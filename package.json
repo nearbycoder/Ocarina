@@ -1,6 +1,6 @@
 {
   "name": "the-bell-of-ages",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "An original 3D coming-of-age adventure",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
