@@ -2060,6 +2060,8 @@ export class Game {
                 if (d) this.loadWorld(d);
               },
               reset: () => this.begin(true),
+              // Scripted capture (tools/media) directs the camera and actors directly.
+              game: () => this,
               damageEnemy: (index: number, damage = 1) => {
                 const e = this.enemies[index];
                 if (e) this.damageEnemy(e, damage);
