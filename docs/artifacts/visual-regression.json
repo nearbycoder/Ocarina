@@ -1,0 +1,241 @@
+{
+  "campaign": {
+    "results": [
+      "New game begins as a child",
+      "E opens the elder dialogue",
+      "W moves the player through real input",
+      "M opens map",
+      "Escape closes map",
+      "root: entrance loads the dungeon",
+      "root: closed gate blocks movement",
+      "Incorrect root sequence does not open gate",
+      "root: intended puzzle solution opens first seal",
+      "root: player crosses the opened gate",
+      "root: defeating guardians opens boss seal",
+      "root: boss defeat reveals relic",
+      "root: claiming relic persists completion",
+      "root: relic returns player to overworld",
+      "ember: entrance loads the dungeon",
+      "ember: closed gate blocks movement",
+      "ember: intended puzzle solution opens first seal",
+      "ember: player crosses the opened gate",
+      "ember: defeating guardians opens boss seal",
+      "ember: boss defeat reveals relic",
+      "ember: claiming relic persists completion",
+      "ember: relic returns player to overworld",
+      "tide: entrance loads the dungeon",
+      "tide: closed gate blocks movement",
+      "tide: intended puzzle solution opens first seal",
+      "tide: player crosses the opened gate",
+      "tide: defeating guardians opens boss seal",
+      "tide: boss defeat reveals relic",
+      "tide: claiming relic persists completion",
+      "tide: relic returns player to overworld",
+      "Bell offers age transition after three relics",
+      "Bell advances hero to adulthood",
+      "frost: entrance loads the dungeon",
+      "frost: closed gate blocks movement",
+      "frost: intended puzzle solution opens first seal",
+      "frost: player crosses the opened gate",
+      "frost: defeating guardians opens boss seal",
+      "frost: boss defeat reveals relic",
+      "frost: claiming relic persists completion",
+      "frost: relic returns player to overworld",
+      "sun: entrance loads the dungeon",
+      "sun: closed gate blocks movement",
+      "sun: intended puzzle solution opens first seal",
+      "sun: player crosses the opened gate",
+      "sun: defeating guardians opens boss seal",
+      "sun: boss defeat reveals relic",
+      "sun: claiming relic persists completion",
+      "sun: relic returns player to overworld",
+      "moon: entrance loads the dungeon",
+      "moon: closed gate blocks movement",
+      "moon: intended puzzle solution opens first seal",
+      "moon: player crosses the opened gate",
+      "moon: defeating guardians opens boss seal",
+      "moon: boss defeat reveals relic",
+      "moon: claiming relic persists completion",
+      "moon: relic returns player to overworld",
+      "crown: entrance loads the dungeon",
+      "crown: closed gate blocks movement",
+      "crown: intended puzzle solution opens first seal",
+      "crown: player crosses the opened gate",
+      "crown: defeating guardians opens boss seal",
+      "crown: boss defeat reveals relic",
+      "crown: claiming relic persists completion",
+      "crown: relic returns player to overworld"
+    ],
+    "state": {
+      "age": "adult",
+      "arenaClear": false,
+      "bossDead": false,
+      "completed": ["root", "ember", "tide", "frost", "sun", "moon", "crown"],
+      "crystals": 364,
+      "dungeon": null,
+      "enemies": [
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -33,
+          "z": 4
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -51,
+          "z": 13
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 43,
+          "z": -20
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 54,
+          "z": -34
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 40,
+          "z": 49
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 62,
+          "z": 51
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -42,
+          "z": -41
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -56,
+          "z": -56
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 41,
+          "z": -82
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -47,
+          "z": 53
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": -68,
+          "z": 58
+        },
+        {
+          "boss": false,
+          "hp": 5,
+          "state": "idle",
+          "x": 9,
+          "z": -85
+        }
+      ],
+      "health": 15,
+      "interaction": null,
+      "maxHealth": 15,
+      "panel": null,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -112
+      },
+      "puzzleProgress": 0,
+      "puzzleSolved": false,
+      "region": "Crownfall",
+      "render": {
+        "averageFrameMs": 16.66198347107443,
+        "cpuSubmitMs": 1.6808333337306975,
+        "drawCalls": 48,
+        "geometries": 57,
+        "p95FrameMs": 17.39999999999418,
+        "pixelRatio": 0.92,
+        "quality": "adaptive",
+        "resolutionScale": 0.92,
+        "textures": 6,
+        "totalNatureCells": 139,
+        "triangles": 71820,
+        "visibleNatureCells": 70
+      },
+      "saveAvailable": false,
+      "won": true
+    },
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "averageFrameMs": 16.667768595041345,
+      "cpuSubmitMs": 1.0641666660706202,
+      "drawCalls": 111,
+      "geometries": 57,
+      "label": "Visual quality High detail",
+      "p95FrameMs": 17.40000000000873,
+      "pixelRatio": 1,
+      "quality": "high",
+      "resolutionScale": 1,
+      "textures": 4,
+      "totalNatureCells": 139,
+      "triangles": 107170,
+      "visibleNatureCells": 70
+    },
+    {
+      "averageFrameMs": 16.667768595041345,
+      "cpuSubmitMs": 1.0641666660706202,
+      "drawCalls": 111,
+      "geometries": 57,
+      "label": "Visual quality Performance",
+      "p95FrameMs": 17.40000000000873,
+      "pixelRatio": 0.85,
+      "quality": "performance",
+      "resolutionScale": 1,
+      "textures": 4,
+      "totalNatureCells": 139,
+      "triangles": 107170,
+      "visibleNatureCells": 70
+    },
+    {
+      "averageFrameMs": 16.667768595041345,
+      "cpuSubmitMs": 1.0641666660706202,
+      "drawCalls": 111,
+      "geometries": 57,
+      "label": "Visual quality Adaptive",
+      "p95FrameMs": 17.40000000000873,
+      "pixelRatio": 1,
+      "quality": "adaptive",
+      "resolutionScale": 1,
+      "textures": 4,
+      "totalNatureCells": 139,
+      "triangles": 107170,
+      "visibleNatureCells": 70
+    }
+  ],
+  "preserved": true
+}

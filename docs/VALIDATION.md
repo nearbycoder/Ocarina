@@ -1,0 +1,65 @@
+# Validation — 4 October 2026
+
+## Latest: movement, combat, and presentation
+
+The latest build passes **30 automated tests**, **40 browser polish assertions**, **four defensive checks**, and **78 campaign assertions**. The rebuilt 31-model pack is 2,442,432 bytes with zero glTF errors/warnings. See [current changes, verification methods, and limitations](POLISH.md) and [recorded results](artifacts/polish-validation.json). Sections below preserve earlier milestone results and timings; their performance measurements are not benchmarks of the current build. Full manual combat, pacing, sustained hardware performance, and cross-browser validation remain outstanding.
+
+## Passed
+
+- Production compilation and bundle: `npm run build`.
+- Seven automated progression tests: `npm test`.
+- Browser opening, new game, elder dialogue, keyboard movement, map opening and closing.
+- Sword input damages nearby enemies; dodge moves the player; dungeon walls and closed gates stop movement.
+- All seven dungeon entrances and their actual interaction sequences: memory stones, push stone, flute melody, rotating mirrors, alternating flames, ordered bells, and the final melody.
+- Opened gates can be crossed through normal movement input.
+- Guardian defeat opens the second gate; boss defeat reveals the relic; claiming each relic restores the sanctuary and returns to the overworld.
+- Three childhood relics unlock the bell transition; the hero becomes an adult with increased health.
+- All seven relics produce the completed campaign state.
+- A separately opened page restored adulthood, all seven collected relics, and the completed state from browser storage.
+- Title and overworld screenshots were visually inspected.
+
+The campaign walkthrough used development scene placement and controlled enemy damage to isolate progression checks. Movement, interactions, puzzle inputs, sword damage, and dodge checks used keyboard events. This is not a claim that the entire campaign was manually fought through.
+
+## Remaining playtest work
+
+- A longer normal-input combat run exceeded the collaborative browser's 15-second evaluation timeout. Some guardians were defeated before the interruption, but the full encounter is not recorded as passed.
+- The unguarded-damage timing assertion ended during an enemy windup; a complete damage/death/recovery journey needs a longer interactive playtest.
+- The background testing tab intermittently failed screenshot capture. No alternative browser was substituted.
+- Full campaign duration, sustained hardware performance, gamepad support, mobile playability, and cross-browser behavior are not validated.
+
+`tests/browser-checks.js` contains the repeatable browser scenarios. Use an isolated browser origin/profile so test progress does not overwrite a player's save. Current production output excludes the development manipulation helpers; the read-only state and rendering counters remain available.
+
+## Visual refinement pass
+
+- Production build and all **12 tests** pass (seven progression tests and five adaptive-quality tests).
+- Browser keyboard checks passed after the visual changes: new child journey, elder dialogue, walking, map opening/closing, sword damage, dodge movement, wall collision, and dungeon exit.
+- Village, dungeon, title, and coast images were inspected during the pass. No shader errors were reported in the successful preview snapshots.
+- Performance and short resource-lifetime samples are recorded in [VISUALS.md](VISUALS.md), together with rendering choices, review scenes, generated assets, and prompts.
+- The post-refinement browser campaign regression passed all seven dungeons, the child-to-adult transition, and the completed campaign state. After preview transport interruptions, the remaining sequence ran asynchronously and its completed assertion results were read back. As above, controlled enemy damage isolates progression; this was not a full manual combat playthrough.
+- Clicking all three quality modes changed the actual renderer pixel ratio as expected (High 1, Performance 0.85, Adaptive 1 on the DPR-1 preview) and preserved campaign completion. The mode was restored to Adaptive.
+- Recorded browser results: [visual-regression.json](artifacts/visual-regression.json).
+
+Use `/?review=visuals` for current development automation: it disables campaign-save reads and writes, preserving the normal journey. This is preferable to testing against the player's normal page.
+
+## Blender asset revision
+
+- Production build and all **13 tests** pass, including a regression for preserving quantized model positions when baking instancing transforms.
+- The **31-model**, 2,379,964-byte runtime kit passes its asset contracts and Khronos glTF Validator with **zero errors and zero warnings**. The validator emits an informational notice that Meshopt data is outside its own extension inspection; the compressed data is additionally decoded by glTF Transform and the browser loader.
+- Browser new-game, elder interaction, movement, map, sword, dodge, wall collision, and exit checks passed on the integrated models.
+- All seven dungeon interaction sequences, gate traversal, controlled guardian/boss defeat, relic collection, adulthood, and completed campaign state passed. [Recorded assertion results](artifacts/model-campaign.json). As before, this isolates progression using development placement and controlled damage, rather than a full manual combat playthrough.
+- Preview automation stalled intermittently. Running the final campaign checks while actively recording the preview allowed the complete sequence to finish. The full campaign was recorded locally; the recording is not included in this repository.
+- Final 1280×800 / DPR-1 preview samples: Adaptive arrival mean **16.67 ms**, p95 **17.5 ms**, CPU frame/submission **2.22 ms**; active walking mean **16.67 ms**, p95 **17.4 ms**; Performance arrival mean **16.67 ms**, p95 **17.4 ms**, CPU **1.58 ms**, pixel ratio **0.85**. Adaptive was restored afterward.
+- [Performance evidence](artifacts/model-performance.json) includes rendering counters and limits. These short recorded preview samples are approximately 60 FPS; they do not establish sustained performance on other hardware. Draw counts now include the geometry pass for contact occlusion and screen passes, so they are not directly comparable to the earlier single-pass counters.
+- Blender cottage/character renders, village/arrival views, and the modeled dungeon interior were inspected. The final arrival snapshot reported no console errors.
+
+Editable sources, workflow, and remaining production work are documented in [BLENDER.md](BLENDER.md).
+
+## Story implementation
+
+- Production build and **17 tests** pass, including prologue gates, the adult reunion requirement, choice persistence, discovered-only journal entries, pending dialogue validation, and legacy save migration.
+- The final native-browser run passed **78 assertions** across the playable prologue, out-of-order NPC interaction, movement, map, sword, dodge, gates, all seven puzzles, relic awards, the farewell promise, adulthood, reunion, and ending. [Recorded results](artifacts/story-campaign.json). Placement and controlled enemy damage accelerate encounter verification; this is not a manual combat or pacing playthrough.
+- A separate temporary origin on port 5175 verified actual browser persistence without touching the user's normal save: reloading resumed opening line 2; selecting the “remember” promise saved adulthood with the crossing scene pending; reloading resumed that scene; Mira's reunion and the journal used the chosen promise. Escape on the choice page did not choose a promise.
+- A legacy adult save on that isolated origin retained three relics and 87 crystals, skipped the new story gates, and entered Frostveil successfully.
+- Desktop (1280×800) and portrait (390×844) opening screenshots were inspected. Text and Continue remained inside the viewport, with no horizontal overflow or console errors in the successful snapshots. This checks the story layout, not full mobile playability.
+- The scenes use text, fixed camera framing, and the existing renderer. No extra render passes or model downloads were added. Performance counters in the campaign evidence are brief samples, not a new hardware benchmark.
+- The final campaign run was recorded locally; the recording is not included in this repository.

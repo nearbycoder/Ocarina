@@ -1,0 +1,31 @@
+{
+  "name": "the-bell-of-ages",
+  "version": "1.0.0",
+  "description": "An original 3D coming-of-age adventure",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "preview": "vite preview --host 0.0.0.0",
+    "assets:build": "blender -b --threads 6 --python scripts/build_assets.py && node scripts/optimize_assets.mjs && node scripts/check_assets.mjs",
+    "assets:check": "node scripts/check_assets.mjs"
+  },
+  "keywords": [],
+  "type": "module",
+  "dependencies": {
+    "meshoptimizer": "^1.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@types/three": "^0.186.0",
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "prettier": "^3.9.9",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

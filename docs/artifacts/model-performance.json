@@ -1,0 +1,55 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "devicePixelRatio": 1
+  },
+  "note": "T3 browser preview with recording active. CPU time covers simulation and render submission, not GPU timing. Frame statistics exclude intervals over 100 ms and hidden-document pauses; not a loading-hitch or cross-device benchmark.",
+  "arrival": {
+    "averageFrameMs": 16.667768595041316,
+    "cpuSubmitMs": 2.219166665772597,
+    "drawCalls": 368,
+    "geometries": 95,
+    "p95FrameMs": 17.5,
+    "pixelRatio": 1,
+    "quality": "adaptive",
+    "resolutionScale": 1,
+    "textures": 16,
+    "totalNatureCells": 142,
+    "triangles": 1466846,
+    "visibleNatureCells": 97
+  },
+  "restored": "adaptive",
+  "samples": [
+    {
+      "averageFrameMs": 16.674380165289243,
+      "cpuSubmitMs": 2.104166666169961,
+      "drawCalls": 317,
+      "geometries": 104,
+      "p95FrameMs": 17.400000000001455,
+      "pixelRatio": 1,
+      "quality": "adaptive",
+      "resolutionScale": 1,
+      "textures": 16,
+      "totalNatureCells": 142,
+      "triangles": 1145558,
+      "view": "walking",
+      "visibleNatureCells": 97
+    },
+    {
+      "averageFrameMs": 16.666942148760306,
+      "cpuSubmitMs": 1.5825000002980232,
+      "drawCalls": 196,
+      "geometries": 95,
+      "p95FrameMs": 17.400000000001455,
+      "pixelRatio": 0.85,
+      "quality": "performance",
+      "resolutionScale": 1,
+      "textures": 16,
+      "totalNatureCells": 142,
+      "triangles": 1001620,
+      "view": "arrival-performance",
+      "visibleNatureCells": 87
+    }
+  ]
+}

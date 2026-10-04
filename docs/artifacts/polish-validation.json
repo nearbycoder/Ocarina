@@ -1,0 +1,345 @@
+{
+  "date": "2026-10-04",
+  "scope": "Collision, sword combat, rig and rendering polish",
+  "unitTests": 30,
+  "productionBuild": "passed",
+  "assetValidation": {
+    "bytes": 2442432,
+    "roots": 31,
+    "errors": 0,
+    "warnings": 0
+  },
+  "browser": {
+    "polish": {
+      "results": [
+        "Cottage: walking and dodging do not penetrate",
+        "Cottage: cannot cross the solid object",
+        "Cottage: follow camera remains outside solids",
+        "Cottage: walking and dodging do not penetrate",
+        "Cottage: cannot cross the solid object",
+        "Cottage: follow camera remains outside solids",
+        "Cottage: walking and dodging do not penetrate",
+        "Cottage: cannot cross the solid object",
+        "Cottage: follow camera remains outside solids",
+        "Cottage: walking and dodging do not penetrate",
+        "Cottage: cannot cross the solid object",
+        "Cottage: follow camera remains outside solids",
+        "Cottage: walking and dodging do not penetrate",
+        "Cottage: cannot cross the solid object",
+        "Cottage: follow camera remains outside solids",
+        "Meadow fence: walking and dodging do not penetrate",
+        "Meadow fence: cannot cross the solid object",
+        "Meadow fence: follow camera remains outside solids",
+        "Rock: walking and dodging do not penetrate",
+        "Rock: cannot cross the solid object",
+        "Rock: follow camera remains outside solids",
+        "Cliff: walking and dodging do not penetrate",
+        "Cliff: cannot cross the solid object",
+        "Cliff: follow camera remains outside solids",
+        "Tree trunk: walking and dodging do not penetrate",
+        "Tree trunk: cannot cross the solid object",
+        "Tree trunk: follow camera remains outside solids",
+        "Sword input does not deal instant damage",
+        "Wind-up has no damage",
+        "Blade contact deals exactly one hit per swing",
+        "Swing misses a nearby enemy behind the player",
+        "Swing misses beyond physical blade reach",
+        "Sword cannot damage through the closed gate",
+        "Blade contact with gate triggers deflection",
+        "Dodge cannot tunnel through the closed gate",
+        "Dungeon camera remains outside the gate and wall",
+        "A second input buffers the follow-up",
+        "Buffered attack transitions into the return cut",
+        "Third input transitions into the thrust",
+        "Combo returns to a clean idle state"
+      ]
+    },
+    "defense": [
+      {
+        "check": "Front guard stops enemy strike",
+        "pass": true
+      },
+      {
+        "check": "Guard does not block behind the player",
+        "pass": true
+      },
+      {
+        "check": "Timed dodge avoids enemy strike",
+        "pass": true
+      },
+      {
+        "check": "Orbit camera stays clear beside dungeon partition",
+        "pass": true
+      }
+    ],
+    "campaign": {
+      "results": [
+        "New game establishes home before movement",
+        "Enter advances a single story line",
+        "Opening leads to meeting Mira",
+        "Speaking out of order cannot skip childhood",
+        "Mira starts the lantern errand",
+        "Catching the light updates the return objective",
+        "Returning the light triggers the first bell",
+        "Soren equips Alder before the journey",
+        "Rowan reveals the reason for visiting sanctuaries",
+        "W moves the player through real input",
+        "M opens map",
+        "Escape closes map",
+        "Sword input damages an enemy in range",
+        "Dodge moves the player forward",
+        "Dungeon wall blocks movement",
+        "Dungeon exit returns to overworld",
+        "root: entrance loads the dungeon",
+        "root: closed gate blocks movement",
+        "Incorrect root sequence does not open gate",
+        "root: intended puzzle solution opens first seal",
+        "root: player crosses the opened gate",
+        "root: defeating guardians opens boss seal",
+        "root: boss defeat reveals relic",
+        "root: claiming relic persists completion",
+        "root: relic returns player to overworld",
+        "ember: entrance loads the dungeon",
+        "ember: closed gate blocks movement",
+        "ember: intended puzzle solution opens first seal",
+        "ember: player crosses the opened gate",
+        "ember: defeating guardians opens boss seal",
+        "ember: boss defeat reveals relic",
+        "ember: claiming relic persists completion",
+        "ember: relic returns player to overworld",
+        "tide: entrance loads the dungeon",
+        "tide: closed gate blocks movement",
+        "tide: intended puzzle solution opens first seal",
+        "tide: player crosses the opened gate",
+        "tide: defeating guardians opens boss seal",
+        "tide: boss defeat reveals relic",
+        "tide: claiming relic persists completion",
+        "tide: relic returns player to overworld",
+        "Bell offers age transition after three relics",
+        "Bell advances hero to adulthood",
+        "Farewell promise survives the crossing",
+        "Adulthood begins with a reason to return home",
+        "Reunion opens the adult chapter",
+        "frost: entrance loads the dungeon",
+        "frost: closed gate blocks movement",
+        "frost: intended puzzle solution opens first seal",
+        "frost: player crosses the opened gate",
+        "frost: defeating guardians opens boss seal",
+        "frost: boss defeat reveals relic",
+        "frost: claiming relic persists completion",
+        "frost: relic returns player to overworld",
+        "sun: entrance loads the dungeon",
+        "sun: closed gate blocks movement",
+        "sun: intended puzzle solution opens first seal",
+        "sun: player crosses the opened gate",
+        "sun: defeating guardians opens boss seal",
+        "sun: boss defeat reveals relic",
+        "sun: claiming relic persists completion",
+        "sun: relic returns player to overworld",
+        "moon: entrance loads the dungeon",
+        "moon: closed gate blocks movement",
+        "moon: intended puzzle solution opens first seal",
+        "moon: player crosses the opened gate",
+        "moon: defeating guardians opens boss seal",
+        "moon: boss defeat reveals relic",
+        "moon: claiming relic persists completion",
+        "moon: relic returns player to overworld",
+        "crown: entrance loads the dungeon",
+        "crown: closed gate blocks movement",
+        "crown: intended puzzle solution opens first seal",
+        "crown: player crosses the opened gate",
+        "crown: defeating guardians opens boss seal",
+        "crown: boss defeat reveals relic",
+        "crown: claiming relic persists completion",
+        "crown: relic returns player to overworld"
+      ],
+      "state": {
+        "age": "adult",
+        "arenaClear": false,
+        "bossDead": false,
+        "camera": {
+          "x": -5,
+          "y": 3.836911756563879,
+          "z": 67.3445638338223
+        },
+        "cameraClear": true,
+        "combat": {
+          "blade": {
+            "base": [
+              -7.1840908357671704,
+              0.9594586213791491,
+              -3.5686348886317614
+            ],
+            "tip": [
+              -7.803838820392015,
+              0.9305678373450121,
+              -4.104804412337964
+            ]
+          },
+          "combo": 0,
+          "elapsed": -1,
+          "hitCount": 1,
+          "queued": false,
+          "recoil": -1
+        },
+        "completed": [
+          "root",
+          "ember",
+          "tide",
+          "frost",
+          "sun",
+          "moon",
+          "crown"
+        ],
+        "crystals": 364,
+        "dungeon": null,
+        "enemies": [
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -33,
+            "z": 4
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -51,
+            "z": 13
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 43,
+            "z": -20
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 54,
+            "z": -34
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 40,
+            "z": 49
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 62,
+            "z": 51
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -42,
+            "z": -41
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -56,
+            "z": -56
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 41,
+            "z": -82
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -47,
+            "z": 53
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": -68,
+            "z": 58
+          },
+          {
+            "boss": false,
+            "hp": 5,
+            "state": "idle",
+            "x": 9,
+            "z": -85
+          }
+        ],
+        "facing": 0,
+        "health": 15,
+        "interaction": "mira",
+        "maxHealth": 15,
+        "panel": null,
+        "playerBlocked": false,
+        "position": {
+          "x": -5,
+          "y": 0.23309956218350036,
+          "z": 60
+        },
+        "puzzleProgress": 0,
+        "puzzleSolved": false,
+        "region": "Alder Village",
+        "render": {
+          "averageFrameMs": 19.211111111110263,
+          "cpuSubmitMs": 123.91000000089407,
+          "drawCalls": 360,
+          "geometries": 33,
+          "p95FrameMs": 33.299999999995634,
+          "pixelRatio": 1.5,
+          "quality": "adaptive",
+          "resolutionScale": 1,
+          "textures": 16,
+          "totalNatureCells": 141,
+          "triangles": 504135,
+          "visibleNatureCells": 141
+        },
+        "saveAvailable": false,
+        "story": {
+          "pending": null,
+          "prologue": 5,
+          "promise": "home",
+          "reunited": true,
+          "seen": [
+            "opening",
+            "lantern",
+            "silence",
+            "smith",
+            "commission",
+            "root",
+            "ember",
+            "tide",
+            "farewell",
+            "crossing",
+            "reunion",
+            "frost",
+            "sun",
+            "moon",
+            "crownArrival",
+            "crown"
+          ]
+        },
+        "won": true
+      }
+    }
+  },
+  "method": "Native T3 browser on isolated ?review=polish. Keyboard events drive controls; deterministic debug.advance steps the same production simulation because host paint cadence was throttled. Campaign uses scene placement and controlled guardian/boss damage; this is not a manual complete combat playthrough. Rendering counters in campaign state are not performance benchmarks.",
+  "limitations": [
+    "No sustained hardware FPS claim. Native preview host and DPR changed during testing.",
+    "Rigid articulated meshes remain; this is not a completed AAA art or animation system.",
+    "Representative obstacles and automated geometric cases were tested, not every possible world trajectory."
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "sourceBytes": 13437412,
+  "runtimeBytes": 2442432,
+  "reductionPercent": 82,
+  "geometry": "EXT_meshopt_compression",
+  "textures": "EXT_texture_webp; 1024px shared PBR atlas",
+  "preserved": "named node hierarchy and limb pivots"
+}
