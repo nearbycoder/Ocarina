@@ -14,7 +14,7 @@ export function stoneMaterial(color = "#dfdcca") {
   if (stoneMaterials.has(color)) return stoneMaterials.get(color)!;
   if (!stoneTexture) {
     stoneTexture = new T.TextureLoader().load(
-      "/textures/ancient-limestone.png",
+      `${import.meta.env.BASE_URL}textures/ancient-limestone.png`,
     );
     stoneTexture.wrapS = stoneTexture.wrapT = T.RepeatWrapping;
     stoneTexture.colorSpace = T.SRGBColorSpace;
@@ -77,7 +77,10 @@ export function terrainMaterial(map: T.Texture) {
 }
 export function foliageMaterial(atlas?: T.Texture) {
   const texture =
-    atlas || new T.TextureLoader().load("/textures/alder-foliage.png");
+    atlas ||
+    new T.TextureLoader().load(
+      `${import.meta.env.BASE_URL}textures/alder-foliage.png`,
+    );
   texture.colorSpace = T.SRGBColorSpace;
   texture.anisotropy = 4;
   const m = new T.MeshLambertMaterial({

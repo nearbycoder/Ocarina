@@ -9,9 +9,12 @@ let loaded: Promise<void> | undefined;
 export function loadAssets(progress?: (fraction: number) => void) {
   return (loaded ??= new GLTFLoader()
     .setMeshoptDecoder(MeshoptDecoder)
-    .loadAsync("/models/alder-kit.optimized.glb", (event) => {
-      if (event.total) progress?.(event.loaded / event.total);
-    })
+    .loadAsync(
+      `${import.meta.env.BASE_URL}models/alder-kit.optimized.glb`,
+      (event) => {
+        if (event.total) progress?.(event.loaded / event.total);
+      },
+    )
     .then((gltf) => {
       gltf.scene.traverse((object) => {
         if (object instanceof T.Mesh) {
