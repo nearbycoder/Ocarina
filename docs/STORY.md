@@ -46,4 +46,4 @@ At the crossing, “I'll find my way home” or “I'll remember us as we are”
 
 ## Production work still ahead
 
-The story now connects the playable prototype from beginning to ending. It does not add a reference-length campaign. Larger regional quests, playable flashbacks, distinct dungeon characters, staged NPC animation, voice work, authored music, additional adult character models, and deeper consequences in the environment remain future production work. Mira currently uses a taller version of the existing model in adulthood. The seven dungeons still use their existing compact trial layouts.
+The story now connects the playable prototype from beginning to ending. It does not add a full-length campaign. Larger regional quests, playable flashbacks, distinct dungeon characters, staged NPC animation, voice work, authored music, additional adult character models, and deeper consequences in the environment remain future production work. Mira currently uses a taller version of the existing model in adulthood. The seven dungeons still use their existing compact trial layouts.

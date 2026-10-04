@@ -19,7 +19,7 @@ npm run assets:build
 npm run assets:check
 ```
 
-The build runs Blender, then glTF Transform with Meshopt and WebP compression, then validation. No Blender installation is needed to play the existing game. Only the optimized GLB is deployed. The uncompressed GLB, packed `.blend`, and source atlas images stay in `art/blender/`.
+The build runs Blender, then glTF Transform with Meshopt and WebP compression, then validation. No Blender installation is needed to play the existing game. Only the optimized GLB is deployed. The packed `.blend` is committed in `art/blender/`; the uncompressed GLB and source atlas images are written there by `npm run assets:build` and are not committed.
 
 ## Library
 

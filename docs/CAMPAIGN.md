@@ -1,6 +1,6 @@
 # Expanding the adventure
 
-The current release is a compact, playable campaign with seven short three-chamber dungeons. Matching the requested reference-scale adventure remains a production objective, not a claim about this build.
+The current release is a compact, playable campaign with seven short three-chamber dungeons. Growing it into a full-length adventure remains a production objective, not a claim about this build.
 
 ## Current playable spine
 
