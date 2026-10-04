@@ -70,16 +70,24 @@ function defaultTrace() {
   const g = window.__game,
     p = g.hero.group.position;
   return {
-    hero: [+p.x.toFixed(2), +p.z.toFixed(2), +g.hero.group.rotation.y.toFixed(2)],
+    hero: [
+      +p.x.toFixed(2),
+      +p.z.toFixed(2),
+      +g.hero.group.rotation.y.toFixed(2),
+    ],
     hp: g.save.health,
     attack: +g.attackElapsed.toFixed(2),
     combo: g.combo,
     enemies: g.enemies
-      .map((e, i) => [i, e.state, e.hp, +Math.hypot(e.x - p.x, e.z - p.z).toFixed(2)])
+      .map((e, i) => [
+        i,
+        e.state,
+        e.hp,
+        +Math.hypot(e.x - p.x, e.z - p.z).toFixed(2),
+      ])
       .filter((e) => e[1] !== "dead" && e[3] < 12),
   };
 }
-
 
 if (command === "capture" || command === "all") await capture();
 if (command === "score" || command === "all")

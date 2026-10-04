@@ -102,7 +102,11 @@ function pageInit({ seed, sampleRate }) {
   const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : 1 - Math.pow(1 - u, 3));
   const smooth = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
   const started = new WeakMap();
-  let overlay, captionKey = "", director = null, shotOrigin = 0;
+  let overlay,
+    captionKey = "",
+    director = null,
+    shotOrigin = 0,
+    directorOrigin = 0;
 
   // Camera directors. `path` interpolates world-space keyframes
   // [t, eyeX, eyeY, eyeZ, lookX, lookY, lookZ]; `follow` orbits a smoothed
@@ -139,10 +143,22 @@ function pageInit({ seed, sampleRate }) {
       lastT = t;
       if (!focus || dt > 0.5 || t === 0) focus = [fx, fy, fz];
       const k = 1 - Math.exp(-dt * (o.lag ?? 6));
-      focus = [lerp(focus[0], fx, k), lerp(focus[1], fy, k), lerp(focus[2], fz, k)];
+      focus = [
+        lerp(focus[0], fx, k),
+        lerp(focus[1], fy, k),
+        lerp(focus[2], fz, k),
+      ];
       const a = (o.angle ?? 0) + (o.spin ?? 0) * t;
-      const r = lerp(o.radius ?? 6, o.radiusTo ?? o.radius ?? 6, smooth(t / (o.over ?? 1e9)));
-      const h = lerp(o.height ?? 2.4, o.heightTo ?? o.height ?? 2.4, smooth(t / (o.over ?? 1e9)));
+      const r = lerp(
+        o.radius ?? 6,
+        o.radiusTo ?? o.radius ?? 6,
+        smooth(t / (o.over ?? 1e9)),
+      );
+      const h = lerp(
+        o.height ?? 2.4,
+        o.heightTo ?? o.height ?? 2.4,
+        smooth(t / (o.over ?? 1e9)),
+      );
       g.camera.position.set(
         focus[0] + Math.sin(a) * r,
         focus[1] + h,
@@ -167,7 +183,8 @@ function pageInit({ seed, sampleRate }) {
       game.sound.ambient = () => {};
       const render = game.worldRenderer.render.bind(game.worldRenderer);
       game.worldRenderer.render = (level) => {
-        if (director) director(game, performance.now() / 1000 - shotOrigin);
+        const now = performance.now() / 1000;
+        if (director) director(game, now - shotOrigin, now - directorOrigin);
         render(level);
       };
       const style = document.createElement("style");
@@ -201,6 +218,7 @@ function pageInit({ seed, sampleRate }) {
       return toBase64(new Uint8Array(pcm.buffer));
     },
     direct(source) {
+      directorOrigin = performance.now() / 1000;
       director = source ? (0, eval)(`(${source})`) : null;
     },
     mode(classes) {
@@ -371,7 +389,8 @@ export class Session {
     if (typeof camera === "function" || typeof camera === "string")
       src = camera.toString();
     else if (camera?.path)
-      src = `(g, t) => window.__capture.cam.path(g, t, ${JSON.stringify(camera.path)})`;
+      // Paths run on time since they were set, so mid-shot cuts animate from key 0.
+      src = `(g, t, d) => window.__capture.cam.path(g, d, ${JSON.stringify(camera.path)})`;
     else if (camera?.follow)
       src = `(g, t) => window.__capture.cam.follow(g, t, ${JSON.stringify(camera.follow)})`;
     return this.page.evaluate((src) => {
@@ -402,7 +421,10 @@ export class Session {
    * reaches their local time. With `this.preview = n`, only one still every
    * n seconds is written (the simulation still runs every frame).
    */
-  async shot(output, { seconds, events = [], captions = [], camera = null, mode = "cine" }) {
+  async shot(
+    output,
+    { seconds, events = [], captions = [], camera = null, mode = "cine" },
+  ) {
     const frames = Math.round(seconds * FPS);
     const preview = this.preview;
     let encoder = null,
@@ -410,10 +432,31 @@ export class Session {
     if (!preview) {
       encoder = spawn(
         "nice",
-        ["-n", "10", "ffmpeg", "-loglevel", "error", "-y",
-          "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
-          "-c:v", "libx264", "-preset", "medium", "-crf", "12", "-pix_fmt", "yuv420p",
-          `${output}.mp4`],
+        [
+          "-n",
+          "10",
+          "ffmpeg",
+          "-loglevel",
+          "error",
+          "-y",
+          "-f",
+          "image2pipe",
+          "-framerate",
+          String(FPS),
+          "-c:v",
+          "mjpeg",
+          "-i",
+          "-",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "medium",
+          "-crf",
+          "12",
+          "-pix_fmt",
+          "yuv420p",
+          `${output}.mp4`,
+        ],
         { stdio: ["pipe", "inherit", "inherit"] },
       );
       done = new Promise((resolve, reject) =>
@@ -423,23 +466,33 @@ export class Session {
       );
     }
     await this.mode(mode);
-    await this.page.evaluate((s) => window.__capture.beginShot(s), seconds + 0.5);
+    await this.page.evaluate(
+      (s) => window.__capture.beginShot(s),
+      seconds + 0.5,
+    );
     await this.direct(camera);
     const queue = [...events].sort((a, b) => a[0] - b[0]);
     const every = preview ? Math.max(1, Math.round(preview * FPS)) : 1;
     for (let f = 0; f < frames; f++) {
       const t = f / FPS;
-      while (queue.length && queue[0][0] <= t + 1e-6) await queue.shift()[1](this);
+      while (queue.length && queue[0][0] <= t + 1e-6)
+        await queue.shift()[1](this);
       await this.page.clock.runFor(1000 / FPS);
       await this.sync(captions);
       if (this.trace && f % 3 === 0)
-        console.log(t.toFixed(2), JSON.stringify(await this.page.evaluate(this.trace)));
+        console.log(
+          t.toFixed(2),
+          JSON.stringify(await this.page.evaluate(this.trace)),
+        );
       if (!preview) {
         const image = await this.screenshot();
         if (!encoder.stdin.write(image))
           await new Promise((r) => encoder.stdin.once("drain", r));
       } else if (f % every === Math.floor(every / 2) || f === frames - 1)
-        await writeFile(`${output}-${String(f).padStart(4, "0")}.jpg`, await this.screenshot("jpeg", 80));
+        await writeFile(
+          `${output}-${String(f).padStart(4, "0")}.jpg`,
+          await this.screenshot("jpeg", 80),
+        );
     }
     for (const [, fn] of queue) await fn(this);
     encoder?.stdin.end();
@@ -447,7 +500,10 @@ export class Session {
       await this.page.evaluate(() => window.__capture.endShot()),
       "base64",
     );
-    await writeFile(`${output}.wav`, wav(pcm.subarray(0, frames * (SAMPLE_RATE / FPS) * 4)));
+    await writeFile(
+      `${output}.wav`,
+      wav(pcm.subarray(0, frames * (SAMPLE_RATE / FPS) * 4)),
+    );
     await this.direct(null);
     await this.sync([]);
     await done;
