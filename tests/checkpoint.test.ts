@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  chamberStart,
-  newSave,
-  parseSave,
-  respawnLandmark,
-} from "../src/data";
+import { chamberStart, newSave, parseSave, respawnLandmark } from "../src/data";
 
 describe("sanctuary checkpoints", () => {
   it("returns to the start of the furthest chamber reached", () => {

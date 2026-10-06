@@ -304,10 +304,15 @@ h1 em {
   position: absolute;
   left: 50%;
   top: 33px;
+  transform: translateX(-50%);
   font-family: "DM Sans", sans-serif;
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #ebe1ba9e;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #f1e8c4;
+  background: #142d24a6;
+  padding: 3px 10px;
+  border-radius: 10px;
+  text-shadow: none;
 }
 .menu-button {
   position: absolute;
@@ -330,8 +335,11 @@ h1 em {
   display: flex;
   gap: 12px;
   max-width: 274px;
-  background: linear-gradient(90deg, transparent, #1c3a2922);
-  text-shadow: 0 2px 5px #203e36;
+  /* A soft backing keeps the objective readable over bright sky and snow. */
+  background: linear-gradient(90deg, #142d2400, #142d24b8 22%, #142d24c4);
+  padding: 10px 14px 12px 12px;
+  border-radius: 4px;
+  text-shadow: 0 1px 4px #10261e;
 }
 .quest-mark {
   font-size: 26px;
@@ -349,7 +357,7 @@ h1 em {
   margin: 6px 0;
 }
 .quest p {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.65;
   color: #eee7c8d9;
 }
@@ -1218,4 +1226,107 @@ blockquote {
   transform: translate(-50%, -50%);
   text-shadow: 0 0 12px #ffe2a2;
   pointer-events: none;
+}
+
+/* Settings */
+.settings-sheet {
+  width: min(92vw, 560px);
+}
+.settings-sheet section {
+  margin-top: 16px;
+}
+.settings-sheet h2 {
+  font-size: 36px;
+}
+.settings-sheet .menu-list {
+  margin: 18px 0 0;
+}
+.settings-sheet h4 {
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  color: #d9c598;
+  margin-bottom: 6px;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 42px;
+  padding: 5px 14px;
+  border: 1px solid #c5c19d23;
+  background: #c4c89b06;
+  margin-top: 6px;
+  font-size: 13px;
+  text-align: left;
+}
+.setting-row small {
+  display: block;
+  font-size: 10px;
+  color: #a9b6a5;
+  margin-top: 3px;
+}
+.setting-row.toggle b {
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #c9b57c;
+}
+.setting-row.toggle[aria-pressed="true"] b {
+  color: #f0d79b;
+}
+.setting-row.toggle:hover {
+  background: #c4c89b18;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stepper button {
+  width: 36px;
+  height: 34px;
+  border: 1px solid #d6c39055;
+  background: #173b2f66;
+  font-size: 18px;
+  line-height: 1;
+}
+.stepper output {
+  min-width: 52px;
+  text-align: center;
+  font-size: 13px;
+  color: #f0d79b;
+}
+/* Comfort: reduced motion removes interface movement. */
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  transition: none !important;
+  animation: none !important;
+}
+body.reduced-motion #damage-flash {
+  display: none;
+}
+
+/* Comfort: larger interface text scales the reading surfaces, not the world. */
+body.large-text .quest,
+body.large-text .location,
+body.large-text .vitals,
+body.large-text #prompt,
+body.large-text #toast,
+body.large-text .controls,
+body.large-text .dialogue-box,
+body.large-text .story-heading,
+body.large-text .sheet {
+  zoom: 1.2;
+}
+body.large-text .sheet {
+  max-height: 76vh;
+}
+@media (max-width: 600px) {
+  /* Keep notices clear of the objective panel on narrow screens. */
+  #toast {
+    top: 36%;
+  }
 }

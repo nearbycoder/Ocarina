@@ -1,4 +1,5 @@
 import { DUNGEONS, objective, type SaveData } from "./data";
+import type { Settings } from "./settings";
 import {
   journalEntries,
   storyPageText,
@@ -8,6 +9,7 @@ import {
 export type Panel =
   | "title"
   | "pause"
+  | "settings"
   | "journal"
   | "map"
   | "flute"
@@ -141,10 +143,33 @@ export class UI {
     this.el("hud").hidden = true;
   }
   pause(s: SaveData, muted: boolean, quality = "Adaptive") {
+    // Re-rendering keeps keyboard and pad focus on the row that was changed.
+    const focused = (document.activeElement as HTMLElement | null)?.dataset
+      ?.action;
     this.setPanel(
       "pause",
-      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>Tab</span></button><button data-action="map">Map of the kingdom <span>M</span></button><button data-action="save">Save your journey <span>◇</span></button><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Ambient sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help"><b>WASD</b> move · <b>Mouse drag / arrows</b> camera · <b>E</b> interact<br><b>J / click</b> sword · <b>Space</b> dodge · <b>Shift</b> shield<br><b>Q</b> lock on · <b>F</b> flute · <b>R</b> return to checkpoint</div><p class="save-note">Saves stay in this browser on this device.</p></div>`,
+      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>Tab</span></button><button data-action="map">Map of the kingdom <span>M</span></button><button data-action="save">Save your journey <span>◇</span></button><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help"><b>WASD</b> move · <b>Mouse drag / arrows</b> camera · <b>E</b> interact<br><b>J / click</b> sword · <b>Space</b> dodge · <b>Shift</b> shield<br><b>Q</b> lock on · <b>F</b> flute · <b>R</b> return to checkpoint</div><p class="save-note">Saves stay in this browser on this device.</p></div>`,
     );
+    this.refocus(focused);
+  }
+  private refocus(action?: string) {
+    if (!action) return;
+    this.el("panel")
+      .querySelector<HTMLElement>(`[data-action="${action}"]`)
+      ?.focus({ preventScroll: true });
+  }
+  settings(s: Settings) {
+    const focused = (document.activeElement as HTMLElement | null)?.dataset
+      ?.action;
+    const stepper = (key: string, label: string, value: string) =>
+      `<div class="setting-row"><span>${label}</span><div class="stepper"><button data-action="set-${key}-down" aria-label="Lower ${label}">−</button><output>${value}</output><button data-action="set-${key}-up" aria-label="Raise ${label}">+</button></div></div>`;
+    const toggle = (key: string, label: string, on: boolean, note: string) =>
+      `<button class="setting-row toggle" data-action="toggle-${key}" aria-pressed="${on}"><span>${label}<small>${note}</small></span><b>${on ? "ON" : "OFF"}</b></button>`;
+    this.setPanel(
+      "settings",
+      `<div class="sheet settings-sheet"><button class="close" data-action="pause" aria-label="Back to the pause menu">×</button><div class="eyebrow">SETTINGS</div><h2>Make the journey yours.</h2><section><h4>SOUND</h4>${stepper("master", "Master volume", `${s.master}%`)}${stepper("effects", "Effects", `${s.effects}%`)}${stepper("ambience", "Ambience", `${s.ambience}%`)}${toggle("muted", "Mute all sound", s.muted, "")}</section><section><h4>CAMERA</h4>${stepper("sensitivity", "Camera speed", `${Math.round(s.sensitivity * 100)}%`)}${toggle("invertY", "Invert vertical camera", s.invertY, "")}</section><section><h4>COMFORT</h4>${toggle("reducedMotion", "Reduced motion", s.reducedMotion, "No hit-stop pauses, damage flash, or sliding interface")}${toggle("largeText", "Larger interface text", s.largeText, "")}</section><div class="menu-list"><button class="primary" data-action="pause">Back <span>←</span></button></div><p class="save-note">Settings stay in this browser and apply to every journey.</p></div>`,
+    );
+    this.refocus(focused);
   }
   journal(s: SaveData) {
     const q = objective(s);

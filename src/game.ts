@@ -29,6 +29,15 @@ import {
   type Dungeon,
 } from "./data";
 import {
+  SETTINGS_KEY,
+  SENSITIVITY_STEP,
+  VOLUME_STEP,
+  parseSettings,
+  sensitivity,
+  volume,
+  type Settings,
+} from "./settings";
+import {
   buildOverworld,
   buildDungeon,
   disposeWorld,
@@ -148,6 +157,7 @@ export class Game {
   private trail: T.Mesh;
   private storageOK = true;
   private frameTimes: number[] = [];
+  settings: Settings = parseSettings(null);
   constructor() {
     const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
     this.renderer = new T.WebGLRenderer({
@@ -221,6 +231,7 @@ export class Game {
     this.hero.group.position.set(0, heightAt(0, 57), 57);
     this.camera.position.set(34, 22, 84);
     this.camera.lookAt(-4, 2.8, 44);
+    this.loadSettings();
     this.ui.title(!!this.readSave());
     this.ui.onAction = (a) => this.action(a);
     this.bindInput();
@@ -238,6 +249,61 @@ export class Game {
     });
     this.expose();
     requestAnimationFrame((t) => this.frame(t));
+  }
+  loadSettings() {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try {
+      this.settings = parseSettings(
+        localStorage.getItem(SETTINGS_KEY),
+        reduced,
+      );
+    } catch {
+      this.settings = parseSettings(null, reduced);
+    }
+    this.applySettings();
+  }
+  applySettings(store = false) {
+    this.sound.configure(this.settings);
+    document.body.classList.toggle(
+      "reduced-motion",
+      this.settings.reducedMotion,
+    );
+    document.body.classList.toggle("large-text", this.settings.largeText);
+    if (!store) return;
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings));
+    } catch {
+      // Settings still apply for this session.
+    }
+  }
+  changeSetting(a: string) {
+    const s = this.settings;
+    const [, key, dir] = a.split("-");
+    const sign = dir === "up" ? 1 : -1;
+    if (a.startsWith("toggle-")) {
+      if (
+        key === "muted" ||
+        key === "invertY" ||
+        key === "reducedMotion" ||
+        key === "largeText"
+      )
+        s[key] = !s[key];
+    } else if (key === "sensitivity")
+      s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
+    else if (key === "master" || key === "effects" || key === "ambience")
+      s[key] = volume(s[key] + sign * VOLUME_STEP, s[key]);
+    this.applySettings(true);
+    // Let the player hear the level they just chose.
+    this.sound.start();
+    if (key === "ambience")
+      this.sound.tone(220, 1.2, "sine", 0.05, 0, "ambience");
+    else if (
+      key === "master" ||
+      key === "effects" ||
+      (key === "muted" && !s.muted)
+    )
+      this.sound.note(2);
+    this.ui.settings(s);
   }
   readSave() {
     if (this.review) return null;
@@ -655,8 +721,7 @@ export class Game {
       const dx = e.clientX - this.lastPointer.x,
         dy = e.clientY - this.lastPointer.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) this.pointerMoved = true;
-      this.yaw -= dx * 0.006;
-      this.pitch = T.MathUtils.clamp(this.pitch + dy * 0.004, 0.17, 1.08);
+      this.turnCamera(dx * 0.006, dy * 0.004);
       this.lastPointer = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener("pointerup", (e) => {
@@ -737,7 +802,7 @@ export class Game {
     if (!this.started) return;
     if (a === "pause") {
       this.keys.clear();
-      this.ui.pause(this.save, this.sound.muted, this.quality.label);
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
       return;
     }
     if (a === "quality") {
@@ -747,7 +812,7 @@ export class Game {
       this.sun.shadow.map?.dispose();
       this.sun.shadow.map = null;
       this.renderer.shadowMap.needsUpdate = true;
-      this.ui.pause(this.save, this.sound.muted, this.quality.label);
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
       return;
     }
     if (a === "map") {
@@ -767,8 +832,17 @@ export class Game {
       return;
     }
     if (a === "sound") {
-      this.sound.muted = !this.sound.muted;
-      this.ui.pause(this.save, this.sound.muted, this.quality.label);
+      this.settings.muted = !this.settings.muted;
+      this.applySettings(true);
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
+      return;
+    }
+    if (a === "settings") {
+      this.ui.settings(this.settings);
+      return;
+    }
+    if (a.startsWith("set-") || a.startsWith("toggle-")) {
+      this.changeSetting(a);
       return;
     }
     if (a === "home") {
@@ -1328,6 +1402,16 @@ export class Game {
         )[0] || null;
     if (!this.target) this.ui.toast("No enemy nearby to lock onto.");
   }
+  /** Turns the camera: positive x orbits right, positive y raises the view. */
+  turnCamera(x: number, y: number) {
+    const k = this.settings.sensitivity;
+    this.yaw -= x * k;
+    this.pitch = T.MathUtils.clamp(
+      this.pitch + y * k * (this.settings.invertY ? -1 : 1),
+      0.17,
+      1.08,
+    );
+  }
   movementVector() {
     const x = Number(this.keys.has("KeyD")) - Number(this.keys.has("KeyA")),
       z = Number(this.keys.has("KeyS")) - Number(this.keys.has("KeyW"));
@@ -1376,11 +1460,14 @@ export class Game {
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.hurt = Math.max(0, this.hurt - dt);
-    if (this.keys.has("ArrowLeft")) this.yaw += dt * 1.8;
-    if (this.keys.has("ArrowRight")) this.yaw -= dt * 1.8;
-    if (this.keys.has("ArrowUp")) this.pitch = Math.min(1.08, this.pitch + dt);
-    if (this.keys.has("ArrowDown"))
-      this.pitch = Math.max(0.17, this.pitch - dt);
+    this.turnCamera(
+      (Number(this.keys.has("ArrowRight")) -
+        Number(this.keys.has("ArrowLeft"))) *
+        dt *
+        1.8,
+      (Number(this.keys.has("ArrowUp")) - Number(this.keys.has("ArrowDown"))) *
+        dt,
+    );
     const m = this.movementVector();
     const shielding =
       (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) &&
@@ -1616,8 +1703,10 @@ export class Game {
     this.recoil = -1;
     this.invulnerable = 1;
     this.sound.hit();
-    this.ui.el("damage-flash").style.opacity = ".7";
-    setTimeout(() => (this.ui.el("damage-flash").style.opacity = "0"), 170);
+    if (!this.settings.reducedMotion) {
+      this.ui.el("damage-flash").style.opacity = ".7";
+      setTimeout(() => (this.ui.el("damage-flash").style.opacity = "0"), 170);
+    }
     this.refreshHUD();
     if (this.save.health <= 0) {
       const where = this.checkpoint();
@@ -1883,6 +1972,7 @@ export class Game {
   }
   simulate(dt: number) {
     this.save.elapsed += dt;
+    if (this.settings.reducedMotion) this.hitStop = 0;
     if (this.hitStop > 0) this.hitStop = Math.max(0, this.hitStop - dt);
     else {
       this.updatePlayer(dt);

@@ -48,7 +48,7 @@ Desktop keyboard and mouse are recommended. Saves are automatic and stay in this
 | Reed flute: play low, middle, high | <kbd>F</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | — |
 | Kingdom map | <kbd>M</kbd> | **The Kingdom** button |
 | Journal and equipment | <kbd>Tab</kbd> | Pause menu |
-| Pause, sound, visual quality, save | <kbd>Esc</kbd> | **Ⅱ** button |
+| Pause, settings, visual quality, save | <kbd>Esc</kbd> | **Ⅱ** button |
 | Return to checkpoint (asks first inside a sanctuary) | <kbd>R</kbd> | — |
 | Advance dialogue | <kbd>Enter</kbd> or **Continue** | **Continue** |
 
@@ -118,6 +118,7 @@ Spoiler-light.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
 - **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), a sword upgrade, and campfire healing.
 - **Visual quality modes:** Adaptive, High detail, and Performance (<kbd>Esc</kbd> → Visual quality).
+- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, and ambience volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, damage flash, or sliding interface; on by default when your system asks for reduced motion); and larger interface text. Settings are stored apart from your save.
 
 ## Screenshots
 
@@ -151,7 +152,7 @@ Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://w
 ```sh
 npm install
 npm run dev        # http://localhost:5174 (dev build with debug helpers)
-npm test           # 33 Vitest tests: progression, story, saves, checkpoints, assets, collision, combat, quality
+npm test           # 36 Vitest tests: progression, story, saves, checkpoints, settings, assets, collision, combat, quality
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
 ```

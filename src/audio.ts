@@ -1,7 +1,15 @@
+import { busGain, type Settings } from "./settings";
+export type Bus = "effects" | "ambience";
 export class Sound {
   ctx: AudioContext | null = null;
-  muted = false;
+  // Each voice is scaled when it starts. No long-lived mixer nodes, so the
+  // capture harness can swap the audio context between shots.
+  private gains: Record<Bus, number> = { effects: 1, ambience: 1 };
   private timer = 0;
+  configure(settings: Settings) {
+    this.gains.effects = busGain(settings, "effects");
+    this.gains.ambience = busGain(settings, "ambience");
+  }
   start() {
     if (!this.ctx) this.ctx = new AudioContext();
     void this.ctx.resume();
@@ -12,8 +20,10 @@ export class Sound {
     type: OscillatorType = "sine",
     volume = 0.055,
     delay = 0,
+    bus: Bus = "effects",
   ) {
-    if (this.muted || !this.ctx) return;
+    volume *= this.gains[bus];
+    if (volume <= 0 || !this.ctx) return;
     const t = this.ctx.currentTime + delay;
     const o = this.ctx.createOscillator(),
       g = this.ctx.createGain();
@@ -46,7 +56,8 @@ export class Sound {
     q: number,
     volume: number,
   ) {
-    if (this.muted || !this.ctx) return;
+    volume *= this.gains.effects;
+    if (volume <= 0 || !this.ctx) return;
     const ctx = this.ctx,
       buffer = ctx.createBuffer(
         1,
@@ -95,6 +106,8 @@ export class Sound {
       3,
       "sine",
       0.025,
+      0,
+      "ambience",
     );
   }
 }
