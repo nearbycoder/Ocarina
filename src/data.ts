@@ -135,6 +135,8 @@ export interface SaveData {
   fireflies: string[];
   reward: boolean;
   chests: string[];
+  /** Sanctuaries whose entrance the player has reached; safe overworld respawns. */
+  visited: string[];
   position: { x: number; z: number };
   elapsed: number;
   won: boolean;
@@ -154,6 +156,7 @@ export function newSave(): SaveData {
     fireflies: [],
     reward: false,
     chests: [],
+    visited: [],
     position: { x: -10, z: 71 },
     elapsed: 0,
     won: false,
@@ -267,10 +270,16 @@ export function parseSave(raw: string | null): SaveData | null {
       !Number.isFinite(s.position.z)
     )
       return null;
+    // Saves from before checkpoints: restored sanctuaries count as visited.
+    const visited = (Array.isArray(s.visited) ? s.visited : s.completed).filter(
+      (id: unknown) =>
+        typeof id === "string" && DUNGEONS.some((d) => d.id === id),
+    );
     return {
       ...def,
       ...s,
       story,
+      visited: [...new Set<string>(visited)],
       maxHealth: Math.min(30, Math.max(6, s.maxHealth)),
       health: Math.min(s.health, s.maxHealth),
       sword: Math.min(3, Math.max(1, s.sword)),
@@ -282,6 +291,35 @@ export function parseSave(raw: string | null): SaveData | null {
   } catch {
     return null;
   }
+}
+// Defeat inside a sanctuary returns the player to the start of the furthest
+// chamber reached, so broken seals stay broken for the rest of the visit.
+export function chamberStart(puzzleSolved: boolean, arenaClear: boolean) {
+  if (arenaClear) return { x: 0, z: -17, chamber: "warden" as const };
+  if (puzzleSolved) return { x: 0, z: 8, chamber: "guardians" as const };
+  return { x: 0, z: 29, chamber: "puzzle" as const };
+}
+export interface Landmark {
+  name: string;
+  x: number;
+  z: number;
+}
+// Overworld defeat returns the player to the nearest safe place they know.
+export function respawnLandmark(s: SaveData, x: number, z: number): Landmark {
+  const landmarks: Landmark[] = [
+    { name: "Alder Village", x: 0, z: 57 },
+    { name: "the Bell Sanctuary", x: 0, z: 13 },
+    ...DUNGEONS.filter((d) => s.visited.includes(d.id)).map((d) => ({
+      name: d.name.replace(/^The /, "the "),
+      x: d.x,
+      z: d.z + 7,
+    })),
+  ];
+  return landmarks.reduce((best, l) =>
+    Math.hypot(l.x - x, l.z - z) < Math.hypot(best.x - x, best.z - z)
+      ? l
+      : best,
+  );
 }
 export function sequenceStep(
   sequence: number[],

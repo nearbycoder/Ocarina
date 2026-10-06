@@ -114,10 +114,16 @@ export class UI {
       1800,
     );
   }
-  dialogue(name: string, text: string, action = "close", button = "Continue") {
+  dialogue(
+    name: string,
+    text: string,
+    action = "close",
+    button = "Continue",
+    cancel = "",
+  ) {
     this.setPanel(
       "dialogue",
-      `<div class="dialogue-box"><div class="eyebrow">${name}</div><p>${text}</p><button class="dialogue-next" data-action="${action}">${button} <span>↵</span></button></div>`,
+      `<div class="dialogue-box"><div class="eyebrow">${name}</div><p>${text}</p><div class="dialogue-buttons"><button class="dialogue-next" data-action="${action}">${button} <span>↵</span></button>${cancel ? `<button class="dialogue-next dialogue-cancel" data-action="close">${cancel} <span>Esc</span></button>` : ""}</div></div>`,
     );
   }
   story(

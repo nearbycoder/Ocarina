@@ -228,8 +228,98 @@ window.bellQA = (() => {
     );
     return results;
   }
+  // Run after start() and before dungeon("root"): defeat must keep broken seals.
+  async function checkpoint() {
+    close();
+    await interactAt(-68, 11);
+    assert(api.getState().dungeon === "root", "Checkpoint: entered the Hollow");
+    close();
+    for (const [x, z] of [
+      [7, 20],
+      [0, 14],
+      [-7, 20],
+    ])
+      await interactAt(x, z);
+    assert(api.getState().puzzleSolved, "Checkpoint: puzzle solved");
+    api.debug.damageEnemy(0, 100);
+    api.debug.damageEnemy(1, 100);
+    api.debug.teleport(-4, -11.5);
+    api.debug.setHealth(1);
+    await wait(1600);
+    let s = api.getState();
+    assert(
+      s.panel === "dialogue" && s.health === s.maxHealth,
+      "Checkpoint: a guardian's real strike defeats the player",
+    );
+    assert(
+      s.dungeon === "root" && s.puzzleSolved && !s.arenaClear,
+      "Checkpoint: defeat in the hall keeps the puzzle solved",
+    );
+    assert(
+      Math.abs(s.position.z - 8) < 0.5,
+      "Checkpoint: player wakes before the guardian hall",
+    );
+    assert(
+      s.enemies[0].state === "dead" &&
+        s.enemies[1].state === "dead" &&
+        s.enemies[2].hp === 3 &&
+        s.enemies[2].state === "idle",
+      "Checkpoint: fallen guardians stay down; survivors recover",
+    );
+    close();
+    api.debug.damageEnemy(2, 100);
+    api.debug.damageEnemy(3, 100);
+    assert(api.getState().arenaClear, "Checkpoint: guardian seal broken");
+    api.debug.teleport(0, -36);
+    api.debug.setHealth(1);
+    // The first slam may land inside the post-defeat grace period; allow a second.
+    await wait(4500);
+    s = api.getState();
+    assert(
+      s.panel === "dialogue" && s.arenaClear && s.puzzleSolved,
+      "Checkpoint: losing to the warden keeps both seals broken",
+    );
+    assert(
+      Math.abs(s.position.z + 17) < 0.5 && s.enemies[4].hp === 13,
+      "Checkpoint: player wakes before the warden, who recovers",
+    );
+    close();
+    api.debug.teleport(0, -10);
+    await key("KeyR");
+    assert(
+      api.getState().panel === "dialogue" &&
+        Math.abs(api.getState().position.z + 10) < 0.5,
+      "Checkpoint: R asks before leaving the chamber",
+    );
+    await key("Escape");
+    assert(
+      api.getState().panel === null &&
+        Math.abs(api.getState().position.z + 10) < 0.5,
+      "Checkpoint: cancelling R keeps the player in place",
+    );
+    await key("KeyR");
+    document.querySelector('[data-action="checkpoint-confirm"]').click();
+    assert(
+      Math.abs(api.getState().position.z + 17) < 0.5 &&
+        api.getState().arenaClear,
+      "Checkpoint: confirming R returns to the last broken seal",
+    );
+    await interactAt(0, 31);
+    assert(api.getState().dungeon === null, "Checkpoint: exited the Hollow");
+    close();
+    api.debug.teleport(-60, 20);
+    await key("KeyR");
+    s = api.getState();
+    assert(
+      Math.hypot(s.position.x + 68, s.position.z - 15) < 4,
+      "Checkpoint: overworld return uses the nearest visited sanctuary",
+    );
+    close();
+    return results.slice(-14);
+  }
   return {
     start,
+    checkpoint,
     dungeon,
     age,
     combat,

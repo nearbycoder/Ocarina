@@ -49,7 +49,7 @@ Desktop keyboard and mouse are recommended. Saves are automatic and stay in this
 | Kingdom map | <kbd>M</kbd> | **The Kingdom** button |
 | Journal and equipment | <kbd>Tab</kbd> | Pause menu |
 | Pause, sound, visual quality, save | <kbd>Esc</kbd> | **Ⅱ** button |
-| Return to checkpoint | <kbd>R</kbd> | — |
+| Return to checkpoint (asks first inside a sanctuary) | <kbd>R</kbd> | — |
 | Advance dialogue | <kbd>Enter</kbd> or **Continue** | **Continue** |
 
 Gamepads are not supported yet. Golden rings on the ground warn that an enemy is about to strike: raise your shield or dodge, then hit back while it recovers.
@@ -78,7 +78,7 @@ Three notes and a lot of history. Melody altars carve their songs into the stone
 
 <img src="docs/media/screenshots/05-boss.jpg" alt="Alder raises his shield as the Cinder Colossus winds up inside a golden warning ring" width="100%">
 
-Each sanctuary ends with a towering warden and its own health bar. Its slams are slow and huge, so read the ring, choose shield or dodge, and punish the recovery. Defeat it to reveal the sanctuary's relic.
+Each sanctuary ends with a towering warden and its own health bar. Its slams are slow and huge, so read the ring, choose shield or dodge, and punish the recovery. Defeat it to reveal the sanctuary's relic. Fall in a sanctuary and you wake at the last seal you broke, with its puzzle still solved and its fallen guardians still down. Fall in the wilds and you wake at the nearest place you know: the village, the Bell Sanctuary, or a sanctuary door you've reached.
 
 ### A kingdom in two ages
 
@@ -149,7 +149,7 @@ Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://w
 ```sh
 npm install
 npm run dev        # http://localhost:5174 (dev build with debug helpers)
-npm test           # 30 Vitest tests: progression, story, saves, assets, collision, combat, quality
+npm test           # 33 Vitest tests: progression, story, saves, checkpoints, assets, collision, combat, quality
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
 ```

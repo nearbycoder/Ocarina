@@ -22,6 +22,8 @@ import {
   grow,
   completeDungeon,
   sequenceStep,
+  chamberStart,
+  respawnLandmark,
   regionAt,
   type SaveData,
   type Dungeon,
@@ -710,6 +712,7 @@ export class Game {
           "Beginning again replaces the journey saved on this device. Your current story will be lost.",
           "new-confirm",
           "Begin again",
+          "Keep my journey",
         );
       } else this.begin(true);
       return;
@@ -793,6 +796,11 @@ export class Game {
       }
       return;
     }
+    if (a === "checkpoint-confirm") {
+      this.ui.setPanel(null);
+      this.checkpoint();
+      return;
+    }
     if (a.startsWith("note-")) {
       this.playNote(Number(a.slice(-1)));
       return;
@@ -807,7 +815,17 @@ export class Game {
       this.sound.start();
       this.ui.flute(this.songSequence(), this.notes);
     }
-    if (a === "checkpoint") this.checkpoint();
+    if (a === "checkpoint") {
+      if (this.world.dungeon)
+        this.ui.dialogue(
+          "RETURN TO CHECKPOINT",
+          "Return to the start of this chamber? Broken seals stay broken, but any guardians still standing, and the warden, recover their strength.",
+          "checkpoint-confirm",
+          "Return",
+          "Stay here",
+        );
+      else this.checkpoint();
+    }
   }
   interact() {
     const i = this.nearest();
@@ -870,6 +888,7 @@ export class Game {
         return;
       }
       s.position = { x: d.x, z: d.z + 7 };
+      if (!s.visited.includes(d.id)) s.visited.push(d.id);
       this.persist(false);
       this.loadWorld(d);
       if (d.id === "crown") this.startStory("crownArrival");
@@ -1601,28 +1620,71 @@ export class Game {
     setTimeout(() => (this.ui.el("damage-flash").style.opacity = "0"), 170);
     this.refreshHUD();
     if (this.save.health <= 0) {
-      this.checkpoint();
+      const where = this.checkpoint();
       this.ui.dialogue(
         "A BREATH, THEN ANOTHER",
-        "The dark does not get the last word. You wake at the entrance, sword still in hand. Watch the golden warning rings. Dodge before the blow, then strike as the guardian rests.",
+        `The dark does not get the last word. You wake ${where}, sword still in hand. Watch the golden warning rings. Dodge before the blow, then strike as the guardian rests.`,
       );
     }
   }
+  /** Restores health and returns to a safe place; describes where for the caller. */
   checkpoint() {
-    const d = this.world.dungeon;
     this.save.health = this.save.maxHealth;
-    if (d) this.loadWorld(d);
-    else {
-      this.save.position = { x: 0, z: 57 };
+    let where: string;
+    if (this.world.dungeon) {
+      const chamber = this.restartChamber();
+      where =
+        chamber === "puzzle"
+          ? "at the sanctuary entrance"
+          : chamber === "guardians"
+            ? "before the guardian hall"
+            : "before the warden's chamber";
+      this.ui.toast(
+        chamber === "puzzle"
+          ? "Returned to the sanctuary entrance."
+          : "Returned to the last broken seal. Your progress here holds.",
+      );
+    } else {
+      const p = this.hero.group.position;
+      const landmark = respawnLandmark(this.save, p.x, p.z);
+      this.save.position = { x: landmark.x, z: landmark.z };
       this.loadWorld();
+      where = `near ${landmark.name}`;
+      this.ui.toast(`Returned safely to ${landmark.name}.`);
     }
     this.invulnerable = 2;
-    this.ui.toast(
-      d
-        ? "Returned to the sanctuary entrance. Its trial begins anew."
-        : "Returned safely to Alder Village.",
-    );
     this.persist();
+    return where;
+  }
+  // Keeps solved seals and fallen guardians; standing foes and the warden recover.
+  restartChamber() {
+    const spot = chamberStart(this.puzzleSolved, this.arenaClear);
+    for (const e of this.enemies) {
+      if (e.state === "dead") continue;
+      e.hp = e.maxHp;
+      e.x = e.homeX;
+      e.z = e.homeZ;
+      e.state = "idle";
+      e.hitFlash = 0;
+      e.mesh.rotation.set(0, e.facing, 0);
+      e.mesh.position.set(e.x, this.ground(e.x, e.z), e.z);
+      (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
+    }
+    this.attackElapsed = -1;
+    this.attackTime = 0;
+    this.attackQueued = false;
+    this.recoil = -1;
+    this.hitStop = 0;
+    this.dodgeTime = 0;
+    this.trail.visible = false;
+    this.target = null;
+    this.keys.clear();
+    this.hero.group.position.set(spot.x, this.ground(spot.x, spot.z), spot.z);
+    this.hero.group.rotation.y = 0;
+    this.yaw = 0;
+    this.snapCamera();
+    this.refreshHUD();
+    return spot.chamber;
   }
   burst(x: number, y: number, z: number, color: string, count: number) {
     for (let i = 0; i < count; i++) {

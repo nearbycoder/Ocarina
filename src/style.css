@@ -799,6 +799,22 @@ blockquote {
 .dialogue-next span {
   font-size: 18px;
 }
+.dialogue-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 30px;
+}
+.dialogue-buttons .dialogue-next {
+  margin-left: 0;
+}
+.dialogue-cancel {
+  color: #cfc8ad;
+}
+.dialogue-cancel span {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
 .flute-sheet {
   text-align: center;
   width: min(590px, 94vw);
