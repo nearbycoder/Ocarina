@@ -1,6 +1,33 @@
 # Validation — 4 to 6 October 2026
 
-## Latest: input, settings, checkpoints, fonts, and hosting (6 October)
+## Latest: round 2 (6 October): wardens, guardian kinds, sanctuary layouts, audio, and puzzle feel
+
+Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-2-results). Results are recorded in [improvements-round2.json](artifacts/improvements-round2.json), and screenshots are in [`docs/media/improvements/round2/`](media/improvements/round2/).
+
+- **62 Vitest tests** pass. The production build and type check pass, and the asset pack is unchanged (0 glTF errors or warnings).
+- `node tests/run-browser-checks.mjs` passes every group:
+  - **92 campaign** (unchanged; it still pushes the Ember Vault stone with E).
+  - **40 polish**.
+  - **14 settings**.
+  - **21 gamepad**.
+  - **12 touch portrait**, including a new two-finger tap of Sword while the thumbstick is held, plus the landscape layout check.
+  - New suites: **48 warden-attack**, **17 guardian-kind**, **36 layout-reachability**, **10 audio**, and **14 puzzle** assertions.
+- The new checks drive the real state machines and collision. They force which attack comes next and step the simulation, but hits, misses, guards, staggers, slides, and footfalls come from normal game code. They include controls that must fail:
+  - A shield turned away still takes the warder's stone.
+  - Closed seals still wall off the hall and arena in the flood fill.
+  - With reduced motion off, the stall check sees hit-stop.
+- The production build loads from `/Ocarina/` with no failed or third-party requests and no console errors, and the debug API is absent.
+- `tools/media/screenshots.mjs` regenerated the README stills.
+
+Two bugs that were already in the game, found and fixed along the way:
+- The camera could enter the sanctuary gate lintel when zoomed out. The lintel now has an overhead collider.
+- The Glass Monastery toast named east and west the wrong way round.
+
+Also hardened: the touch buttons now act on press. In testing, Chromium sometimes delivered no click for a tap that followed other touches.
+
+Limits: no physical controller, phone, or tablet. Audio was verified by counting scheduled voices, not by listening. No performance numbers. No manual playthrough or difficulty tuning.
+
+## Round 1 (6 October): input, settings, checkpoints, fonts, and hosting
 
 This round is planned and tracked in [IMPROVEMENTS.md](IMPROVEMENTS.md). Results are recorded in [improvements-round1.json](artifacts/improvements-round1.json), and screenshots are in [`docs/media/improvements/`](media/improvements/).
 

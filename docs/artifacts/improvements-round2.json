@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-06",
+  "branch": "improvements-2",
+  "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
+  "unitTests": { "files": 14, "tests": 62, "passed": 62 },
+  "build": "pass",
+  "assetCheck": { "gltfErrors": 0, "gltfWarnings": 0, "contractErrors": 0 },
+  "browserAssertions": {
+    "campaign": 92,
+    "settings": 14,
+    "audio": 10,
+    "gamepad": 21,
+    "puzzles": 14,
+    "wardens": 48,
+    "guardianKinds": 17,
+    "layouts": 36,
+    "polish": 40,
+    "touchPortrait": 12,
+    "touchLandscapeLayout": 1
+  },
+  "subpathSmoke": {
+    "url": "/Ocarina/ via vite preview --base /Ocarina/",
+    "newGameStarts": true,
+    "failedRequests": 0,
+    "consoleErrors": 0,
+    "thirdPartyHosts": 0,
+    "debugApiAbsentInProduction": true
+  },
+  "mediaTooling": "tools/media/screenshots.mjs regenerated all ten README stills without errors",
+  "limits": [
+    "No physical gamepad, phone, or tablet: gamepad and touch use synthetic input",
+    "Audio checks count scheduled voices; nobody has listened to the mix",
+    "No performance numbers: the shared machine was heavily loaded",
+    "No full manual playthrough or difficulty tuning; difficulty direction is an owner decision"
+  ]
+}

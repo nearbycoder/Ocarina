@@ -253,3 +253,38 @@ Verification
 - A mirror screenshot.
 
 If an item turns out larger or riskier than planned, I'll finish the others first and report it rather than half-land it. Items 8 (balance), 11 (performance), 12 (save export), 14 (new skinned art), and 15 (traversal) stay deferred.
+
+## Round 2 results
+
+All five scoped items shipped on `improvements-2`. Two existing bugs were fixed along the way, and the touch buttons were hardened. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round2.json](artifacts/improvements-round2.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round2/`) |
+| --- | --- | --- | --- |
+| A. Warden signature attacks, stagger, shake | `cfeee6e` | 8 unit tests; 48 browser assertions on all seven real wardens | `a-volley-briar-warden`, `a-charge-drowned-scribe`, `a-shockwave-windup-cinder-colossus`, `a-shockwave-wave-cinder-colossus` |
+| B. Skirmisher and warder guardian kinds | `33c0b94` | 3 unit tests; 17 browser assertions, including a turned-away-shield control | `b-kinds-guardian-skirmisher-warder`, `b-skirmisher-lunge`, `b-warder-throw` |
+| C. Distinct halls and arenas | `a5914bf` | 4 unit tests; 36 flood-fill reachability assertions over the game's collision | `c-hall-contact-sheet`, `c-arena-contact-sheet` |
+| D. Audio pass and Music volume | `265c9fe` | 4 unit tests; 10 voice-count assertions | `d-settings-music` |
+| E. Push block and mirror beams | `3697e56` | 14 browser assertions, movement input only for the block | `e-push-block`, `e-mirror-beams` |
+| Fix: camera in gate lintels | `394c695` | Physics unit test; shockwave screenshots before and after | — |
+| Fix: touch buttons act on press | `5692297` | Touch checks, plus a two-finger assertion | — |
+
+What changed for a player:
+- **Every warden fights differently.** Childhood wardens add one signature (volley, shockwave, or charge), adult wardens two, and the King Without a Name all three, faster when wounded. Guarding a blow staggers the attacker.
+- **Halls have three kinds of guardian** (melee, lunging skirmisher, stone-throwing warder), and each sanctuary has its own layout and formation.
+- **Footsteps, regional ambience, and a warden drum** give places and fights their own sound.
+- **The Ember Vault stone is pushed by walking into it,** and the Glass Monastery mirrors show their beams.
+
+Honest notes:
+- **Difficulty moved, though the numbers didn't.** Health and damage are unchanged, and every new attack telegraphs at least as long as the attack it joins. But wardens now have attacks the shield can't stop, and warders pressure you from range, so fights ask more of you. Guarding now staggers, which gives some of it back. Nobody has played a full run to judge the net effect. The overall difficulty direction is still the owner's call.
+- **The layouts are variety inside the same spine.** The puzzle, hall, and arena still run in a straight line, with no branching rooms, keys, or shortcuts. Distinct dungeon structure (item 13 in full) is still the largest content gap.
+- **One model, reshaped.** All enemies are still the one Blender model, reshaped with scale and accessories. There is no new sculpted art or animation.
+- **Sound unheard.** The audio was checked by counting scheduled voices; nobody has listened to the mix.
+- **Hints unchanged.** Puzzle hint text is untouched; whether hints should give away answers is still the owner's call.
+
+Still deferred, and why:
+- **Balance with an autopilot (8):** blocked on the difficulty-direction decision.
+- **Performance profiling (11):** needs a quiet machine for honest numbers.
+- **Save export (12):** small, but lower value than this round's items.
+- **Skinned characters and new enemy art (14):** a large Blender job.
+- **Traversal tools (15):** a large job that needs new content built around it.
+- **Branching dungeon structure (the rest of 13):** a large job that needs new content built around it.
