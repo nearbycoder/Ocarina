@@ -164,3 +164,92 @@ Notes and differences from the plan:
 - **Hardware.** No physical controller, phone, or tablet was available, so A was verified only with synthetic input.
 
 Still open: everything ranked 7 to 15 above (combat depth, balance, puzzles, audio, performance, save export, layouts, characters, traversal). The difficulty and puzzle-hint questions remain owner decisions; this round deliberately kept today's tuning and hints.
+
+## Round 2 scope — 6 October 2026
+
+Branch `improvements-2`, from `main` after round 1 was merged. Round 1 made the existing campaign playable on every input and fairer to fail. This round goes after the largest remaining complaint: **every sanctuary and every fight feels the same**. That covers ranked items 7 (combat depth), 13 (sanctuary layouts, in a scoped form), part of 14 (enemy variety, without new skinned art), 10 (audio), and 9 (puzzle feel, without touching hints).
+
+Ground rules for this round:
+- **Difficulty direction stays an owner decision.** HP, sword damage, and damage per hit (1 for guardians, 2 for wardens) stay as they are. New attacks telegraph at least as long as today's slam. Variety is the goal, not a harder game, but new attacks do change how fights play, and I'll say so in the results.
+- **Puzzle hints stay as they are.** Item E changes how the block and the mirrors feel, not what the inscriptions say.
+- **The tooling keeps working.** Every sanctuary keeps four hall guardians (indices 0–3) and one warden (index 4). The Rootbound Hollow keeps its guardian positions, which the browser checks and media scripts use.
+
+### A. Warden signature attacks, stagger, and impact feel (item 7)
+
+Acceptance criteria
+- Each warden keeps its slam and gains a signature attack. Each signature has a ground telegraph that reads differently from the slam ring:
+  - **Root lash / surge (charge):** a long lane telegraph, then a dash along it.
+  - **Shockwave:** an expanding ring that you must be outside of, or dodge-roll through.
+  - **Volley:** three marked circles that erupt where you were standing.
+- Childhood wardens have one signature each: the Briar Warden uses volley, the Cinder Colossus shockwave, and the Drowned Scribe charge. Adult wardens have two each, and the King Without a Name uses all three, with shorter cooldowns below half health.
+- Guarding a melee strike (a warden's slam or charge, or a guardian's strike) staggers the attacker for a longer opening than a normal recovery. Shockwave and volley can't be blocked with the shield, only avoided.
+- Heavy impacts shake the camera briefly, except under reduced motion.
+- Damage values are unchanged: 2 for any warden attack.
+
+Verification
+- Unit tests for the pure hit geometry: lane distance, ring crossing, volley targets, and each warden's move list.
+- A browser check that forces each signature on a real warden and confirms three things: standing in the telegraph costs health, dodging or standing outside it doesn't, and shield blocks melee but not shockwave or volley. It also checks stagger after a guarded slam, and that camera shake is suppressed under reduced motion.
+- Screenshots of each telegraph.
+
+### B. Guardian kinds (part of item 14)
+
+Acceptance criteria
+- Two new guardian kinds join the existing melee guardian. Both are built from the existing model with clearly different proportions, accessories, and motion:
+  - **Skirmisher:** small and fast, with a short telegraphed lunge.
+  - **Warder:** keeps its distance and lobs a stone at a ring marked where you stand. Its shot can be blocked by facing it with the shield, or dodged.
+- Sanctuary halls and the overworld mix the kinds, and the minimap marks each kind differently. HP stays at the guardian scale: child 2–3, adult 3–5.
+
+Verification
+- Unit tests for kind stats and spacing logic.
+- A browser check that each kind approaches or keeps its distance as designed, that its attack telegraphs and lands with real timing, and that the warder's shot is guarded when facing it.
+- Screenshots of the three kinds side by side.
+
+### C. Distinct sanctuary halls and arenas (scoped item 13)
+
+Acceptance criteria
+- Each sanctuary gets its own authored guardian-hall layout and arena layout, with real collision:
+  - **Rootbound Hollow:** root pillars.
+  - **Ember Vault:** basalt cover walls.
+  - **Tidal Archive:** fallen shelves and pools.
+  - **Glass Monastery:** crystal clusters.
+  - **Sunken Observatory:** sundial ring.
+  - **Moonwell Crypt:** sarcophagus rows.
+  - **Silent Crown:** a colonnade.
+- Each sanctuary also gets its own four-guardian formation mixing kinds from B.
+- Every guardian, the warden, and the relic stay reachable on foot, and nothing spawns inside geometry.
+- The three-chamber spine (puzzle, hall, arena) stays. This is variety inside it, not new dungeons.
+
+Verification
+- A browser check that walks a collision grid (flood fill on the game's own collision) in each sanctuary. It confirms every guardian, the warden, and the relic are reachable from the chamber entrance and that no spawn is blocked.
+- The existing 92 campaign assertions still pass.
+- A contact sheet of all seven halls.
+
+### D. Audio pass (item 10)
+
+Acceptance criteria
+- Footsteps that follow the walk cycle and change with the surface (stone in sanctuaries, softer on grass and paths).
+- Region-specific ambient beds instead of one random sine.
+- A warden-fight drum pulse that starts when the arena wakes and stops when the warden falls.
+- Quiet UI and pickup sounds.
+- A new **Music** volume, persisted, which older stored settings default to 100%.
+- All sound stays synthesized, and the capture harness keeps working.
+
+Verification
+- Unit tests for settings migration and step timing.
+- A browser check that counts scheduled voices: footsteps scale with walking and stop when you stand still, the drums start and stop with the warden fight, and Music at 0% silences them.
+- `tools/media/screenshots.mjs` still runs.
+- Subjective sound quality can't be verified here, and I'll say so.
+
+### E. Puzzle feel: a real push block and visible mirror beams (part of item 9)
+
+Acceptance criteria
+- In the Ember Vault you push the stone by walking into it from the far side. It slides one tile at a time on collision, can't be pushed through walls, and still needs to reach the gold seal. <kbd>E</kbd> also still pushes, for accessibility.
+- In the Glass Monastery, each mirror casts a visible beam showing where it points. A beam brightens when its mirror faces north.
+- Hint text is unchanged.
+
+Verification
+- A browser check that pushes the block onto the seal using movement input only.
+- The existing campaign assertions (E-press path) still pass.
+- A mirror screenshot.
+
+If an item turns out larger or riskier than planned, I'll finish the others first and report it rather than half-land it. Items 8 (balance), 11 (performance), 12 (save export), 14 (new skinned art), and 15 (traversal) stay deferred.
