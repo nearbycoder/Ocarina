@@ -44,6 +44,7 @@ async function open(options) {
     "settings-checks.js",
     "input-checks.js",
     "foe-checks.js",
+    "puzzle-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -67,6 +68,7 @@ await inPage("campaign: prologue", async () => (await bellQA.start()).length);
 await inPage("settings", async () => (await settingsQA.run()).length);
 await inPage("audio", async () => (await settingsQA.audio()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
+await inPage("puzzles", async () => (await puzzleQA.run()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);
 await inPage("foes: kinds", async () => (await foeQA.kinds()).length);

@@ -198,6 +198,9 @@ export class Game {
   attackTime = 0;
   private collision = new CollisionWorld([]);
   private movingBlock: Collider | null = null;
+  /** Seconds spent leaning on the push block, and its slide in progress. */
+  private blockPush = 0;
+  private blockSlide: { from: number; to: number; t: number } | null = null;
   private attackElapsed = -1;
   private combo = 0;
   private attackQueued = false;
@@ -574,6 +577,8 @@ export class Game {
         }
       : null;
     this.collision.dynamic = this.movingBlock ? [this.movingBlock] : [];
+    this.blockPush = 0;
+    this.blockSlide = null;
     this.attackElapsed = -1;
     this.attackQueued = false;
     this.recoil = -1;
@@ -591,6 +596,7 @@ export class Game {
     this.arenaClear = false;
     this.bossDead = false;
     this.mirrorTurns = [1, 2, 3];
+    if (d?.puzzle === "mirrors") this.updateMirrorBeams();
     this.torchStates = [false, false, false];
     this.notes = [];
     this.attackTime = 0;
@@ -1339,9 +1345,9 @@ export class Game {
         );
     }
     if (d.puzzle === "block") {
-      i.mesh.position.z = Math.max(14, i.mesh.position.z - 2);
-      i.z = i.mesh.position.z;
-      if (this.movingBlock) this.movingBlock.z = i.z;
+      // E moves the stone a full tile at once (the accessible path).
+      this.finishBlockSlide();
+      this.setBlockZ(Math.max(14, i.z - 2));
       this.sound.tone(95, 0.3, "triangle");
       this.ui.toast("Stone grinds against stone.");
       if (i.z === 14) this.solvePuzzle();
@@ -1349,11 +1355,12 @@ export class Game {
     if (d.puzzle === "mirrors") {
       this.mirrorTurns[n] = (this.mirrorTurns[n] + 1) % 4;
       i.mesh.rotation.y = (this.mirrorTurns[n] * Math.PI) / 2;
+      this.updateMirrorBeams();
       this.sound.note(n + 1);
       if (this.mirrorTurns.every((t) => t === 0)) this.solvePuzzle();
       else
         this.ui.toast(
-          ["North", "East", "South", "West"][this.mirrorTurns[n]] +
+          ["North", "West", "South", "East"][this.mirrorTurns[n]] +
             " · the beam turns.",
         );
     }
@@ -1370,6 +1377,65 @@ export class Game {
         d.hint + " Stand near this altar and {flute} to play.",
       );
     }
+  }
+  private blockInteractable() {
+    return this.world.interactables.find((i) => i.mesh === this.world.block);
+  }
+  private setBlockZ(z: number) {
+    const i = this.blockInteractable();
+    if (!i) return;
+    i.mesh.position.z = z;
+    i.z = z;
+    if (this.movingBlock) this.movingBlock.z = z;
+  }
+  private finishBlockSlide() {
+    if (!this.blockSlide) return;
+    this.setBlockZ(this.blockSlide.to);
+    this.blockSlide = null;
+  }
+  /**
+   * Walking into the stone's far side for a moment slides it one tile toward
+   * the seal. It only ever moves along its groove, and stops on the seal.
+   */
+  updateBlock(dt: number, move: T.Vector3) {
+    const i = this.blockInteractable();
+    if (!i || this.world.dungeon?.puzzle !== "block") return;
+    if (this.blockSlide) {
+      const slide = this.blockSlide;
+      slide.t = Math.min(1, slide.t + dt / 0.3);
+      const eased = slide.t * slide.t * (3 - 2 * slide.t);
+      this.setBlockZ(slide.from + (slide.to - slide.from) * eased);
+      if (slide.t >= 1) {
+        this.blockSlide = null;
+        this.setBlockZ(slide.to);
+        if (slide.to === 14) this.solvePuzzle();
+      }
+      return;
+    }
+    const p = this.hero.group.position;
+    const leaning =
+      !this.puzzleSolved &&
+      i.z > 14 &&
+      move.z < -0.5 &&
+      Math.abs(p.x - i.x) < 1.05 &&
+      p.z > i.z + 1.1 &&
+      p.z < i.z + 1.8;
+    this.blockPush = leaning ? this.blockPush + dt : 0;
+    if (this.blockPush < 0.35) return;
+    this.blockPush = 0;
+    this.blockSlide = { from: i.z, to: Math.max(14, i.z - 2), t: 0 };
+    this.sound.tone(95, 0.3, "triangle");
+    this.sound.tone(62, 0.35, "triangle", 0.04);
+  }
+  /** Beams brighten and thicken when their mirror faces the northern star. */
+  updateMirrorBeams() {
+    this.world.puzzle.forEach((g, n) => {
+      const beam = g.getObjectByName("beam") as T.Mesh | undefined;
+      if (!beam) return;
+      const north = this.mirrorTurns[n] === 0;
+      (beam.material as T.MeshBasicMaterial).opacity = north ? 0.9 : 0.3;
+      beam.scale.set(north ? 1.8 : 1, north ? 1.8 : 1, 1);
+    });
   }
   solvePuzzle() {
     this.puzzleSolved = true;
@@ -1828,6 +1894,7 @@ export class Game {
         p.z = next.z;
       }
     }
+    this.updateBlock(dt, m);
     const traveled = Math.hypot(p.x - oldX, p.z - oldZ);
     p.y =
       this.ground(p.x, p.z) +

@@ -749,8 +749,20 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
     mesh(cylinder(0.8, 1, 0.7), wall, 0, 0.35, 0, g);
     if (d.puzzle === "mirrors") {
       mesh(box(0.15, 2.5, 1.5), "#bdd9d7", 0, 2, 0, g);
-      const beam = mesh(box(0.12, 0.1, 3), d.color, 0, 2, -1.5, g);
-      beam.material = mat(d.color, true);
+      // A long beam shows where each mirror points; it brightens facing north.
+      const beam = new T.Mesh(
+        box(0.14, 0.14, 9),
+        new T.MeshBasicMaterial({
+          color: d.color,
+          transparent: true,
+          opacity: 0.3,
+          depthWrite: false,
+        }),
+      );
+      beam.name = "beam";
+      beam.position.set(0, 2, -4.5);
+      beam.userData.skipAO = true;
+      g.add(beam);
       g.rotation.y = (Math.PI / 2) * (i + 1);
     } else if (d.puzzle === "torches") {
       mesh(cylinder(0.2, 0.3, 1.5), "#938569", 0, 1.1, 0, g);
