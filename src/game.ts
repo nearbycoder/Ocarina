@@ -29,6 +29,13 @@ import {
   type Dungeon,
 } from "./data";
 import {
+  padActions,
+  padShield,
+  shapeStick,
+  type Device,
+  type PadContext,
+} from "./input";
+import {
   SETTINGS_KEY,
   SENSITIVITY_STEP,
   VOLUME_STEP,
@@ -158,6 +165,13 @@ export class Game {
   private storageOK = true;
   private frameTimes: number[] = [];
   settings: Settings = parseSettings(null);
+  // Analog sources (length ≤ 1) and held shields from pads and touch.
+  private padMove = { x: 0, y: 0 };
+  private padHeld: boolean[] = [];
+  private padShield = false;
+  private padNav = 0;
+  private touchMove = { x: 0, y: 0 };
+  private touchShield = false;
   constructor() {
     const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
     this.renderer = new T.WebGLRenderer({
@@ -232,6 +246,7 @@ export class Game {
     this.camera.position.set(34, 22, 84);
     this.camera.lookAt(-4, 2.8, 44);
     this.loadSettings();
+    if (matchMedia("(pointer: coarse)").matches) this.setDevice("touch");
     this.ui.title(!!this.readSave());
     this.ui.onAction = (a) => this.action(a);
     this.bindInput();
@@ -667,6 +682,7 @@ export class Game {
         e.preventDefault();
       if (e.repeat) return;
       this.keys.add(e.code);
+      this.setDevice("keyboard");
       if (this.ui.panel === "flute") {
         if (["Digit1", "Digit2", "Digit3"].includes(e.code))
           this.action(`note-${e.code.slice(-1)}`);
@@ -706,7 +722,13 @@ export class Game {
       if (actions[e.code]) this.action(actions[e.code]);
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
-    window.addEventListener("blur", () => this.keys.clear());
+    window.addEventListener("blur", () => this.releaseHeld());
+    // Whatever the player touches or clicks decides which controls to show.
+    window.addEventListener(
+      "pointerdown",
+      (e) => this.setDevice(e.pointerType === "mouse" ? "keyboard" : "touch"),
+      { capture: true },
+    );
     const canvas = this.renderer.domElement;
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     canvas.addEventListener("pointerdown", (e) => {
@@ -739,15 +761,149 @@ export class Game {
       },
       { passive: true },
     );
-    document.querySelectorAll<HTMLElement>("[data-hold]").forEach((b) => {
-      b.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        this.keys.add(b.dataset.hold!);
-        b.setPointerCapture(e.pointerId);
-      });
-      for (const event of ["pointerup", "pointercancel"])
-        b.addEventListener(event, () => this.keys.delete(b.dataset.hold!));
+    // Touch thumbstick: the knob follows the finger inside the ring.
+    const stick = this.ui.el("touch-stick"),
+      knob = this.ui.el("touch-knob");
+    let stickPointer = -1;
+    const steer = (e: PointerEvent) => {
+      const r = stick.getBoundingClientRect(),
+        radius = r.width / 2;
+      let x = (e.clientX - r.left - radius) / radius,
+        y = (e.clientY - r.top - radius) / radius;
+      const length = Math.hypot(x, y);
+      if (length > 1) {
+        x /= length;
+        y /= length;
+      }
+      this.touchMove = shapeStick(x, y, 0.12, 0.85);
+      knob.style.transform = `translate(${x * radius * 0.6}px, ${y * radius * 0.6}px)`;
+    };
+    const release = () => {
+      stickPointer = -1;
+      this.touchMove = { x: 0, y: 0 };
+      knob.style.transform = "";
+    };
+    stick.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      stickPointer = e.pointerId;
+      stick.setPointerCapture(e.pointerId);
+      steer(e);
     });
+    stick.addEventListener("pointermove", (e) => {
+      if (e.pointerId === stickPointer) steer(e);
+    });
+    for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
+      stick.addEventListener(event, release);
+    const shield = this.ui.el("touch-shield");
+    shield.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      shield.setPointerCapture(e.pointerId);
+      this.touchShield = true;
+    });
+    for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
+      shield.addEventListener(event, () => (this.touchShield = false));
+  }
+  releaseHeld() {
+    this.keys.clear();
+    this.touchMove = { x: 0, y: 0 };
+    this.touchShield = false;
+  }
+  setDevice(device: Device) {
+    if (this.ui.device === device) return;
+    this.ui.setDevice(device);
+    // Open sheets that name controls are redrawn for the new device.
+    if (this.ui.panel === "pause")
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
+    else if (this.ui.panel === "flute")
+      this.ui.flute(this.songSequence(), this.notes);
+  }
+  shieldHeld() {
+    return (
+      this.keys.has("ShiftLeft") ||
+      this.keys.has("ShiftRight") ||
+      this.padShield ||
+      this.touchShield
+    );
+  }
+  /** Reads the first connected gamepad once per frame. */
+  pollGamepad(dt: number) {
+    const pads = navigator.getGamepads?.() ?? [];
+    let pad: Gamepad | null = null;
+    for (const p of pads)
+      if (p?.connected && (!pad || p.mapping === "standard")) pad = p;
+    if (!pad) {
+      this.padMove = { x: 0, y: 0 };
+      this.padShield = false;
+      this.padHeld = [];
+      return;
+    }
+    const held = pad.buttons.map((b) => b.pressed || b.value > 0.5);
+    const move = shapeStick(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
+    const look = shapeStick(pad.axes[2] ?? 0, pad.axes[3] ?? 0, 0.15);
+    if (held.some(Boolean) || move.x || move.y || look.x || look.y)
+      this.setDevice("gamepad");
+    const panel = this.ui.panel;
+    const context: PadContext =
+      panel === "flute"
+        ? "flute"
+        : panel || !this.started || this.save.story.pending
+          ? "menu"
+          : "play";
+    const actions = padActions(this.padHeld, held, context);
+    this.padHeld = held;
+    this.padShield = context === "play" && padShield(held);
+    this.padMove = context === "play" ? move : { x: 0, y: 0 };
+    if (context === "play") {
+      // Right stick: right orbits right; pushing up looks up unless inverted.
+      if (look.x || look.y)
+        this.turnCamera(look.x * dt * 2.6, look.y * dt * 1.6);
+      for (const a of actions) this.action(a);
+      return;
+    }
+    if (context === "flute") {
+      for (const a of actions) this.action(a);
+      return;
+    }
+    // Menus: the left stick also steps through buttons, with a repeat delay.
+    this.padNav = Math.max(0, this.padNav - dt);
+    if (Math.abs(move.y) > 0.6 && this.padNav <= 0) {
+      actions.push(move.y < 0 ? "focus-prev" : "focus-next");
+      this.padNav = 0.22;
+    } else if (Math.abs(move.y) < 0.3) this.padNav = 0;
+    for (const a of actions) this.menuInput(a);
+  }
+  /** Gamepad navigation for the title, menus, sheets, and dialogue. */
+  menuInput(a: string) {
+    const root = this.ui.el("panel");
+    const buttons = [
+      ...root.querySelectorAll<HTMLButtonElement>("button[data-action]"),
+    ].filter((b) => b.offsetParent !== null);
+    const focused = buttons.indexOf(
+      document.activeElement as HTMLButtonElement,
+    );
+    if (a === "focus-prev" || a === "focus-next") {
+      if (!buttons.length) return;
+      const step = a === "focus-next" ? 1 : -1;
+      const next =
+        focused < 0
+          ? step > 0
+            ? 0
+            : buttons.length - 1
+          : (focused + step + buttons.length) % buttons.length;
+      buttons[next].focus();
+      return;
+    }
+    const panel = this.ui.panel;
+    if (a === "confirm") {
+      (focused >= 0 ? buttons[focused] : buttons[0])?.click();
+    } else if (a === "back") {
+      if (panel === "settings") this.action("pause");
+      else if (panel !== "title" && !this.save.story.pending)
+        this.action("close");
+    } else if (a === "start") {
+      if (panel === "title") buttons[0]?.click();
+      else if (!this.save.story.pending) this.action("close");
+    } else if (a === "map" && panel === "map") this.action("close");
   }
   action(a: string) {
     if (
@@ -870,6 +1026,10 @@ export class Game {
       }
       return;
     }
+    if (a === "checkpoint" && this.ui.panel === "pause") {
+      this.ui.setPanel(null);
+      this.keys.clear();
+    }
     if (a === "checkpoint-confirm") {
       this.ui.setPanel(null);
       this.checkpoint();
@@ -948,7 +1108,7 @@ export class Game {
             ? "That star-forged blade will serve you well. Remember: raise your shield as the enemy strikes, then answer while they recover."
             : s.crystals >= 60
               ? "You have enough crystals. For sixty, I can forge a blade that strikes with the strength of three."
-              : `${npcReflection(s, "smith") || "A good sword needs a brave hand."} Bring me 60 crystals and I will temper yours. Hold Shift to brace your shield.`,
+              : `${npcReflection(s, "smith") || "A good sword needs a brave hand."} Bring me 60 crystals and I will temper yours. {Shield} to brace your shield.`,
           s.sword < 3 && s.crystals >= 60 ? "upgrade" : "close",
           s.sword < 3 && s.crystals >= 60
             ? "Temper the blade · 60 ◆"
@@ -1070,7 +1230,7 @@ export class Game {
     if (d.puzzle === "song" || d.puzzle === "final") {
       this.ui.dialogue(
         "THE MELODY ALTAR",
-        d.hint + " Stand near this altar and press F to play.",
+        d.hint + " Stand near this altar and {flute} to play.",
       );
     }
   }
@@ -1412,14 +1572,28 @@ export class Game {
       1.08,
     );
   }
+  /** Camera-relative movement; keys give full speed, sticks give partial. */
   movementVector() {
-    const x = Number(this.keys.has("KeyD")) - Number(this.keys.has("KeyA")),
+    let x = Number(this.keys.has("KeyD")) - Number(this.keys.has("KeyA")),
       z = Number(this.keys.has("KeyS")) - Number(this.keys.has("KeyW"));
+    const keys = Math.hypot(x, z);
+    if (keys > 0) {
+      x /= keys;
+      z /= keys;
+    } else {
+      const stick =
+        Math.hypot(this.padMove.x, this.padMove.y) >=
+        Math.hypot(this.touchMove.x, this.touchMove.y)
+          ? this.padMove
+          : this.touchMove;
+      x = stick.x;
+      z = stick.y;
+    }
     return new T.Vector3(
       x * Math.cos(this.yaw) + z * Math.sin(this.yaw),
       0,
       -x * Math.sin(this.yaw) + z * Math.cos(this.yaw),
-    ).normalize();
+    );
   }
   blocked(x: number, z: number, r = 0.4) {
     return this.collision.blocked({ x, z }, r);
@@ -1470,9 +1644,7 @@ export class Game {
     );
     const m = this.movementVector();
     const shielding =
-      (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) &&
-      this.attackElapsed < 0 &&
-      this.dodgeTime <= 0;
+      this.shieldHeld() && this.attackElapsed < 0 && this.dodgeTime <= 0;
     const speed = shielding ? 2.8 : this.save.age === "adult" ? 7 : 6.5;
     const movement =
       this.dodgeTime > 0
@@ -1677,7 +1849,7 @@ export class Game {
     if (this.invulnerable > 0 || this.ui.panel) return;
     const p = this.hero.group.position;
     if (
-      (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) &&
+      this.shieldHeld() &&
       this.attackElapsed < 0 &&
       this.dodgeTime <= 0 &&
       (!source ||
@@ -1994,6 +2166,7 @@ export class Game {
     if (this.frameTimes.length > 120) this.frameTimes.shift();
     if (raw < 0.1) this.frameTimes.push(raw * 1000);
     this.quality.sample(raw * 1000);
+    this.pollGamepad(dt);
     if (this.started && !this.ui.panel && !this.inspectMode) {
       this.simulate(dt);
       this.sound.ambient(dt, this.save.age === "adult");

@@ -86,6 +86,10 @@ h2 {
 .panel-wrap:empty {
   display: none;
 }
+/* Full sheets (pause, settings, journal, map, flute) sit above passing toasts. */
+.panel-wrap:not(.dialogue):not(.title) {
+  z-index: 6;
+}
 .panel-wrap.title {
   backdrop-filter: none;
   background: linear-gradient(
@@ -885,33 +889,64 @@ blockquote {
 #touch {
   display: none;
   position: absolute;
-  bottom: 65px;
-  left: 20px;
-  right: 20px;
+  bottom: 28px;
+  left: 22px;
+  right: 22px;
   justify-content: space-between;
+  align-items: flex-end;
   pointer-events: none;
 }
-.touch-pad,
+.touch-stick,
 .touch-actions {
   pointer-events: auto;
 }
-#touch button {
-  background: #203e3370;
+.touch-stick {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
   border: 1px solid #e7d59e55;
-  width: 47px;
-  height: 43px;
-  margin: 3px;
-  border-radius: 8px;
+  background: radial-gradient(circle, #203e3350 0 45%, #203e3388 100%);
+  touch-action: none;
 }
-.touch-pad > button {
-  margin-left: 56px;
+.touch-stick i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: #e9d6a5cc;
+  box-shadow: 0 3px 12px #0e231b66;
 }
 .touch-actions {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, 64px);
+  gap: 8px;
+  touch-action: none;
 }
 #touch .touch-actions button {
-  font-size: 10px;
+  height: 46px;
+  font-size: 11px;
+  background: #203e3388;
+  border: 1px solid #e7d59e55;
+  border-radius: 10px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#touch .touch-actions .touch-sword {
+  background: #e9d6a5d9;
+  color: #233a30;
+  font-weight: 600;
+}
+#touch-shield:active {
+  background: #e9d6a555;
+}
+body[data-device="gamepad"] #panel button:focus {
+  outline: 2px solid #efcc85;
+  outline-offset: 4px;
 }
 @media (pointer: coarse) {
   #touch:not([hidden]) {
@@ -921,7 +956,7 @@ blockquote {
     display: none;
   }
   .bottom-left {
-    bottom: 190px;
+    bottom: 186px;
   }
   .quest {
     max-width: 220px;
@@ -1328,5 +1363,31 @@ body.large-text .sheet {
   /* Keep notices clear of the objective panel on narrow screens. */
   #toast {
     top: 36%;
+  }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  /* Phone landscape: a compact minimap between the vitals and the stick. */
+  .bottom-left {
+    bottom: 172px;
+  }
+  #minimap {
+    width: 76px;
+    height: 76px;
+  }
+  .map-label {
+    display: none;
+  }
+  .touch-stick {
+    width: 116px;
+    height: 116px;
+  }
+  .touch-actions {
+    grid-template-columns: repeat(3, 62px);
+  }
+  #touch .touch-actions button {
+    height: 42px;
+  }
+  .vitals {
+    top: 14px;
   }
 }

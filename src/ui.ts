@@ -1,5 +1,21 @@
 import { DUNGEONS, objective, type SaveData } from "./data";
 import type { Settings } from "./settings";
+import { controlText, interactGlyph, noteGlyphs, type Device } from "./input";
+const CONTROLS: Record<Device, string> = {
+  keyboard:
+    "<span><kbd>W A S D</kbd> Move</span><span><kbd>J</kbd> Sword</span><span><kbd>SPACE</kbd> Dodge</span><span><kbd>Q</kbd> Lock on</span><span><kbd>F</kbd> Flute</span><span><kbd>TAB</kbd> Journal</span>",
+  gamepad:
+    "<span><kbd>LS</kbd> Move</span><span><kbd>X</kbd> Sword</span><span><kbd>B</kbd> Dodge</span><span><kbd>RB</kbd> Shield</span><span><kbd>LB</kbd> Lock on</span><span><kbd>Y</kbd> Flute</span><span><kbd>START</kbd> Pause</span>",
+  touch: "",
+};
+const HELP: Record<Device, string> = {
+  keyboard:
+    "<b>WASD</b> move · <b>Mouse drag / arrows</b> camera · <b>E</b> interact<br><b>J / click</b> sword · <b>Space</b> dodge · <b>Shift</b> shield<br><b>Q</b> lock on · <b>F</b> flute · <b>R</b> return to checkpoint",
+  gamepad:
+    "<b>Left stick</b> move · <b>Right stick</b> camera · <b>A</b> interact<br><b>X</b> sword · <b>B</b> dodge · <b>RB / RT</b> shield · <b>LB</b> lock on<br><b>Y</b> flute · <b>Back</b> map · <b>D-pad up</b> journal · <b>Start</b> pause",
+  touch:
+    "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on · <b>Flute</b> · <b>Ⅱ</b> pause",
+};
 import {
   journalEntries,
   storyPageText,
@@ -21,6 +37,7 @@ export class UI {
   panel: Panel = "title";
   onAction: (action: string) => void = () => {};
   private toastTimer = 0;
+  device: Device = "keyboard";
   constructor() {
     this.root.innerHTML = `
  <div id="vignette"></div><div id="hud" hidden>
@@ -28,16 +45,33 @@ export class UI {
  <div class="location"><span class="location-line"></span><span id="region">Alder Village</span><span class="location-line"></span><small id="compass">N</small></div>
  <button class="menu-button" data-action="pause" aria-label="Pause game">Ⅱ <span>ESC</span></button>
  <div class="quest"><span class="quest-mark">◇</span><div><small>THE JOURNEY</small><h3 id="quest-title"></h3><p id="quest-detail"></p></div></div>
- <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd>M</kbd></button></div>
+ <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd id="map-key">M</kbd></button></div>
  <div id="prompt" hidden></div><div id="boss" hidden><small id="boss-name"></small><div><i id="boss-fill"></i></div></div>
- <div class="controls"><span><kbd>W A S D</kbd> Move</span><span><kbd>J</kbd> Sword</span><span><kbd>SPACE</kbd> Dodge</span><span><kbd>Q</kbd> Lock on</span><span><kbd>F</kbd> Flute</span><span><kbd>TAB</kbd> Journal</span></div>
+ <div class="controls" id="controls"></div>
  <div id="target-dot" hidden>◇</div><div id="save-indicator">Progress saved</div></div>
  <div id="toast" role="status"></div><div id="damage-flash"></div><div id="panel"></div>
- <div id="touch" hidden><div class="touch-pad"><button data-hold="KeyW" aria-label="Move forward">↑</button><div><button data-hold="KeyA" aria-label="Move left">←</button><button data-hold="KeyS" aria-label="Move backward">↓</button><button data-hold="KeyD" aria-label="Move right">→</button></div></div><div class="touch-actions"><button data-action="attack">Sword</button><button data-action="interact">Use</button><button data-action="dodge">Dodge</button></div></div>`;
+ <div id="touch" hidden><div class="touch-stick" id="touch-stick" role="application" aria-label="Movement thumbstick"><i id="touch-knob"></i></div><div class="touch-actions"><button data-action="target">Lock</button><button data-action="flute">Flute</button><button id="touch-shield" aria-label="Shield (hold)">Shield</button><button data-action="dodge">Dodge</button><button data-action="interact">Use</button><button class="touch-sword" data-action="attack">Sword</button></div></div>`;
+    this.setDevice(this.device);
     this.root.addEventListener("click", (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
       if (b) this.onAction(b.dataset.action!);
     });
+  }
+  /** Swaps every control hint to the device the player last used. */
+  setDevice(device: Device) {
+    this.device = device;
+    document.body.dataset.device = device;
+    this.el("controls").innerHTML = CONTROLS[device];
+    this.el("map-key").textContent = device === "gamepad" ? "BACK" : "M";
+    this.el("map-key").hidden = device === "touch";
+    this.hudSignature = "";
+    const prompt = this.lastPrompt;
+    this.lastPrompt = "";
+    this.prompt(prompt);
+  }
+  /** Fills {control} placeholders for the active device. */
+  say(text: string) {
+    return controlText(text, this.device);
   }
   el(id: string) {
     return document.getElementById(id)!;
@@ -48,11 +82,16 @@ export class UI {
     this.el("panel").className = panel ? `panel-wrap ${panel}` : "";
     this.el("hud").hidden = panel === "title";
     this.el("touch").hidden = panel !== null;
+    // Pads have no pointer: start with the first choice selected.
+    if (this.device === "gamepad" && panel !== "flute")
+      this.el("panel")
+        .querySelector<HTMLElement>("button[data-action]")
+        ?.focus({ preventScroll: true });
   }
   title(hasSave: boolean) {
     this.setPanel(
       "title",
-      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? '<button class="primary" data-action="continue">Continue your journey <span>→</span></button><button class="quiet" data-action="new">Begin a new story</button>' : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}</div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse</span></div>`,
+      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? '<button class="primary" data-action="continue">Continue your journey <span>→</span></button><button class="quiet" data-action="new">Begin a new story</button>' : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}</div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse, gamepad, or touch</span></div>`,
     );
   }
   private hudSignature = "";
@@ -89,7 +128,7 @@ export class UI {
     this.el("quest-title").textContent = dungeonHint
       ? "The sanctuary trial"
       : q.title;
-    this.el("quest-detail").textContent = dungeonHint || q.detail;
+    this.el("quest-detail").textContent = this.say(dungeonHint || q.detail);
   }
   private lastPrompt = "";
   prompt(text: string) {
@@ -97,11 +136,11 @@ export class UI {
     this.lastPrompt = text;
     this.el("prompt").hidden = !text;
     this.el("prompt").innerHTML = text
-      ? `<kbd>E</kbd><span>${text}</span>`
+      ? `<kbd>${interactGlyph(this.device)}</kbd><span>${text}</span>`
       : "";
   }
   toast(text: string) {
-    this.el("toast").textContent = text;
+    this.el("toast").textContent = this.say(text);
     this.el("toast").classList.add("visible");
     clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(
@@ -125,7 +164,7 @@ export class UI {
   ) {
     this.setPanel(
       "dialogue",
-      `<div class="dialogue-box"><div class="eyebrow">${name}</div><p>${text}</p><div class="dialogue-buttons"><button class="dialogue-next" data-action="${action}">${button} <span>↵</span></button>${cancel ? `<button class="dialogue-next dialogue-cancel" data-action="close">${cancel} <span>Esc</span></button>` : ""}</div></div>`,
+      `<div class="dialogue-box"><div class="eyebrow">${name}</div><p>${this.say(text)}</p><div class="dialogue-buttons"><button class="dialogue-next" data-action="${action}">${button} <span>↵</span></button>${cancel ? `<button class="dialogue-next dialogue-cancel" data-action="close">${cancel} <span>Esc</span></button>` : ""}</div></div>`,
     );
   }
   story(
@@ -135,7 +174,7 @@ export class UI {
   ) {
     const line = scene.pages[index];
     const last = index === scene.pages.length - 1;
-    const text = storyPageText(scene, index, promise);
+    const text = this.say(storyPageText(scene, index, promise));
     this.setPanel(
       "dialogue",
       `<div class="story-heading"><span>${scene.chapter}</span><h2>${scene.title}</h2></div><div class="dialogue-box story-box" role="dialog" aria-label="${scene.title}" aria-live="polite"><div class="story-meta"><div class="eyebrow">${line.speaker}</div><small>${String(index + 1).padStart(2, "0")} / ${String(scene.pages.length).padStart(2, "0")}</small></div><p>${text}</p>${last && scene.choice ? '<div class="story-choices"><button data-action="promise-home">“I’ll find my way home.” <span>↵</span></button><button data-action="promise-remember">“I’ll remember us as we are.”</button></div><small class="story-choice-note">Your promise will be remembered. Either choice begins the seven-year crossing.</small>' : `<button class="dialogue-next" data-action="story-next">${last ? "Continue the journey" : "Continue"} <span>↵</span></button>`}</div>`,
@@ -148,7 +187,7 @@ export class UI {
       ?.action;
     this.setPanel(
       "pause",
-      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>Tab</span></button><button data-action="map">Map of the kingdom <span>M</span></button><button data-action="save">Save your journey <span>◇</span></button><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help"><b>WASD</b> move · <b>Mouse drag / arrows</b> camera · <b>E</b> interact<br><b>J / click</b> sword · <b>Space</b> dodge · <b>Shift</b> shield<br><b>Q</b> lock on · <b>F</b> flute · <b>R</b> return to checkpoint</div><p class="save-note">Saves stay in this browser on this device.</p></div>`,
+      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>Tab</span></button><button data-action="map">Map of the kingdom <span>M</span></button><button data-action="save">Save your journey <span>◇</span></button><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? "R" : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device]}</div><p class="save-note">Saves stay in this browser on this device.</p></div>`,
     );
     this.refocus(focused);
   }
@@ -176,7 +215,7 @@ export class UI {
     const memories = journalEntries(s);
     this.setPanel(
       "journal",
-      `<div class="sheet wide"><button class="close" data-action="close" aria-label="Close journal">×</button><div class="eyebrow">THE WANDERER’S JOURNAL</div><h2>A promise, kept.</h2><div class="journal-layout"><section><h3>${q.title}</h3><p>${q.detail}</p><blockquote>“When the last bell falls silent, listen for the small things that still sing.”</blockquote><div class="equipment"><h4>IN YOUR SATCHEL</h4><p>⚔ ${s.story.prologue < 4 ? "No blade yet" : s.sword === 3 ? "Star-forged blade" : s.age === "adult" ? "Keeper’s longsword" : "Practice sword"} <small>${s.sword} damage</small></p><p>◈ ${s.story.prologue < 4 ? "Visit Soren for equipment" : "Oak shield"} <small>Hold Shift</small></p><p>♫ Reed flute <small>Press F</small></p><p>✧ Wandering lights <small>${s.fireflies.length} / 3</small></p></div><p class="journal-tip">Mira is looking for three lights near the orchard, Whisperwood path, and coastal road. The smith can temper your sword for 60 crystals.</p></section><section class="relic-list">${DUNGEONS.map((d) => `<div class="relic-row ${s.completed.includes(d.id) ? "complete" : ""}"><span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><div><h4>${d.name}</h4><p>${d.region} · ${d.age === "child" ? "First age" : "Second age"}</p></div><small>${s.completed.includes(d.id) ? "RESTORED" : d.age === s.age ? "UNDISCOVERED" : "ANOTHER AGE"}</small></div>`).join("")}</section></div><section class="story-journal"><h3>What I remember</h3>${s.story.promise ? `<p class="promise-entry">My promise to Mira: “${s.story.promise === "home" ? "I’ll find my way home." : "I’ll remember us as we are."}”</p>` : ""}${memories.length ? memories.map((m) => `<details><summary>${m.title}</summary>${m.pages.map((line) => `<p><b>${line.speaker}</b><br>${line.text}</p>`).join("")}</details>`).join("") : "<p>The first page is still waiting.</p>"}</section></div>`,
+      `<div class="sheet wide"><button class="close" data-action="close" aria-label="Close journal">×</button><div class="eyebrow">THE WANDERER’S JOURNAL</div><h2>A promise, kept.</h2><div class="journal-layout"><section><h3>${q.title}</h3><p>${this.say(q.detail)}</p><blockquote>“When the last bell falls silent, listen for the small things that still sing.”</blockquote><div class="equipment"><h4>IN YOUR SATCHEL</h4><p>⚔ ${s.story.prologue < 4 ? "No blade yet" : s.sword === 3 ? "Star-forged blade" : s.age === "adult" ? "Keeper’s longsword" : "Practice sword"} <small>${s.sword} damage</small></p><p>◈ ${s.story.prologue < 4 ? "Visit Soren for equipment" : "Oak shield"} <small>${this.say("{Shield}")}</small></p><p>♫ Reed flute <small>${this.say("{Flute}")}</small></p><p>✧ Wandering lights <small>${s.fireflies.length} / 3</small></p></div><p class="journal-tip">Mira is looking for three lights near the orchard, Whisperwood path, and coastal road. The smith can temper your sword for 60 crystals.</p></section><section class="relic-list">${DUNGEONS.map((d) => `<div class="relic-row ${s.completed.includes(d.id) ? "complete" : ""}"><span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><div><h4>${d.name}</h4><p>${d.region} · ${d.age === "child" ? "First age" : "Second age"}</p></div><small>${s.completed.includes(d.id) ? "RESTORED" : d.age === s.age ? "UNDISCOVERED" : "ANOTHER AGE"}</small></div>`).join("")}</section></div><section class="story-journal"><h3>What I remember</h3>${s.story.promise ? `<p class="promise-entry">My promise to Mira: “${s.story.promise === "home" ? "I’ll find my way home." : "I’ll remember us as we are."}”</p>` : ""}${memories.length ? memories.map((m) => `<details><summary>${m.title}</summary>${m.pages.map((line) => `<p><b>${line.speaker}</b><br>${this.say(line.text)}</p>`).join("")}</details>`).join("") : "<p>The first page is still waiting.</p>"}</section></div>`,
     );
   }
   map(s: SaveData, x: number, z: number) {
@@ -188,9 +227,10 @@ export class UI {
     );
   }
   flute(sequence: number[], notes: number[]) {
+    const glyphs = noteGlyphs(this.device);
     this.setPanel(
       "flute",
-      `<div class="sheet flute-sheet"><button class="close" data-action="close" aria-label="Put away flute">×</button><div class="eyebrow">THE REED FLUTE</div><h2>Let the world listen.</h2><p>${sequence.length ? "Echo the inscription at this altar." : "A small song for a wide world."}</p><div class="notes">${[1, 2, 3].map((n) => `<button data-action="note-${n}"><span>${["", "●", "◒", "○"][n]}</span><b>${["", "Low", "Middle", "High"][n]}</b><kbd>${n}</kbd></button>`).join("")}</div><div class="played-notes">${notes.length ? notes.map((n) => ["", "●", "◒", "○"][n]).join("　") : "—　—　—"}</div><p class="save-note">${sequence.length ? `Inscription: ${sequence.map((n) => ["", "low", "middle", "high"][n]).join(" · ")}` : "Number keys 1, 2, 3 to play · Esc to put away"}</p></div>`,
+      `<div class="sheet flute-sheet"><button class="close" data-action="close" aria-label="Put away flute">×</button><div class="eyebrow">THE REED FLUTE</div><h2>Let the world listen.</h2><p>${sequence.length ? "Echo the inscription at this altar." : "A small song for a wide world."}</p><div class="notes">${[1, 2, 3].map((n) => `<button data-action="note-${n}"><span>${["", "●", "◒", "○"][n]}</span><b>${["", "Low", "Middle", "High"][n]}</b>${glyphs ? `<kbd>${glyphs[n - 1]}</kbd>` : ""}</button>`).join("")}</div><div class="played-notes">${notes.length ? notes.map((n) => ["", "●", "◒", "○"][n]).join("　") : "—　—　—"}</div><p class="save-note">${sequence.length ? `Inscription: ${sequence.map((n) => ["", "low", "middle", "high"][n]).join(" · ")}` : { keyboard: "Number keys 1, 2, 3 to play · Esc to put away", gamepad: "A, X, Y to play · B to put away", touch: "Tap a note to play · × to put away" }[this.device]}</p></div>`,
     );
   }
   ending(s: SaveData) {

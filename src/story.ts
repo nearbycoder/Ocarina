@@ -33,7 +33,7 @@ export const SCENES: Record<string, StoryScene> = {
       ),
       page(
         "A MORNING THAT STILL BELONGS TO YOU",
-        "You put your father’s reed flute in your satchel and step outside. Find Mira by the well. Move with WASD; drag the mouse to look around. Walk close and press E to talk.",
+        "You put your father’s reed flute in your satchel and step outside. Find Mira by the well. Move with {move}; {look} to look around. Walk close and {talk} to talk.",
       ),
     ],
   },
@@ -83,7 +83,7 @@ export const SCENES: Record<string, StoryScene> = {
       ),
       page(
         "SOREN",
-        "Take this practice blade and the oak shield. J to strike. Hold Shift to block, then answer while a guardian recovers. Space gets you out of reach. You needn’t win every fight. Coming home counts.",
+        "Take this practice blade and the oak shield. {Sword} to strike. {Shield} to block, then answer while a guardian recovers. {Dodge} to roll out of reach. You needn’t win every fight. Coming home counts.",
       ),
       page(
         "SOREN",
@@ -345,12 +345,15 @@ export function storyObjective(
   if (s.age !== "child") return null;
   const objectives = [
     ["The lantern morning", "Your story begins outside your home."],
-    ["A familiar face", "Find Mira by the well · WASD to move, E to talk."],
+    [
+      "A familiar face",
+      "Find Mira by the well · {moveShort} to move, {use} to talk.",
+    ],
     [
       "One small errand",
       s.fireflies.includes("orchard")
         ? "Bring the wandering light back to Mira by the well."
-        : "Find the golden light in the orchard, east of the village. E to catch it.",
+        : "Find the golden light in the orchard, east of the village. {Use} to catch it.",
     ],
     ["Someone who knows", "Speak with Soren at the forge, east of the well."],
     ["No more secrets", "Ask Elder Rowan, beside the well, about your father."],

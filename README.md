@@ -33,26 +33,26 @@ The Bell of Ages is an **original adventure inspired by classic 3D action-advent
 
 ## How to play
 
-Desktop keyboard and mouse are recommended. Saves are automatic and stay in this browser.
+Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompts, and tutorial lines follow whichever you used last. Saves are automatic and stay in this browser.
 
-| Action | Keyboard & mouse | Touch |
-| --- | --- | --- |
-| Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> | On-screen arrows |
-| Look around | Drag the mouse, or arrow keys | Drag the scene |
-| Camera distance | Mouse wheel | — |
-| Interact · talk · read · open | <kbd>E</kbd> | **Use** |
-| Sword (press again mid-swing to chain the combo) | <kbd>J</kbd> or click without dragging | **Sword** |
-| Shield (guards your front) | Hold <kbd>Shift</kbd> | — |
-| Dodge roll | <kbd>Space</kbd> | **Dodge** |
-| Lock on to the nearest enemy | <kbd>Q</kbd> | — |
-| Reed flute: play low, middle, high | <kbd>F</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | — |
-| Kingdom map | <kbd>M</kbd> | **The Kingdom** button |
-| Journal and equipment | <kbd>Tab</kbd> | Pause menu |
-| Pause, settings, visual quality, save | <kbd>Esc</kbd> | **Ⅱ** button |
-| Return to checkpoint (asks first inside a sanctuary) | <kbd>R</kbd> | — |
-| Advance dialogue | <kbd>Enter</kbd> or **Continue** | **Continue** |
+| Action | Keyboard & mouse | Gamepad (standard layout) | Touch |
+| --- | --- | --- | --- |
+| Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> | Left stick (analog) | Thumbstick (analog) |
+| Look around | Drag the mouse, or arrow keys | Right stick | Drag the scene |
+| Camera distance | Mouse wheel | — | — |
+| Interact · talk · read · open | <kbd>E</kbd> | **A** | **Use** |
+| Sword (press again mid-swing to chain the combo) | <kbd>J</kbd> or click without dragging | **X** | **Sword**, or tap the scene |
+| Shield (guards your front) | Hold <kbd>Shift</kbd> | Hold **RB** or **RT** | Hold **Shield** |
+| Dodge roll | <kbd>Space</kbd> | **B** | **Dodge** |
+| Lock on to the nearest enemy | <kbd>Q</kbd> | **LB** | **Lock** |
+| Reed flute: play low, middle, high | <kbd>F</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | **Y**, then **A** **X** **Y** | **Flute**, then tap the notes |
+| Kingdom map | <kbd>M</kbd> | **Back** | **The Kingdom** button or pause menu |
+| Journal and equipment | <kbd>Tab</kbd> | D-pad up | Pause menu |
+| Pause, settings, visual quality, save | <kbd>Esc</kbd> | **Start** | **Ⅱ** button |
+| Return to checkpoint (asks first inside a sanctuary) | <kbd>R</kbd> | Pause menu | Pause menu |
+| Advance dialogue | <kbd>Enter</kbd> or **Continue** | **A** | **Continue** |
 
-Gamepads are not supported yet. Golden rings on the ground warn that an enemy is about to strike: raise your shield or dodge, then hit back while it recovers.
+In menus a gamepad moves with the D-pad or left stick, chooses with **A**, and backs out with **B**. Gamepad support was tested with synthetic input in a headless browser, not with physical controllers, and touch with emulated touch events, not on a physical phone or tablet. Golden rings on the ground warn that an enemy is about to strike: raise your shield or dodge, then hit back while it recovers.
 
 ## Features
 
@@ -139,7 +139,7 @@ Spoiler-light.
    npx serve the-bell-of-ages        # or: python3 -m http.server --directory the-bell-of-ages
    ```
 
-3. Open the printed address in a desktop browser with **WebGL 2** (current Chrome, Edge, Firefox, or Safari).
+3. Open the printed address in a browser with **WebGL 2** (current Chrome, Edge, Firefox, or Safari). A desktop is recommended; phone performance hasn't been measured.
 
 The build is plain static files with relative asset URLs, so it can also be hosted on any web host, at the site root or in a subfolder.
 
@@ -152,7 +152,7 @@ Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://w
 ```sh
 npm install
 npm run dev        # http://localhost:5174 (dev build with debug helpers)
-npm test           # 36 Vitest tests: progression, story, saves, checkpoints, settings, assets, collision, combat, quality
+npm test           # 42 Vitest tests: progression, story, saves, checkpoints, settings, input, assets, collision, combat, quality
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
 ```
@@ -170,7 +170,7 @@ See [docs/BLENDER.md](docs/BLENDER.md) for the asset contract, budgets, and revi
 
 **Audio.** There are no audio files. Ambient tones, flute notes, chimes, and combat sounds are synthesized at runtime with the Web Audio API in [`src/audio.ts`](src/audio.ts).
 
-**Browser checks.** `tests/browser-checks.js` and `tests/polish-checks.js` hold scripted campaign, movement, and combat assertions for a dev-server page opened at `/?review=polish`. See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
+**Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, and `tests/input-checks.js` hold scripted campaign, checkpoint, movement, combat, settings, and gamepad assertions for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174). See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
 
 **Trailer and screenshots.** Everything under `docs/media/` is reproducible. With the dev server running:
 
@@ -202,7 +202,9 @@ src/
   surfaces.ts       custom surface shaders (wind, water, terrain)
   assets.ts         glTF/Meshopt loading, instancing-safe geometry
   audio.ts          Web Audio synthesis
-  ui.ts             HUD, dialogue, map, journal, menus
+  input.ts          gamepad mapping, stick shaping, device-aware control text
+  settings.ts       validated player settings (volume, camera, comfort)
+  ui.ts             HUD, dialogue, map, journal, menus, settings
 tests/              Vitest suites + in-browser check scripts
 scripts/            Blender asset build, compression, validation
 art/blender/        editable .blend source library
@@ -244,7 +246,7 @@ The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from
 - **One enemy design.** Field guardians and all seven wardens use a single Blender model (scaled and tinted) with one melee state machine; bosses differ in health, damage, and size.
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.
-- **Input coverage.** No gamepad support. Touch controls cover moving, the camera, sword, interact, and dodge; the shield, lock-on, and flute (needed for melody puzzles) currently require a keyboard.
+- **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Controls can't be remapped yet.
 - **Hardware.** Requires WebGL 2. Performance has been sampled at about 60 FPS on a few desktop configurations and is not validated across devices or browsers.
 - **Saves are per browser.** They live in `localStorage`, and clearing site data removes them.
 - **Validation.** Automated tests and scripted browser checks cover progression, collision, and combat. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
