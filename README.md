@@ -140,7 +140,9 @@ Spoiler-light.
 
 3. Open the printed address in a desktop browser with **WebGL 2** (current Chrome, Edge, Firefox, or Safari).
 
-The build is plain static files, so it can also be hosted on GitHub Pages or any web host, at the site root or in a subfolder.
+The build is plain static files with relative asset URLs, so it can also be hosted on any web host, at the site root or in a subfolder.
+
+**Hosted build (not live yet).** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the game, and publishes `dist/` to GitHub Pages. It only runs when started by hand, and it has not been run, so there is no hosted build at the moment. To publish, enable Pages with **GitHub Actions** as the source (Settings → Pages), then run **Deploy web build to GitHub Pages** from the Actions tab. The production build has been checked when served from a `/Ocarina/` subfolder.
 
 ## Build from source
 
