@@ -11,7 +11,7 @@
 // pages use real touch events through the Chrome DevTools Protocol. Pages use
 // /?review=polish, so the player's normal save is never read or written.
 import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 
 const BASE = process.env.BELL_URL || "http://127.0.0.1:5174/";
 const URL = new globalThis.URL("?review=polish", BASE).href;
@@ -100,6 +100,109 @@ await inPage("polish: scenery", async () => {
 await inPage("polish: sword", async () => (await polishQA.sword()).length);
 await inPage("polish: combo", async () => (await polishQA.combo()).length);
 await page.close();
+
+// Journey files: export through the pause menu, import on a fresh page.
+await run("journey files", async () => {
+  const results = [];
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    results.push(message);
+  };
+  const stored = (p) =>
+    p.evaluate(() => localStorage.getItem("bell-of-ages-save-v1"));
+  const source = await open({ viewport: { width: 1280, height: 800 } });
+  check((await stored(source)) === null, "No stored save before the check");
+  await source.evaluate(async () => {
+    await bellQA.start();
+    bellQA.close();
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    game.save.crystals = 42;
+    game.save.fireflies = ["orchard", "woods"];
+    api.debug.teleport(12, 40);
+    api.debug.action("pause");
+  });
+  const [download] = await Promise.all([
+    source.waitForEvent("download"),
+    source.click('[data-action="export"]'),
+  ]);
+  const dir = new globalThis.URL("../.capture/round3/", import.meta.url);
+  mkdirSync(dir, { recursive: true });
+  const file = new globalThis.URL("journey.json", dir).pathname;
+  await download.saveAs(file);
+  check(
+    /^bell-of-ages-journey-\d{4}-\d\d-\d\d\.json$/.test(
+      download.suggestedFilename(),
+    ),
+    `Export names the file by date (${download.suggestedFilename()})`,
+  );
+  const exported = JSON.parse(readFileSync(file, "utf8"));
+  check(
+    exported.game === "the-bell-of-ages" &&
+      exported.save.crystals === 42 &&
+      Math.abs(exported.save.position.x - 12) < 0.5,
+    "The file holds the journey in memory, including where Alder stands",
+  );
+  check((await stored(source)) === null, "Exporting writes no stored save");
+  await source.close();
+  // A fresh page starts at the title and imports the file.
+  const fresh = await open({ viewport: { width: 1280, height: 800 } });
+  const choose = async (files) => {
+    const [chooser] = await Promise.all([
+      fresh.waitForEvent("filechooser"),
+      fresh.click('[data-action="import"]'),
+    ]);
+    await chooser.setFiles(files);
+    await fresh.waitForSelector(".dialogue-box");
+    return fresh.textContent(".dialogue-box");
+  };
+  const summary = await choose(file);
+  check(
+    summary.includes("IMPORT A JOURNEY") &&
+      summary.includes("42 crystals") &&
+      summary.includes("2 / 3 wandering lights"),
+    "Importing shows what the file holds before anything changes",
+  );
+  await fresh.click('[data-action="import-confirm"]');
+  const state = await fresh.evaluate(() => window.__BELL_OF_AGES__.getState());
+  check(
+    state.crystals === 42 &&
+      state.story.prologue === 5 &&
+      Math.abs(state.position.x - 12) < 0.5 &&
+      Math.abs(state.position.z - 40) < 0.5 &&
+      state.panel === null,
+    "Confirming continues the imported journey where it was exported",
+  );
+  // A damaged file is refused from the pause menu and changes nothing.
+  await fresh.evaluate(() => window.__BELL_OF_AGES__.debug.action("pause"));
+  const refused = await choose({
+    name: "journey.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"game":"the-bell-of-ages","save":{"version":1'),
+  });
+  check(
+    refused.includes("isn’t a journey file") &&
+      (await fresh.evaluate(
+        () => window.__BELL_OF_AGES__.getState().crystals,
+      )) === 42,
+    "A damaged file is refused and the journey is unchanged",
+  );
+  await fresh.click('.dialogue-box [data-action="close"]');
+  await fresh.evaluate(() => window.__BELL_OF_AGES__.debug.action("pause"));
+  const other = await choose({
+    name: "other.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ game: "another", save: {} })),
+  });
+  check(other.includes("another game"), "Another game's file is refused");
+  check(
+    (await stored(fresh)) === null,
+    "Review pages never write the imported journey to storage",
+  );
+  await fresh.close();
+  return results.length;
+});
 
 // Touch: a phone in portrait, driven only by taps, drags, and holds.
 const touchResults = [];

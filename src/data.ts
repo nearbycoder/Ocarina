@@ -275,13 +275,14 @@ export function parseSave(raw: string | null): SaveData | null {
       (id: unknown) =>
         typeof id === "string" && DUNGEONS.some((d) => d.id === id),
     );
+    const maxHealth = Math.min(30, Math.max(6, s.maxHealth));
     return {
       ...def,
       ...s,
       story,
       visited: [...new Set<string>(visited)],
-      maxHealth: Math.min(30, Math.max(6, s.maxHealth)),
-      health: Math.min(s.health, s.maxHealth),
+      maxHealth,
+      health: Math.min(s.health, maxHealth),
       sword: Math.min(3, Math.max(1, s.sword)),
       position: {
         x: Math.max(-140, Math.min(140, s.position.x)),
@@ -291,6 +292,56 @@ export function parseSave(raw: string | null): SaveData | null {
   } catch {
     return null;
   }
+}
+// A journey file the player can keep outside the browser. The save inside it
+// passes through parseSave on the way back in, like a stored save.
+export const EXPORT_GAME = "the-bell-of-ages";
+export function exportSave(s: SaveData, now = new Date()) {
+  return JSON.stringify(
+    { game: EXPORT_GAME, format: 1, exported: now.toISOString(), save: s },
+    null,
+    1,
+  );
+}
+export function exportName(now = new Date()) {
+  const day = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+    .map((n) => String(n).padStart(2, "0"))
+    .join("-");
+  return `bell-of-ages-journey-${day}.json`;
+}
+/** Reads a journey file (or a bare save); explains what is wrong if it can't. */
+export function importSave(
+  text: string,
+): { save: SaveData; error?: undefined } | { save?: undefined; error: string } {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { error: "This file isn’t a journey file. Nothing was changed." };
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data))
+    return { error: "This file isn’t a journey file. Nothing was changed." };
+  const file = data as Record<string, unknown>;
+  if ("game" in file && file.game !== EXPORT_GAME)
+    return { error: "This file belongs to another game. Nothing was changed." };
+  const save = parseSave(JSON.stringify("game" in file ? file.save : file));
+  return save
+    ? { save }
+    : {
+        error:
+          "This journey file is damaged or from a newer version. Nothing was changed.",
+      };
+}
+/** One line describing a journey, shown before it replaces another. */
+export function saveSummary(s: SaveData) {
+  return [
+    s.age === "child"
+      ? "the first age, childhood"
+      : "the second age, adulthood",
+    `${s.completed.length} / 7 relics`,
+    `${s.crystals} crystals`,
+    `${s.fireflies.length} / 3 wandering lights`,
+  ].join(" · ");
 }
 // Defeat inside a sanctuary returns the player to the start of the furthest
 // chamber reached, so broken seals stay broken for the rest of the visit.

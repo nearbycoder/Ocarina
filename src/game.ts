@@ -17,6 +17,10 @@ import {
   SAVE_KEY,
   newSave,
   parseSave,
+  exportName,
+  exportSave,
+  importSave,
+  saveSummary,
   canEnter,
   canGrow,
   grow,
@@ -235,6 +239,8 @@ export class Game {
   private lastPointer = { x: 0, y: 0 };
   private trail: T.Mesh;
   private storageOK = true;
+  /** A checked journey file waiting for the player to confirm it. */
+  private pendingImport: SaveData | null = null;
   private frameTimes: number[] = [];
   settings: Settings = parseSettings(null);
   // Analog sources (length ≤ 1) and held shields from pads and touch.
@@ -411,13 +417,17 @@ export class Game {
       return null;
     }
   }
-  persist(show = true) {
-    if (!this.started || this.review) return;
+  /** Records where the hero stands; inside a sanctuary, its door is kept. */
+  syncPosition() {
     if (!this.world.dungeon)
       this.save.position = {
         x: this.hero.group.position.x,
         z: this.hero.group.position.z,
       };
+  }
+  persist(show = true) {
+    if (!this.started || this.review) return;
+    this.syncPosition();
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.save));
       if (show) this.ui.saved();
@@ -429,10 +439,10 @@ export class Game {
       this.storageOK = false;
     }
   }
-  begin(fresh: boolean) {
+  begin(fresh: boolean, imported?: SaveData) {
     this.inspectMode = false;
     const stored = this.readSave();
-    this.save = fresh ? newSave() : stored || newSave();
+    this.save = imported ?? (fresh ? newSave() : stored || newSave());
     this.started = true;
     this.sound.start();
     this.replaceHero();
@@ -865,6 +875,11 @@ export class Game {
       if (actions[e.code]) this.action(actions[e.code]);
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    const importFile = this.ui.el("import-file") as HTMLInputElement;
+    importFile.addEventListener("change", () => {
+      const file = importFile.files?.[0];
+      if (file) void this.readJourneyFile(file);
+    });
     window.addEventListener("blur", () => this.releaseHeld());
     // Whatever the player touches or clicks decides which controls to show.
     window.addEventListener(
@@ -1089,6 +1104,18 @@ export class Game {
       this.begin(false);
       return;
     }
+    if (a === "import") {
+      const input = this.ui.el("import-file") as HTMLInputElement;
+      input.value = "";
+      input.click();
+      return;
+    }
+    if (a === "import-confirm") {
+      const save = this.pendingImport;
+      this.pendingImport = null;
+      if (save) this.begin(false, save);
+      return;
+    }
     if (a === "close") {
       if (!this.started) {
         this.ui.title(!!this.readSave());
@@ -1128,6 +1155,10 @@ export class Game {
     }
     if (a === "save") {
       this.persist();
+      return;
+    }
+    if (a === "export") {
+      this.exportJourney();
       return;
     }
     if (a === "sound") {
@@ -1203,6 +1234,40 @@ export class Game {
         );
       else this.checkpoint();
     }
+  }
+  /** Downloads the journey in memory, so it works without browser storage. */
+  exportJourney() {
+    this.syncPosition();
+    const name = exportName();
+    const url = URL.createObjectURL(
+      new Blob([exportSave(this.save)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.ui.toast(
+      `Journey file saved as ${name}. Import it here or in another browser to continue.`,
+    );
+  }
+  /** Checks a chosen journey file, then asks before it replaces anything. */
+  async readJourneyFile(file: File) {
+    const result = importSave(await file.text());
+    if (result.error !== undefined) {
+      this.pendingImport = null;
+      this.ui.dialogue("JOURNEY FILE", result.error);
+      return;
+    }
+    this.pendingImport = result.save;
+    const replaces = this.started || !!this.readSave();
+    this.ui.dialogue(
+      "IMPORT A JOURNEY",
+      `In this file: ${saveSummary(result.save)}.${replaces ? " It will replace the journey saved on this device." : ""}`,
+      "import-confirm",
+      "Continue this journey",
+      replaces ? "Keep my journey" : "Not now",
+    );
   }
   interact() {
     const i = this.nearest();
