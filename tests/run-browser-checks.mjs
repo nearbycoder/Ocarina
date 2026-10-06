@@ -99,6 +99,7 @@ await inPage("polish: scenery", async () => {
 });
 await inPage("polish: sword", async () => (await polishQA.sword()).length);
 await inPage("polish: combo", async () => (await polishQA.combo()).length);
+await inPage("polish: sparks", async () => (await polishQA.sparks()).length);
 await page.close();
 
 // Keyboard remapping on its own page, so rebinds can't leak into other groups.

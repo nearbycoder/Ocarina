@@ -62,7 +62,46 @@ const rebind = async (page, pairs) => {
   }
 };
 
+// A sword hit in the Rootbound Hollow, frozen 0.12 s after contact.
+const sparkHit = (page) =>
+  page.evaluate(() => {
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    api.debug.enter("root");
+    bellQA.close();
+    game.puzzleSolved = true;
+    game.world.gates[0].visible = false;
+    for (const i of [1, 2, 3]) api.debug.damageEnemy(i, 100);
+    api.debug.teleport(0, -3);
+    api.debug.advance(1.5);
+    game.yaw = 0.7;
+    game.pitch = 0.18;
+    game.distance = 4.6;
+    api.debug.face(0);
+    api.debug.placeEnemy(0, 0, -4.5);
+    game.enemies[0].hp = 99;
+    // A seeded random sequence makes the sparks fly the same way every run.
+    let seed = 7;
+    Math.random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+    for (let t = 0; t < 120 && game.enemies[0].hp === 99; t++)
+      api.debug.advance(1 / 120);
+    api.debug.advance(0.12);
+    game.snapCamera();
+  });
+
 const SHOTS = {
+  async "c-sparks"(page) {
+    await started(page);
+    await sparkHit(page);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    await page.screenshot({
+      path: `${OUT}/${process.env.BELL_SHOT_NAME || "c-sparks"}.jpg`,
+      type: "jpeg",
+      quality: 86,
+    });
+  },
   async "b-settings-keys"(page) {
     await started(page);
     await page.evaluate(() => {

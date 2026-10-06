@@ -96,6 +96,7 @@ import { skyDome, Quality } from "./atmosphere";
 import { visualTime, visualEye, grassReach } from "./surfaces";
 import { updateNature } from "./nature";
 import { UI } from "./ui";
+import { Sparks } from "./sparks";
 import { Sound, stepsBetween, surfaceAt } from "./audio";
 import {
   SCENES,
@@ -169,12 +170,6 @@ function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
   parent.add(m);
   return m;
 }
-interface Effect {
-  mesh: T.Mesh;
-  life: number;
-  max: number;
-  velocity: T.Vector3;
-}
 export class Game {
   scene = new T.Scene();
   camera = new T.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 650);
@@ -196,7 +191,7 @@ export class Game {
   sun = new T.DirectionalLight("#ffe2ab", 3.1);
   keys = new Set<string>();
   enemies: Enemy[] = [];
-  effects: Effect[] = [];
+  sparks = new Sparks();
   started = false;
   elapsed = 0;
   last = 0;
@@ -328,7 +323,7 @@ export class Game {
     this.trail.frustumCulled = false;
     this.trail.userData.skipAO = true;
     this.trail.visible = false;
-    this.scene.add(this.trail);
+    this.scene.add(this.trail, this.sparks.mesh);
     this.scene.add(this.hero.group);
     this.loadWorld();
     this.hero.group.position.set(0, heightAt(0, 57), 57);
@@ -588,11 +583,7 @@ export class Game {
       e.marks.removeFromParent();
     });
     this.enemies = [];
-    this.effects.forEach((e) => {
-      e.mesh.geometry.dispose();
-      e.mesh.removeFromParent();
-    });
-    this.effects = [];
+    this.sparks.clear();
     this.world = d ? buildDungeon(d, this.save) : buildOverworld(this.save);
     this.scene.add(this.world.group);
     for (const c of this.world.colliders) {
@@ -2524,39 +2515,10 @@ export class Game {
     return spot.chamber;
   }
   burst(x: number, y: number, z: number, color: string, count: number) {
-    for (let i = 0; i < count; i++) {
-      const m = new T.Mesh(
-        new T.IcosahedronGeometry(0.07 + Math.random() * 0.05, 0),
-        mat(color, true),
-      );
-      m.position.set(x, y, z);
-      this.scene.add(m);
-      const life = 0.45 + Math.random() * 0.5;
-      this.effects.push({
-        mesh: m,
-        life,
-        max: life,
-        velocity: new T.Vector3(
-          (Math.random() - 0.5) * 6,
-          Math.random() * 4,
-          (Math.random() - 0.5) * 6,
-        ),
-      });
-    }
+    this.sparks.burst(x, y, z, color, count);
   }
   updateEffects(dt: number) {
-    for (let i = this.effects.length - 1; i >= 0; i--) {
-      const e = this.effects[i];
-      e.life -= dt;
-      e.velocity.y -= dt * 6;
-      e.mesh.position.addScaledVector(e.velocity, dt);
-      e.mesh.scale.setScalar(Math.max(0, e.life / e.max));
-      if (e.life <= 0) {
-        e.mesh.geometry.dispose();
-        e.mesh.removeFromParent();
-        this.effects.splice(i, 1);
-      }
-    }
+    this.sparks.update(dt);
     for (const i of this.world.interactables) {
       if (i.kind === "firefly" || i.kind === "relic") {
         i.mesh.rotation.y += dt * 0.8;

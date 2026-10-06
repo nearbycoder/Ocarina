@@ -145,5 +145,66 @@ window.polishQA = (() => {
     );
     return results;
   }
-  return { scenery, sword, combo, results, key, wait };
+  // Fifty real sword hits: sparks show and fade, and no hit allocates geometry.
+  async function sparks() {
+    const game = api.debug.game(),
+      info = game.renderer.info.memory;
+    const frame = () => new Promise(requestAnimationFrame);
+    api.debug.enter("root");
+    bellQA.close();
+    game.puzzleSolved = true;
+    game.world.gates[0].visible = false;
+    // Only guardian 0 stays, so nothing else interrupts a swing.
+    for (const i of [1, 2, 3]) api.debug.damageEnemy(i, 100);
+    api.debug.teleport(0, -3);
+    api.debug.advance(1.5);
+    await frame();
+    await frame();
+    let geometries = info.geometries,
+      children = game.scene.children.length,
+      hits = 0,
+      most = 0,
+      peak = geometries,
+      seen = false;
+    // Five warm-up swings first: telegraphs and shaders upload once on first use.
+    for (let n = -5; n < 50; n++) {
+      if (n === 0) {
+        geometries = peak = info.geometries;
+        children = game.scene.children.length;
+        hits = 0;
+      }
+      const p = game.hero.group.position;
+      api.debug.face(0);
+      api.debug.placeEnemy(0, p.x, p.z - 1.5);
+      game.enemies[0].hp = 99;
+      api.debug.setHealth(game.save.maxHealth);
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      // Step until the swing is over, so each press is a fresh swing.
+      for (let t = 0; t < 15 && (t < 2 || game.attackElapsed >= 0); t++) {
+        api.debug.advance(0.12);
+        most = Math.max(most, game.sparks.alive);
+        await frame();
+        seen ||= game.sparks.mesh.visible && game.sparks.alive > 0;
+        peak = Math.max(peak, info.geometries);
+      }
+      if (game.enemies[0].hp < 99) hits++;
+    }
+    assert(hits === 50, `Fifty swings land fifty hits (${hits})`);
+    assert(seen && most >= 7, `Sparks show on hits (up to ${most} at once)`);
+    assert(
+      peak === geometries && game.scene.children.length === children,
+      `Hits add no geometries (${geometries} before, ${peak} at most)`,
+    );
+    api.debug.damageEnemy(0, 100);
+    api.debug.advance(1.5);
+    assert(
+      game.sparks.alive === 0 && !game.sparks.mesh.visible,
+      `Sparks fade out once the fight stops (${game.sparks.alive} left, panel ${api.getState().panel})`,
+    );
+    await bellQA.interactAt(0, 31);
+    bellQA.close();
+    return results;
+  }
+  return { scenery, sword, combo, sparks, results, key, wait };
 })();
