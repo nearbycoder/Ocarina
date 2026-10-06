@@ -2,7 +2,7 @@
   "date": "2026-10-06",
   "branch": "improvements-2",
   "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
-  "unitTests": { "files": 14, "tests": 62, "passed": 62 },
+  "unitTests": { "files": 12, "tests": 62, "passed": 62 },
   "build": "pass",
   "assetCheck": { "gltfErrors": 0, "gltfWarnings": 0, "contractErrors": 0 },
   "browserAssertions": {
