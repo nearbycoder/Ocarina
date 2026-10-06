@@ -124,7 +124,7 @@ Spoiler-light.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
 - **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), a sword upgrade, and campfire healing.
 - **Visual quality modes:** Adaptive, High detail, and Performance (<kbd>Esc</kbd> → Visual quality).
-- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, and ambience volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, damage flash, or sliding interface; on by default when your system asks for reduced motion); and larger interface text. Settings are stored apart from your save.
+- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, ambience, and music volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); and larger interface text. Settings are stored apart from your save.
 
 ## Screenshots
 
@@ -174,7 +174,7 @@ npm run assets:check   # validate public/models/alder-kit.optimized.glb only
 
 See [docs/BLENDER.md](docs/BLENDER.md) for the asset contract, budgets, and review scenes.
 
-**Audio.** There are no audio files. Ambient tones, flute notes, chimes, and combat sounds are synthesized at runtime with the Web Audio API in [`src/audio.ts`](src/audio.ts).
+**Audio.** There are no audio files. Everything is synthesized at runtime with the Web Audio API in [`src/audio.ts`](src/audio.ts): flute notes, chimes, and combat sounds; footsteps that change with the surface (stone, path, grass, sand, snow); ambient beds per region (birdsong in the Whisperwood, surf on the coast, wind over Cinderpeak and the Saffron Wastes, glassy chimes in Frostveil, drips in the Fen and the sanctuaries); a drum pulse during warden fights; and soft UI and crystal pickup sounds. The browser checks confirm these voices are scheduled when they should be. Nobody has listened to the new mix yet, so its balance is untested.
 
 **Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, and `tests/input-checks.js` hold scripted campaign, checkpoint, movement, combat, settings, and gamepad assertions for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174). See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
 

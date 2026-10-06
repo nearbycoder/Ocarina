@@ -71,6 +71,7 @@ import {
   disposeWorld,
   character,
   heightAt,
+  pathDistance,
   mesh,
   box,
   sphere,
@@ -84,7 +85,7 @@ import { skyDome, Quality } from "./atmosphere";
 import { visualTime, visualEye, grassReach } from "./surfaces";
 import { updateNature } from "./nature";
 import { UI } from "./ui";
-import { Sound } from "./audio";
+import { Sound, stepsBetween, surfaceAt } from "./audio";
 import {
   SCENES,
   finishScene,
@@ -316,7 +317,10 @@ export class Game {
     this.loadSettings();
     if (matchMedia("(pointer: coarse)").matches) this.setDevice("touch");
     this.ui.title(!!this.readSave());
-    this.ui.onAction = (a) => this.action(a);
+    this.ui.onAction = (a) => {
+      if (this.started) this.sound.ui();
+      this.action(a);
+    };
     this.bindInput();
     window.addEventListener("resize", () => {
       this.camera.aspect = innerWidth / innerHeight;
@@ -373,13 +377,20 @@ export class Game {
         s[key] = !s[key];
     } else if (key === "sensitivity")
       s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
-    else if (key === "master" || key === "effects" || key === "ambience")
+    else if (
+      key === "master" ||
+      key === "effects" ||
+      key === "ambience" ||
+      key === "music"
+    )
       s[key] = volume(s[key] + sign * VOLUME_STEP, s[key]);
     this.applySettings(true);
     // Let the player hear the level they just chose.
     this.sound.start();
     if (key === "ambience")
       this.sound.tone(220, 1.2, "sine", 0.05, 0, "ambience");
+    else if (key === "music")
+      this.sound.tone(70, 0.4, "sine", 0.11, 0, "music", 38);
     else if (
       key === "master" ||
       key === "effects" ||
@@ -1612,6 +1623,7 @@ export class Game {
       e.state = "dead";
       e.mesh.visible = false;
       this.save.crystals += e.boss ? 15 : 3;
+      this.sound.pickup();
       this.save.health = Math.min(
         this.save.maxHealth,
         this.save.health + (e.boss ? 4 : 1),
@@ -1852,7 +1864,16 @@ export class Game {
       14,
       dt,
     );
+    const stride = this.gait;
     this.gait += traveled * 2.1;
+    if (walking && stepsBetween(stride, this.gait))
+      this.sound.step(
+        surfaceAt(
+          !!this.world.dungeon,
+          regionAt(p.x, p.z),
+          pathDistance(p.x, p.z),
+        ),
+      );
     const swing = Math.sin(this.gait) * 0.48 * this.walkBlend;
     this.hero.legs[0].rotation.x = swing;
     this.hero.legs[1].rotation.x = -swing;
@@ -2158,6 +2179,15 @@ export class Game {
       e.mesh.rotation.x = 0;
       this.burst(e.x, this.ground(e.x, e.z) + 1.6, e.z, "#f3e2b0", 8);
     }
+  }
+  /** True while a living warden's arena is awake and the hero is in it. */
+  wardenAwake() {
+    return (
+      !!this.world.dungeon &&
+      this.arenaClear &&
+      this.hero.group.position.z < -22 &&
+      this.enemies.some((e) => e.boss && e.state !== "dead")
+    );
   }
   clearMarks(e: Enemy) {
     (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
@@ -2526,7 +2556,13 @@ export class Game {
     this.pollGamepad(dt);
     if (this.started && !this.ui.panel && !this.inspectMode) {
       this.simulate(dt);
-      this.sound.ambient(dt, this.save.age === "adult");
+      this.sound.ambient(
+        dt,
+        this.save.age === "adult",
+        this.region,
+        !!this.world.dungeon,
+      );
+      this.sound.battle(dt, this.wardenAwake());
       this.saveTime += dt;
       if (this.saveTime > 25) {
         this.saveTime = 0;

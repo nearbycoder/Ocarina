@@ -6,6 +6,8 @@ export interface Settings {
   master: number;
   effects: number;
   ambience: number;
+  /** The warden-fight drums. Older stored settings default to 100. */
+  music: number;
   muted: boolean;
   /** Camera speed multiplier, 0.5–2 in steps of 0.25. */
   sensitivity: number;
@@ -23,6 +25,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     master: 100,
     effects: 100,
     ambience: 100,
+    music: 100,
     muted: false,
     sensitivity: 1,
     invertY: false,
@@ -62,6 +65,7 @@ export function parseSettings(
     master: volume(s.master, def.master),
     effects: volume(s.effects, def.effects),
     ambience: volume(s.ambience, def.ambience),
+    music: volume(s.music, def.music),
     muted: flag("muted"),
     sensitivity: sensitivity(s.sensitivity, def.sensitivity),
     invertY: flag("invertY"),
@@ -70,9 +74,9 @@ export function parseSettings(
   };
 }
 /** Linear gain for a voice on the given bus; 0 means the voice is silent. */
-export function busGain(s: Settings, bus: "effects" | "ambience") {
+export function busGain(s: Settings, bus: "effects" | "ambience" | "music") {
   if (s.muted) return 0;
-  return (
-    (s.master / 100) * ((bus === "effects" ? s.effects : s.ambience) / 100)
-  );
+  const level =
+    bus === "effects" ? s.effects : bus === "ambience" ? s.ambience : s.music;
+  return (s.master / 100) * (level / 100);
 }

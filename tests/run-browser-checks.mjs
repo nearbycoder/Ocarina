@@ -65,6 +65,7 @@ const page = await open({ viewport: { width: 1280, height: 800 } });
 const inPage = (label, fn, arg) => run(label, () => page.evaluate(fn, arg));
 await inPage("campaign: prologue", async () => (await bellQA.start()).length);
 await inPage("settings", async () => (await settingsQA.run()).length);
+await inPage("audio", async () => (await settingsQA.audio()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);

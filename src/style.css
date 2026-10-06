@@ -1288,8 +1288,8 @@ body[data-device="gamepad"] #panel button:focus {
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  min-height: 42px;
-  padding: 5px 14px;
+  min-height: 38px;
+  padding: 4px 14px;
   border: 1px solid #c5c19d23;
   background: #c4c89b06;
   margin-top: 6px;

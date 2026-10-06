@@ -116,5 +116,100 @@ window.settingsQA = (() => {
     bellQA.close();
     return results;
   }
-  return { run, results };
+  // Counts the voices the game schedules; it cannot judge how they sound.
+  async function audio() {
+    const sound = game.sound;
+    const count = (tag) => sound.stats[tag] ?? 0;
+    const reset = () => (sound.stats = {});
+    const realTime = async (ms) => {
+      window.BELL_TEST_MANUAL = false;
+      api.debug.resume();
+      await new Promise((r) => setTimeout(r, ms));
+      game.inspectMode = true;
+      window.BELL_TEST_MANUAL = true;
+    };
+    bellQA.close();
+    game.loadSettings();
+    sound.start();
+    // Footsteps follow the walk and stop when standing still.
+    api.debug.teleport(-8, 70);
+    game.yaw = 0;
+    reset();
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+    api.debug.advance(1);
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }));
+    const walked = count("step");
+    assert(
+      walked >= 3 && walked <= 8,
+      `Walking one second makes ${walked} footstep voices`,
+    );
+    reset();
+    api.debug.advance(1);
+    assert(count("step") === 0, "Standing still makes no footsteps");
+    assert(
+      ["grass", "path", "stone"].includes(sound.lastSurface),
+      `Village footsteps are on ${sound.lastSurface}`,
+    );
+    api.debug.teleport(-60, -60);
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }));
+    api.debug.advance(0.6);
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }));
+    assert(sound.lastSurface === "snow", "Frostveil footsteps crunch on snow");
+    // Ambience runs from the real frame loop.
+    reset();
+    game.invulnerable = 99;
+    await realTime(4000);
+    assert(count("ambient") >= 1, "Ambient beds play in the overworld");
+    // Warden drums: only while the arena is awake and the warden stands.
+    foeQA.arena("root");
+    game.invulnerable = 99;
+    api.debug.teleport(0, -29);
+    reset();
+    let t0 = game.elapsed;
+    await realTime(3000);
+    const drums = count("drum"),
+      played = game.elapsed - t0,
+      expected = Math.floor(played / 0.62);
+    assert(
+      played > 0.7 && drums >= Math.max(1, expected) && drums <= expected + 2,
+      `The warden fight drums: ${drums} beats in ${played.toFixed(1)} s of game time`,
+    );
+    assert(
+      count("step") === 0 || sound.lastSurface === "stone",
+      "Sanctuary footsteps are on stone",
+    );
+    game.settings.music = 0;
+    game.applySettings();
+    reset();
+    t0 = game.elapsed;
+    await realTime(2000);
+    assert(
+      count("drum") === 0 && game.elapsed - t0 > 0.7,
+      "Music at 0% silences the drums",
+    );
+    game.loadSettings();
+    api.debug.teleport(0, -15);
+    reset();
+    t0 = game.elapsed;
+    await realTime(2000);
+    assert(
+      count("drum") === 0 && game.elapsed - t0 > 0.7,
+      "Leaving the arena stops the drums",
+    );
+    api.debug.teleport(0, -29);
+    api.debug.damageEnemy(4, 100);
+    bellQA.close();
+    reset();
+    t0 = game.elapsed;
+    await realTime(2000);
+    assert(
+      count("drum") === 0 && game.elapsed - t0 > 0.7,
+      "The drums stop when the warden falls",
+    );
+    game.invulnerable = 0;
+    await bellQA.interactAt(0, 31);
+    bellQA.close();
+    return results;
+  }
+  return { run, audio, results };
 })();
