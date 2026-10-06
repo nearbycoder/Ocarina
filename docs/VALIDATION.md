@@ -1,8 +1,26 @@
-# Validation — 4 October 2026
+# Validation — 4 to 6 October 2026
 
-## Latest: movement, combat, and presentation
+## Latest: input, settings, checkpoints, fonts, and hosting (6 October)
 
-The latest build passes **30 automated tests**, **40 browser polish assertions**, **four defensive checks**, and **78 campaign assertions**. The rebuilt 31-model pack is 2,442,432 bytes with zero glTF errors/warnings. See [current changes, verification methods, and limitations](POLISH.md) and [recorded results](artifacts/polish-validation.json). Sections below preserve earlier milestone results and timings; their performance measurements are not benchmarks of the current build. Full manual combat, pacing, sustained hardware performance, and cross-browser validation remain outstanding.
+This round is planned and tracked in [IMPROVEMENTS.md](IMPROVEMENTS.md). Results are recorded in [improvements-round1.json](artifacts/improvements-round1.json), and screenshots are in [`docs/media/improvements/`](media/improvements/).
+
+- **42 Vitest tests** pass (30 earlier, plus checkpoints, settings, and input). The production build and type check pass. The asset pack is unchanged: 0 glTF errors or warnings and 0 contract failures.
+- `node tests/run-browser-checks.mjs` drives every in-browser suite in headless Chromium against the dev server:
+  - **92 campaign assertions**: the original 78, plus 14 checkpoint assertions in which real guardian and warden strikes defeat the player in the hall and the arena.
+  - **40 polish assertions**, unchanged.
+  - **14 settings assertions**: master, effects, and ambience gains; mute; camera speed and invert; persistence; and reduced motion, checked with a real sword hit whose swing clock never stalls. With reduced motion off, the same check sees 3 hit-stop stalls.
+  - **21 gamepad assertions** with a synthetic standard-mapping pad: analog walking at full and half tilt, the right-stick camera, the A prompt, menu focus and selection, sword hits, guarding a real guardian strike with RB, lock-on, and the Tidal Archive melody on A, Y, X.
+  - **11 touch assertions** on a 390×844 phone page using real CDP touch events: tutorial text names touch controls, the thumbstick walks at full and partial speed, the Tidal Archive melody is played with taps only, and Shield, Lock, the Use prompt, and the pause menu all work.
+  - A **phone-landscape layout check** at 844×390 confirms that the vitals, region, menu button, objective, minimap, thumbstick, and buttons don't overlap.
+- The production build, served from `/Ocarina/` the way GitHub Pages would serve it, loads to the title and starts a new game. There were no failed requests, no console errors, and no third-party requests; the fonts come from the build.
+- The Pages workflow passes `@action-validator/cli` schema validation. Its steps (`npm ci`, test, build, asset check) pass in a clean clone on Node 26 locally. It has not run on GitHub.
+- `tools/media/screenshots.mjs` still works with the new audio buses and HUD, and the README stills were regenerated with it. The trailer and teaser were not regenerated.
+
+Limits: no physical gamepad, phone, or tablet was available. Gamepad and touch were verified only with synthetic input. No performance numbers were taken because the shared machine was heavily loaded. A full manual playthrough and pacing pass are still outstanding.
+
+## Movement, combat, and presentation (4 October)
+
+The build at that point passed **30 automated tests**, **40 browser polish assertions**, **four defensive checks**, and **78 campaign assertions**. The rebuilt 31-model pack is 2,442,432 bytes with zero glTF errors/warnings. See [current changes, verification methods, and limitations](POLISH.md) and [recorded results](artifacts/polish-validation.json). Sections below preserve earlier milestone results and timings; their performance measurements are not benchmarks of the current build. Full manual combat, pacing, sustained hardware performance, and cross-browser validation remain outstanding.
 
 ## Passed
 

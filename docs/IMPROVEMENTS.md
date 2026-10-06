@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This is a planning document for the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player, then proposes a scope for this round. Nothing listed here is implemented yet.
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome) at the end.
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -143,3 +143,24 @@ Distinct dungeon layouts, new models and animation, traversal tools, and regener
 1. **Hosting.** May the round add a GitHub Pages workflow, and should the owner enable Pages and deploy it afterward? (I won't push or deploy.)
 2. **Difficulty direction.** Combat currently reads as forgiving. Should a later balance pass make it harder by default, or add a difficulty option and keep today's tuning as "Story"?
 3. **Puzzle hints.** Is giving away the answer in the hint text intentional for accessibility? If not, the puzzle pass would move the answers behind an optional hint setting.
+
+## Round outcome
+
+All five scoped items shipped on the `improvements` branch. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round1.json](artifacts/improvements-round1.json).
+
+| Item | Status | Verified by | Screenshots (`docs/media/improvements/`) |
+| --- | --- | --- | --- |
+| A. Touch and gamepad parity | Done | Unit tests; 21 synthetic-gamepad assertions; 11 CDP-touch assertions; landscape overlap check | `a-touch-portrait`, `a-touch-landscape`, `a-touch-flute`, `a-gamepad-hud`, `a-gamepad-pause`, `a-gamepad-flute` |
+| B. Fair sanctuary checkpoints | Done | Unit tests; 14 browser assertions with real enemy strikes | `b-warden-defeat`, `b-return-confirm` |
+| C. Settings and accessibility | Done | Unit tests; 14 browser assertions | `c-settings`, `c-settings-phone`, `c-hud-village`, `c-hud-frostveil`, `c-hud-phone`, `c-large-text` |
+| D. Self-hosted fonts | Done | Request log (no third-party requests); fonts load from the build | `d-title-local-fonts` |
+| E. Hosted-build readiness | Done; not deployed | Workflow schema check; CI steps in a clean clone; `/Ocarina/` subpath smoke test | `e-subpath-title` |
+
+Notes and differences from the plan:
+- **D.** The fonts ship through the Fontsource packages, which Vite bundles into `dist/assets/`, instead of hand-copied files in `public/fonts/`. The OFL text ships as `licenses/fonts-OFL.txt`.
+- **A.** "Return to checkpoint" was added to the pause menu so pad and touch players can reach it.
+- **A.** Full sheets now draw above toasts, which used to cover the flute and pause headings.
+- **C.** Larger text uses CSS `zoom` on the reading surfaces, so it depends on browser support for `zoom`. Current Chrome, Safari, and Firefox support it.
+- **Hardware.** No physical controller, phone, or tablet was available, so A was verified only with synthetic input.
+
+Still open: everything ranked 7 to 15 above (combat depth, balance, puzzles, audio, performance, save export, layouts, characters, traversal). The difficulty and puzzle-hint questions remain owner decisions; this round deliberately kept today's tuning and hints.

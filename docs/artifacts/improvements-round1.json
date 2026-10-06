@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-06",
+  "branch": "improvements",
+  "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
+  "unitTests": {
+    "files": 9,
+    "tests": 42,
+    "passed": 42
+  },
+  "build": "pass",
+  "assetCheck": {
+    "gltfErrors": 0,
+    "gltfWarnings": 0,
+    "contractErrors": 0
+  },
+  "browserGroups": [
+    {
+      "group": "campaign: prologue",
+      "result": "PASS",
+      "reportedCount": 12
+    },
+    {
+      "group": "settings",
+      "result": "PASS",
+      "reportedCount": 14
+    },
+    {
+      "group": "gamepad",
+      "result": "PASS",
+      "reportedCount": 21
+    },
+    {
+      "group": "checkpoints",
+      "result": "PASS",
+      "reportedCount": 14
+    },
+    {
+      "group": "campaign: root",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: ember",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: tide",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: crossing",
+      "result": "PASS",
+      "reportedCount": null
+    },
+    {
+      "group": "campaign: frost",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: sun",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: moon",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: crown",
+      "result": "PASS",
+      "reportedCount": 8
+    },
+    {
+      "group": "campaign: combat",
+      "result": "PASS",
+      "reportedCount": 92
+    },
+    {
+      "group": "polish: scenery",
+      "result": "PASS",
+      "reportedCount": 27
+    },
+    {
+      "group": "polish: sword",
+      "result": "PASS",
+      "reportedCount": 36
+    },
+    {
+      "group": "polish: combo",
+      "result": "PASS",
+      "reportedCount": 40
+    },
+    {
+      "group": "touch: phone portrait",
+      "result": "PASS",
+      "reportedCount": 11
+    },
+    {
+      "group": "touch: phone landscape layout",
+      "result": "PASS",
+      "reportedCount": 1
+    }
+  ],
+  "totals": {
+    "campaign": 92,
+    "settings": 14,
+    "gamepad": 21,
+    "polish": 40,
+    "touchPortrait": 11,
+    "touchLandscapeLayout": 1
+  },
+  "subpathSmoke": {
+    "url": "/Ocarina/ via vite preview --base /Ocarina/",
+    "failedRequests": 0,
+    "consoleErrors": 0,
+    "thirdPartyRequests": 0,
+    "newGameStarts": true
+  },
+  "limits": [
+    "Gamepad verified with a synthetic standard-mapping pad, not physical controllers",
+    "Touch verified with CDP touch events on emulated phone viewports, not physical devices",
+    "No performance benchmark: the shared machine was under heavy load"
+  ]
+}
