@@ -3,8 +3,11 @@
 //   npm run dev                          # or any port; then:
 //   node tests/run-browser-checks.mjs    # BELL_URL=http://127.0.0.1:5174/
 //
+// Set BELL_ONLY to a label fragment (e.g. BELL_ONLY=wardens) to run only the
+// matching groups; the prologue always runs because the others build on it.
+//
 // Needs a Playwright Chromium (`npx playwright install chromium`). The desktop
-// page loads the in-page suites (browser, polish, settings, gamepad); the touch
+// page loads the in-page suites (browser, polish, settings, gamepad, foes); the touch
 // pages use real touch events through the Chrome DevTools Protocol. Pages use
 // /?review=polish, so the player's normal save is never read or written.
 import { chromium } from "playwright";
@@ -40,11 +43,14 @@ async function open(options) {
     "polish-checks.js",
     "settings-checks.js",
     "input-checks.js",
+    "foe-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
 }
+const only = process.env.BELL_ONLY;
 async function run(label, task) {
+  if (only && label !== "campaign: prologue" && !label.includes(only)) return;
   try {
     const count = await task();
     console.log(`PASS ${label}${count === undefined ? "" : ` (${count})`}`);
@@ -61,6 +67,7 @@ await inPage("campaign: prologue", async () => (await bellQA.start()).length);
 await inPage("settings", async () => (await settingsQA.run()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
+await inPage("foes: wardens", async () => (await foeQA.wardens()).length);
 for (const id of ["root", "ember", "tide"])
   await inPage(
     `campaign: ${id}`,
@@ -158,6 +165,23 @@ await run("touch: phone portrait", async () => {
     sidestep > 0.2 && sidestep < walked * 0.75,
     `A small push walks slowly (${sidestep.toFixed(2)} m)`,
   );
+  // Two thumbs: hold the stick and tap Sword with another finger.
+  const sword = await center('#touch [data-action="attack"]');
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: stick.x, y: stick.box.y + 4, id: 1 }],
+  });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      { x: stick.x, y: stick.box.y + 4, id: 1 },
+      { x: sword.x, y: sword.y, id: 2 },
+    ],
+  });
+  const swinging = (await state()).combat.elapsed >= 0;
+  await touch("touchEnd");
+  await phone.evaluate(() => window.__BELL_OF_AGES__.debug.advance(1));
+  check(swinging, "Sword swings while another finger holds the stick");
   // The Tidal Archive melody with taps only.
   await phone.evaluate(() => {
     const api = window.__BELL_OF_AGES__;
@@ -166,7 +190,11 @@ await run("touch: phone portrait", async () => {
     api.debug.teleport(0, 14);
   });
   await tap('#touch [data-action="flute"]');
-  check((await state()).panel === "flute", "Flute button raises the flute");
+  const raised = await state();
+  check(
+    raised.panel === "flute",
+    `Flute button raises the flute (panel: ${raised.panel}, at ${raised.position.x.toFixed(1)}, ${raised.position.z.toFixed(1)})`,
+  );
   for (const n of [1, 3, 2]) await tap(`[data-action="note-${n}"]`);
   const solved = await state();
   check(

@@ -18,7 +18,7 @@ The current release is a compact, playable campaign with seven short three-chamb
 - Give childhood regions return visits in adulthood with changed routes, inhabitants, consequences, and equipment puzzles. Presently the two ages change appearance, character size, progression gates, and dialogue.
 - Add a campaign quest graph between dungeons: village stories, regional inhabitants, environmental mysteries, and meaningful optional rewards. The current optional content consists of treasure, sword forging, and Mira's wandering lights.
 - Add swimming, climbing, ledge interaction, ranged tools, moving platforms, and their collision and camera rules. Current traversal is grounded walking and dodging.
-- Author character animations and varied enemy movesets. Current wardens share a readable melee state machine and vary in appearance, health, and damage.
+- Author character animations and varied enemy movesets. Each warden now adds signature attacks (charge, shockwave, or volley) to the shared slam, but all of them share one model and the same health and damage scale.
 - Add separate musical themes, environmental sound, richer effects, configurable controls, gamepad support, graphics settings, and accessibility options.
 - Test every complete player journey without scene manipulation, measure actual completion times, then adjust content and difficulty. Content length should come from authored challenges and exploration rather than repeating the existing rooms.
 

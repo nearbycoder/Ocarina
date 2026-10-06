@@ -29,6 +29,19 @@ import {
   type Dungeon,
 } from "./data";
 import {
+  MOVES,
+  WARDEN_DAMAGE,
+  WARDEN_MOVES,
+  blockable,
+  chargeEnd,
+  chooseWardenMove,
+  laneDistance,
+  ringCrossed,
+  signatureCooldown,
+  volleyTargets,
+  type WardenMove,
+} from "./foes";
+import {
   padActions,
   padShield,
   shapeStick,
@@ -81,13 +94,55 @@ interface Enemy {
   hp: number;
   maxHp: number;
   boss: boolean;
-  state: "idle" | "chase" | "windup" | "strike" | "recover" | "dead";
+  state:
+    "idle" | "chase" | "windup" | "strike" | "recover" | "stagger" | "dead";
   timer: number;
   speed: number;
   hitFlash: number;
   indicator: T.Mesh;
   phase: number;
   facing: number;
+  /** The attack being wound up or delivered. */
+  move: WardenMove;
+  /** Seconds until a warden may use a signature attack again. */
+  cooldown: number;
+  /** Development hook: the next attack, regardless of range or cooldown. */
+  forced: WardenMove | null;
+  /** True once the current attack has landed or been guarded. */
+  struck: boolean;
+  /** World-space telegraphs: lane, shockwave ring, and volley circles. */
+  marks: T.Group;
+  lane: T.Mesh | null;
+  wave: T.Mesh | null;
+  spots: T.Mesh[];
+  targets: { x: number; z: number }[];
+  from: { x: number; z: number };
+  to: { x: number; z: number };
+  waveRadius: number;
+}
+// Telegraph shapes are shared; each enemy owns only its fading materials.
+const MARK = {
+  plane: new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+  ring: new T.RingGeometry(0.9, 1, 56).rotateX(-Math.PI / 2),
+  disc: new T.CircleGeometry(1, 40).rotateX(-Math.PI / 2),
+};
+function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
+  const m = new T.Mesh(
+    geometry,
+    new T.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0,
+      side: T.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  m.userData.sharedGeometry = true;
+  m.userData.skipAO = true;
+  m.renderOrder = 2;
+  m.visible = false;
+  parent.add(m);
+  return m;
 }
 interface Effect {
   mesh: T.Mesh;
@@ -453,6 +508,10 @@ export class Game {
           o.geometry.dispose();
       });
       e.mesh.removeFromParent();
+      e.marks.traverse((o) => {
+        if (o instanceof T.Mesh) (o.material as T.Material).dispose();
+      });
+      e.marks.removeFromParent();
     });
     this.enemies = [];
     this.effects.forEach((e) => {
@@ -634,6 +693,13 @@ export class Game {
     batchStatic(g, [indicator]);
     g.position.set(x, this.ground(x, z), z);
     this.scene.add(g);
+    const marks = new T.Group();
+    this.scene.add(marks);
+    const lane = boss ? markMesh(MARK.plane, "#e7c27a", marks) : null;
+    const wave = boss ? markMesh(MARK.ring, "#f0a35e", marks) : null;
+    const spots = boss
+      ? [0, 1, 2].map(() => markMesh(MARK.disc, "#e9b26c", marks))
+      : [];
     const hp = boss
       ? this.save.age === "adult"
         ? 24
@@ -657,6 +723,18 @@ export class Game {
       indicator,
       phase: 0,
       facing: 0,
+      move: "slam",
+      cooldown: 1.5 + Math.random() * 1.5,
+      forced: null,
+      struck: false,
+      marks,
+      lane,
+      wave,
+      spots,
+      targets: [],
+      from: { x, z },
+      to: { x, z },
+      waveRadius: 0,
     });
   }
   ground(x: number, z: number) {
@@ -1788,50 +1866,42 @@ export class Game {
       e.mesh.position.y = this.ground(e.x, e.z) + Math.sin(e.phase * 3) * 0.06;
       if (!active) {
         e.state = "idle";
-        (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
+        this.clearMarks(e);
         continue;
       }
       if (e.state === "idle") e.state = "chase";
       e.timer -= dt;
-      const range = e.boss ? 3.6 : 1.9;
+      e.cooldown = Math.max(0, e.cooldown - dt);
       if (e.state === "chase") {
-        if (distance < range && this.clearSight(e.x, e.z, p.x, p.z)) {
-          e.state = "windup";
-          e.timer = e.boss ? 1.05 : 0.8;
-        } else {
+        const sight = this.clearSight(e.x, e.z, p.x, p.z);
+        const pick = e.forced
+          ? e.forced
+          : !sight
+            ? null
+            : e.boss
+              ? chooseWardenMove(
+                  WARDEN_MOVES[this.world.dungeon?.id ?? ""] ?? [],
+                  distance,
+                  e.cooldown,
+                  Math.random(),
+                )
+              : distance < 1.9
+                ? "slam"
+                : null;
+        if (pick) this.beginWindup(e, pick);
+        else {
           const dx = ((p.x - e.x) / distance) * dt * e.speed,
             dz = ((p.z - e.z) / distance) * dt * e.speed;
           this.moveEnemy(e, dx, dz);
         }
-      } else if (e.state === "windup") {
-        (e.indicator.material as T.MeshBasicMaterial).opacity =
-          0.35 + Math.sin(this.elapsed * 16) * 0.22;
-        e.mesh.rotation.x =
-          -0.16 * (1 - Math.max(0, e.timer) / (e.boss ? 1.05 : 0.8));
+      } else if (e.state === "windup") this.windup(e, distance);
+      else if (e.state === "strike") this.strike(e, dt);
+      else if (e.state === "stagger") {
+        e.mesh.rotation.z = Math.sin(e.phase * 22) * 0.07;
         if (e.timer <= 0) {
-          e.state = "strike";
-          e.timer = 0.18;
-          e.mesh.rotation.x = 0.22;
-          if (
-            distance < range + 0.35 &&
-            inFront(e.facing, p.x - e.x, p.z - e.z, 0.15) &&
-            this.clearSight(e.x, e.z, p.x, p.z)
-          )
-            this.damagePlayer(e.boss ? 2 : 1, e);
-          this.burst(
-            e.x,
-            this.ground(e.x, e.z) + 0.2,
-            e.z,
-            "#e5b06e",
-            e.boss ? 20 : 7,
-          );
+          e.mesh.rotation.z = 0;
+          e.state = "chase";
         }
-      } else if (e.state === "strike" && e.timer <= 0) {
-        e.state = "recover";
-        e.timer = e.boss ? 1.4 : 0.85;
-        e.mesh.rotation.z = 0;
-        e.mesh.rotation.x = 0;
-        (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
       } else if (e.state === "recover" && e.timer <= 0) e.state = "chase";
       e.mesh.position.x = e.x;
       e.mesh.position.z = e.z;
@@ -1845,10 +1915,173 @@ export class Game {
       this.ui.el("boss-fill").style.width = `${(boss.hp / boss.maxHp) * 100}%`;
     }
   }
-  damagePlayer(amount: number, source?: Enemy) {
-    if (this.invulnerable > 0 || this.ui.panel) return;
+  private windupTime(e: Enemy) {
+    return e.boss ? MOVES[e.move].windup : 0.8;
+  }
+  /** Commits to an attack and lays down its telegraph. */
+  beginWindup(e: Enemy, move: WardenMove) {
+    const p = this.hero.group.position;
+    e.forced = null;
+    e.move = move;
+    e.state = "windup";
+    e.struck = false;
+    e.timer = this.windupTime(e);
+    e.facing = Math.atan2(-(p.x - e.x), -(p.z - e.z));
+    if (move === "charge" && e.lane) {
+      e.from = { x: e.x, z: e.z };
+      e.to = chargeEnd(e.x, e.z, p.x, p.z);
+      const dx = e.to.x - e.x,
+        dz = e.to.z - e.z;
+      e.lane.position.set(
+        (e.x + e.to.x) / 2,
+        this.ground(e.x, e.z) + 0.07,
+        (e.z + e.to.z) / 2,
+      );
+      e.lane.rotation.y = Math.atan2(dx, dz);
+      e.lane.scale.set(MOVES.charge.halfWidth * 2, 1, MOVES.charge.length);
+      e.lane.visible = true;
+    } else if (move === "shockwave" && e.wave) {
+      e.wave.position.set(e.x, this.ground(e.x, e.z) + 0.08, e.z);
+      e.wave.scale.setScalar(MOVES.shockwave.reach);
+      e.wave.visible = true;
+    } else if (move === "volley") {
+      e.targets = volleyTargets(e.x, e.z, p.x, p.z);
+      e.spots.forEach((spot, i) => {
+        const t = e.targets[i];
+        spot.position.set(t.x, this.ground(t.x, t.z) + 0.07, t.z);
+        spot.scale.setScalar(MOVES.volley.radius);
+        spot.visible = true;
+      });
+    }
+  }
+  private windup(e: Enemy, distance: number) {
+    const p = this.hero.group.position;
+    const total = this.windupTime(e),
+      pulse = 0.35 + Math.sin(this.elapsed * 16) * 0.22,
+      grow = 1 - Math.max(0, e.timer) / total;
+    if (e.move === "slam")
+      (e.indicator.material as T.MeshBasicMaterial).opacity = pulse;
+    else if (e.move === "charge" && e.lane)
+      (e.lane.material as T.MeshBasicMaterial).opacity = 0.18 + grow * 0.3;
+    else if (e.move === "shockwave" && e.wave)
+      (e.wave.material as T.MeshBasicMaterial).opacity = pulse;
+    else if (e.move === "volley")
+      for (const spot of e.spots)
+        (spot.material as T.MeshBasicMaterial).opacity = 0.15 + grow * 0.4;
+    e.mesh.rotation.x = -0.16 * grow;
+    if (e.timer > 0) return;
+    e.state = "strike";
+    e.mesh.rotation.x = 0.22;
+    const ground = this.ground(e.x, e.z);
+    if (e.move === "slam") {
+      e.timer = 0.18;
+      const range = e.boss ? MOVES.slam.max : 1.9;
+      if (
+        distance < range + 0.35 &&
+        inFront(e.facing, p.x - e.x, p.z - e.z, 0.15) &&
+        this.clearSight(e.x, e.z, p.x, p.z)
+      )
+        this.hitPlayer(e, e.boss ? WARDEN_DAMAGE : 1);
+      this.burst(e.x, ground + 0.2, e.z, "#e5b06e", e.boss ? 20 : 7);
+      if (e.boss) this.shakeCamera(0.55);
+    } else if (e.move === "charge") {
+      e.timer = MOVES.charge.dash;
+      this.sound.swing(2);
+    } else if (e.move === "shockwave") {
+      e.timer = MOVES.shockwave.travel;
+      e.waveRadius = 0.8;
+      this.burst(e.x, ground + 0.2, e.z, "#f0a35e", 16);
+      this.sound.hit();
+      this.shakeCamera(0.7);
+    } else if (e.move === "volley") {
+      e.timer = 0.25;
+      for (const t of e.targets) {
+        this.burst(t.x, this.ground(t.x, t.z) + 0.2, t.z, "#e9b26c", 9);
+        if (
+          !e.struck &&
+          Math.hypot(p.x - t.x, p.z - t.z) < MOVES.volley.radius + 0.3
+        )
+          this.hitPlayer(e, WARDEN_DAMAGE);
+      }
+      this.sound.hit();
+      this.shakeCamera(0.45);
+    }
+  }
+  private strike(e: Enemy, dt: number) {
+    const p = this.hero.group.position;
+    if (e.move === "charge" && e.timer > 0) {
+      const step = (MOVES.charge.length / MOVES.charge.dash) * dt,
+        dx = e.to.x - e.from.x,
+        dz = e.to.z - e.from.z,
+        l = Math.hypot(dx, dz) || 1;
+      const x0 = e.x,
+        z0 = e.z;
+      this.moveEnemy(e, (dx / l) * step, (dz / l) * step);
+      if (
+        !e.struck &&
+        laneDistance(x0, z0, e.x, e.z, p.x, p.z) < MOVES.charge.halfWidth + 0.4
+      )
+        this.hitPlayer(e, WARDEN_DAMAGE);
+      // Walls end the charge early.
+      if (Math.hypot(e.x - x0, e.z - z0) < step * 0.3) e.timer = 0;
+    }
+    if (e.move === "shockwave" && e.wave && e.timer > 0) {
+      const from = e.waveRadius;
+      e.waveRadius = Math.min(
+        MOVES.shockwave.reach,
+        e.waveRadius + (MOVES.shockwave.reach / MOVES.shockwave.travel) * dt,
+      );
+      e.wave.scale.setScalar(e.waveRadius);
+      (e.wave.material as T.MeshBasicMaterial).opacity = 0.75;
+      if (
+        !e.struck &&
+        ringCrossed(Math.hypot(p.x - e.x, p.z - e.z), from, e.waveRadius)
+      )
+        this.hitPlayer(e, WARDEN_DAMAGE);
+    }
+    if (e.state !== "strike" || e.timer > 0) return;
+    e.state = "recover";
+    e.timer = e.boss ? MOVES[e.move].recover : 0.85;
+    if (e.boss && e.move !== "slam")
+      e.cooldown = signatureCooldown(
+        this.world.dungeon?.id === "crown" && e.hp < e.maxHp / 2,
+        Math.random(),
+      );
+    e.mesh.rotation.z = 0;
+    e.mesh.rotation.x = 0;
+    this.clearMarks(e);
+  }
+  /** Lands an enemy attack; a guarded melee blow staggers the attacker. */
+  private hitPlayer(e: Enemy, amount: number) {
+    e.struck = true;
+    const melee = !e.boss || blockable(e.move);
+    const result = this.damagePlayer(amount, e, !melee);
+    if (result === "guarded") {
+      e.state = "stagger";
+      e.timer = e.boss ? 2.2 : 1.3;
+      this.clearMarks(e);
+      e.mesh.rotation.x = 0;
+      this.burst(e.x, this.ground(e.x, e.z) + 1.6, e.z, "#f3e2b0", 8);
+    }
+  }
+  clearMarks(e: Enemy) {
+    (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
+    for (const m of e.marks.children) m.visible = false;
+  }
+  private shake = 0;
+  private shakeOffset = new T.Vector3();
+  shakeCamera(amount: number) {
+    if (!this.settings.reducedMotion) this.shake = Math.max(this.shake, amount);
+  }
+  damagePlayer(
+    amount: number,
+    source?: Enemy,
+    unblockable = false,
+  ): "ignored" | "guarded" | "hit" {
+    if (this.invulnerable > 0 || this.ui.panel) return "ignored";
     const p = this.hero.group.position;
     if (
+      !unblockable &&
       this.shieldHeld() &&
       this.attackElapsed < 0 &&
       this.dodgeTime <= 0 &&
@@ -1864,7 +2097,7 @@ export class Game {
       this.hitStop = 0.035;
       this.invulnerable = 0.4;
       this.ui.toast("Guarded. Strike while the enemy recovers.");
-      return;
+      return "guarded";
     }
     this.save.health = Math.max(0, this.save.health - amount);
     this.hurt = 0.7;
@@ -1887,6 +2120,7 @@ export class Game {
         `The dark does not get the last word. You wake ${where}, sword still in hand. Watch the golden warning rings. Dodge before the blow, then strike as the guardian rests.`,
       );
     }
+    return "hit";
   }
   /** Restores health and returns to a safe place; describes where for the caller. */
   checkpoint() {
@@ -1929,7 +2163,9 @@ export class Game {
       e.hitFlash = 0;
       e.mesh.rotation.set(0, e.facing, 0);
       e.mesh.position.set(e.x, this.ground(e.x, e.z), e.z);
-      (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
+      e.cooldown = 1.5;
+      e.forced = null;
+      this.clearMarks(e);
     }
     this.attackElapsed = -1;
     this.attackTime = 0;
@@ -2028,6 +2264,9 @@ export class Game {
     this.camera.lookAt(focus);
   }
   updateCamera(dt: number) {
+    // Remove last frame's shake before smoothing so it never accumulates.
+    this.camera.position.sub(this.shakeOffset);
+    this.shakeOffset.set(0, 0, 0);
     const p = this.hero.group.position,
       focus = this.cameraFocus(),
       desired = this.cameraDestination(focus);
@@ -2039,6 +2278,17 @@ export class Game {
     this.camera.position.lerp(desired, close ? 1 : 1 - Math.exp(-dt * 8));
     this.constrainCamera(focus, this.camera.position);
     this.camera.lookAt(focus);
+    if (this.shake > 0) {
+      if (this.settings.reducedMotion) this.shake = 0;
+      const k = this.shake * this.shake * 0.35;
+      this.shakeOffset.set(
+        (Math.random() - 0.5) * k,
+        (Math.random() - 0.5) * k,
+        (Math.random() - 0.5) * k,
+      );
+      this.camera.position.add(this.shakeOffset);
+      this.shake = Math.max(0, this.shake - dt * 2.4);
+    }
     this.hero.group.visible = this.camera.position.distanceTo(focus) > 0.62;
     this.sun.position.set(p.x - 45, 70, p.z - 55);
     this.sun.target.position.set(p.x, 0, p.z);
@@ -2261,7 +2511,9 @@ export class Game {
           hp: e.hp,
           boss: e.boss,
           state: e.state,
+          move: e.move,
         })),
+        shake: this.shake,
         render: {
           drawCalls: this.renderer.info.render.calls,
           triangles: this.renderer.info.render.triangles,
@@ -2414,6 +2666,15 @@ export class Game {
                   }
                 }
                 this.refreshHUD();
+              },
+              /** Makes enemy `index` begin `move` on its next decision. */
+              forceMove: (index: number, move: WardenMove) => {
+                const e = this.enemies[index];
+                if (e && e.state !== "dead") {
+                  e.forced = move;
+                  e.state = "chase";
+                  e.timer = 0;
+                }
               },
               placeEnemy: (index: number, x: number, z: number) => {
                 const e = this.enemies[index];

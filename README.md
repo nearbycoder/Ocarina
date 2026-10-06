@@ -60,7 +60,7 @@ In menus a gamepad moves with the D-pad or left stick, chooses with **A**, and b
 
 <img src="docs/media/screenshots/04-combat.jpg" alt="Alder slashes a stone guardian in the Whisperwood, leaving a pale sword trail" width="100%">
 
-Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the blade itself: each swing traces the sword's real path against enemy hit volumes, so a miss is really a miss, and a blade that hits a wall glances off in a shower of sparks. Hits land with a brief hit-stop. Guardians telegraph every attack with a pulsing golden ring and commit to their facing, so a well-timed shield or dodge always has an answer. <kbd>Q</kbd> locks on and keeps a single foe in focus.
+Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the blade itself: each swing traces the sword's real path against enemy hit volumes, so a miss is really a miss, and a blade that hits a wall glances off in a shower of sparks. Hits land with a brief hit-stop. Guardians telegraph every attack with a pulsing golden ring and commit to their facing, so a well-timed shield or dodge always has an answer. Guard a blow and the attacker staggers, which gives you a longer opening than a normal recovery. <kbd>Q</kbd> locks on and keeps a single foe in focus.
 
 ### Seven sanctuaries, seven trials
 
@@ -78,7 +78,13 @@ Three notes and a lot of history. Melody altars carve their songs into the stone
 
 <img src="docs/media/screenshots/05-boss.jpg" alt="Alder raises his shield as the Cinder Colossus winds up inside a golden warning ring" width="100%">
 
-Each sanctuary ends with a towering warden and its own health bar. Its slams are slow and huge, so read the ring, choose shield or dodge, and punish the recovery. Defeat it to reveal the sanctuary's relic. Fall in a sanctuary and you wake at the last seal you broke, with its puzzle still solved and its fallen guardians still down. Fall in the wilds and you wake at the nearest place you know: the village, the Bell Sanctuary, or a sanctuary door you've reached.
+Each sanctuary ends with a towering warden and its own health bar. Every warden slams, and each also has signature attacks with their own warnings on the ground:
+
+- A **charge** marks a lane, then the warden dashes down it. Step out of the lane, or guard to stagger it.
+- A **shockwave** shows its full reach, then rolls outward. Be outside the ring, or dodge-roll through the wave.
+- A **volley** marks three circles around where you stand, then they erupt. Leave the circles; the shield can't help.
+
+The Briar Warden throws volleys, the Cinder Colossus sends shockwaves, and the Drowned Scribe charges. Each adult warden combines two, and the last uses all three, faster when wounded. Heavy blows shake the camera unless reduced motion is on. Defeat a warden to reveal the sanctuary's relic. Fall in a sanctuary and you wake at the last seal you broke, with its puzzle still solved and its fallen guardians still down. Fall in the wilds and you wake at the nearest place you know: the village, the Bell Sanctuary, or a sanctuary door you've reached.
 
 ### A kingdom in two ages
 
@@ -243,7 +249,7 @@ Design, code, story, Blender models, and audio synthesis: **[nearbycoder](https:
 The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from the opening to the epilogue. It is not a finished commercial game. Honestly:
 
 - **Short, similar dungeons.** All seven sanctuaries share the same three-chamber layout and differ in their puzzle, palette, and warden. A full playthrough is short.
-- **One enemy design.** Field guardians and all seven wardens use a single Blender model (scaled and tinted) with one melee state machine; bosses differ in health, damage, and size.
+- **One enemy model.** Field guardians and all seven wardens use a single Blender model (scaled and tinted). Wardens now have distinct signature attacks, but their health and damage follow the same scale, and none has unique art or animation.
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.
 - **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Controls can't be remapped yet.
