@@ -91,7 +91,120 @@ const sparkHit = (page) =>
     game.snapCamera();
   });
 
+// Stands in a sanctuary's guardian hall facing its cracked wall.
+const atCrack = (page, id) =>
+  page.evaluate((id) => {
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    api.debug.enter(id);
+    bellQA.close();
+    game.puzzleSolved = true;
+    game.world.gates[0].visible = false;
+    for (const i of [0, 1, 2, 3]) api.debug.damageEnemy(i, 100);
+    api.debug.advance(1.5);
+    const side = game.world.crack.x > 0 ? 1 : -1;
+    api.debug.teleport(side * 12.5, -4);
+    api.debug.face((-side * Math.PI) / 2);
+    game.yaw = (-side * Math.PI) / 2 + side * 0.35;
+    game.pitch = 0.16;
+    game.distance = 6.5;
+    api.debug.advance(0.2);
+    game.snapCamera();
+    return side;
+  }, id);
+const breakWall = (page) =>
+  page.evaluate(() => {
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    const side = game.world.crack.x > 0 ? 1 : -1;
+    api.debug.teleport(side * 16.1, -4);
+    for (let n = 0; n < 3; n++) {
+      api.debug.face((-side * Math.PI) / 2);
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      for (let t = 0; t < 15 && (t < 2 || game.attackElapsed >= 0); t++)
+        api.debug.advance(0.12);
+    }
+    return game.crackBroken;
+  });
+
 const SHOTS = {
+  async "d-cracked-wall"(page) {
+    await started(page);
+    await atCrack(page, "root");
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      const side = api.debug.game().world.crack.x > 0 ? 1 : -1;
+      api.debug.teleport(side * 15, -4);
+      api.debug.advance(0.1);
+    });
+    await shoot(page, "d-cracked-wall");
+  },
+  async "d-broken-wall"(page) {
+    await started(page);
+    await atCrack(page, "root");
+    await breakWall(page);
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      const side = game.world.crack.x > 0 ? 1 : -1;
+      api.debug.teleport(side * 13.5, -4.6);
+      api.debug.face((-side * Math.PI) / 2);
+      game.yaw = (-side * Math.PI) / 2 + side * 0.45;
+      game.pitch = 0.14;
+      game.distance = 6.5;
+      api.debug.advance(1.5);
+      game.snapCamera();
+    });
+    await shoot(page, "d-broken-wall");
+  },
+  async "d-alcove"(page) {
+    await started(page);
+    await atCrack(page, "ember");
+    if (!(await breakWall(page))) throw new Error("The wall did not break");
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      const side = game.world.crack.x > 0 ? 1 : -1;
+      api.debug.teleport(side * 21.4, -4);
+      api.debug.face((-side * Math.PI) / 2);
+      game.yaw = (-side * Math.PI) / 2 - side * 0.5;
+      game.pitch = 0.2;
+      game.distance = 5.5;
+      api.debug.advance(1.2);
+      game.snapCamera();
+    });
+    await shoot(page, "d-alcove");
+  },
+  async "d-carving"(page) {
+    await started(page);
+    await atCrack(page, "frost");
+    await breakWall(page);
+    await page.evaluate(async () => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      const side = game.world.crack.x > 0 ? 1 : -1;
+      api.debug.teleport(side * 23.2, -4);
+      api.debug.face((-side * Math.PI) / 2);
+      game.yaw = (-side * Math.PI) / 2 - side * 0.6;
+      api.debug.advance(0.1);
+      game.snapCamera();
+      await bellQA.key("KeyE");
+    });
+    await shoot(page, "d-carving");
+  },
+  async "d-journal"(page) {
+    await started(page);
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.save.carvings = ["root", "ember", "tide"];
+      window.__BELL_OF_AGES__.debug.action("journal");
+      const list = document.querySelector(".carvings");
+      list.querySelector("details").open = true;
+      list.scrollIntoView({ block: "center" });
+    });
+    await shoot(page, "d-journal");
+  },
   async "c-sparks"(page) {
     await started(page);
     await sparkHit(page);

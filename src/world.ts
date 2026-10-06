@@ -7,10 +7,12 @@ import {
 } from "./assets";
 import { addNature, type NatureCell } from "./nature";
 import {
+  addAlcove,
   addCottage,
   addDungeonDetails,
   addSanctuaryLayout,
 } from "./architecture";
+import { ALCOVE, LAYOUTS } from "./layouts";
 import { buildTerrain } from "./terrain";
 import { stoneMaterial, waterMaterial } from "./surfaces";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -35,7 +37,9 @@ export interface Interactable {
     | "exit"
     | "puzzle"
     | "relic"
-    | "heal";
+    | "heal"
+    | "crack"
+    | "carving";
   x: number;
   z: number;
   label: string;
@@ -51,6 +55,8 @@ export interface World {
   gates: T.Group[];
   puzzle: T.Group[];
   block?: T.Group;
+  /** The hall's cracked wall, and the rubble shown once it breaks. */
+  crack?: { wall: T.Group; rubble: T.Group; x: number; z: number };
   spawn: { x: number; z: number };
   dungeon?: Dungeon;
   nature?: NatureCell[];
@@ -667,8 +673,16 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
             : "#607370",
     floor = d.id === "sun" ? "#aa9574" : "#81908a";
   mesh(box(36, 1, 88), floor, 0, -0.5, -10, group);
+  // One side wall of the hall opens onto a hidden alcove (see addAlcove).
+  const side = LAYOUTS[d.id]?.alcove ?? 1;
   for (const x of [-18, 18])
     for (let z = -51; z < 34; z += 6) {
+      // Kit wall panels are 6 m wide; leave out any that would cover the door.
+      if (
+        x === side * ALCOVE.wall &&
+        Math.abs(z - ALCOVE.z) < 3 + ALCOVE.door / 2
+      )
+        continue;
       const wall = asset("Dungeon_Wall");
       wall.position.set(x, 0, z);
       wall.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -681,9 +695,18 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
       wall.rotation.y = z < 0 ? 0 : Math.PI;
       group.add(wall);
     }
+  const doorStart = ALCOVE.z - ALCOVE.door / 2,
+    doorEnd = ALCOVE.z + ALCOVE.door / 2;
   w.colliders.push(
-    { x: -18, z: -10, w: 1.5, d: 88 },
-    { x: 18, z: -10, w: 1.5, d: 88 },
+    { x: -side * 18, z: -10, w: 1.5, d: 88 },
+    // The alcove side's wall runs either side of the doorway.
+    {
+      x: side * 18,
+      z: (-54 + doorStart) / 2,
+      w: 1.5,
+      d: doorStart + 54,
+    },
+    { x: side * 18, z: (doorEnd + 34) / 2, w: 1.5, d: 34 - doorEnd },
     { x: 0, z: -54, w: 36, d: 1.5 },
     { x: 0, z: 34, w: 36, d: 1.5 },
   );
@@ -857,14 +880,17 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
   mesh(new T.TorusGeometry(1.1, 0.055, 5, 32), d.color, 0, 0, 0, relic);
   relic.visible = false;
   interact(w, "relic", "relic", 0, -45, `Claim ${d.relic}`, relic);
-  addDungeonDetails(w, d);
+  addDungeonDetails(w, d, side);
   addSanctuaryLayout(w, d);
+  addAlcove(w, d, side, wall, floor);
   batchStatic(
     group,
     [
       ...w.gates,
       ...w.puzzle,
       w.block,
+      w.crack?.wall,
+      w.crack?.rubble,
       ...w.interactables.filter((i) => i.kind === "relic").map((i) => i.mesh),
     ].filter((o): o is T.Group => !!o) as T.Object3D[],
   );

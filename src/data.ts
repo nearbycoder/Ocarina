@@ -137,6 +137,8 @@ export interface SaveData {
   chests: string[];
   /** Sanctuaries whose entrance the player has reached; safe overworld respawns. */
   visited: string[];
+  /** Sanctuaries whose hidden alcove carving the player has read. */
+  carvings: string[];
   position: { x: number; z: number };
   elapsed: number;
   won: boolean;
@@ -157,6 +159,7 @@ export function newSave(): SaveData {
     reward: false,
     chests: [],
     visited: [],
+    carvings: [],
     position: { x: -10, z: 71 },
     elapsed: 0,
     won: false,
@@ -270,10 +273,14 @@ export function parseSave(raw: string | null): SaveData | null {
       !Number.isFinite(s.position.z)
     )
       return null;
+    const sanctuaries = (list: unknown) =>
+      (Array.isArray(list) ? list : []).filter(
+        (id: unknown) =>
+          typeof id === "string" && DUNGEONS.some((d) => d.id === id),
+      );
     // Saves from before checkpoints: restored sanctuaries count as visited.
-    const visited = (Array.isArray(s.visited) ? s.visited : s.completed).filter(
-      (id: unknown) =>
-        typeof id === "string" && DUNGEONS.some((d) => d.id === id),
+    const visited = sanctuaries(
+      Array.isArray(s.visited) ? s.visited : s.completed,
     );
     const maxHealth = Math.min(30, Math.max(6, s.maxHealth));
     return {
@@ -281,6 +288,8 @@ export function parseSave(raw: string | null): SaveData | null {
       ...s,
       story,
       visited: [...new Set<string>(visited)],
+      // Saves from before the alcoves have read no carvings.
+      carvings: [...new Set<string>(sanctuaries(s.carvings))],
       maxHealth,
       health: Math.min(s.health, maxHealth),
       sword: Math.min(3, Math.max(1, s.sword)),

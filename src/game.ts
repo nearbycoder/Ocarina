@@ -52,7 +52,7 @@ import {
   type FoeKind,
   type WardenMove,
 } from "./foes";
-import { LAYOUTS } from "./layouts";
+import { ALCOVE, LAYOUTS } from "./layouts";
 import {
   DEFAULT_KEYS,
   KEY_ACTION_NAMES,
@@ -99,6 +99,7 @@ import { UI } from "./ui";
 import { Sparks } from "./sparks";
 import { Sound, stepsBetween, surfaceAt } from "./audio";
 import {
+  CARVINGS,
   SCENES,
   finishScene,
   storyGate,
@@ -231,6 +232,9 @@ export class Game {
   puzzleProgress = 0;
   puzzleSolved = false;
   arenaClear = false;
+  /** Sword strikes the hall's cracked wall has taken, and whether it broke. */
+  crackHits = 0;
+  crackBroken = false;
   bossDead = false;
   mirrorTurns = [1, 2, 3];
   torchStates = [false, false, false];
@@ -591,7 +595,8 @@ export class Game {
       c.bottom ??= floor - 0.8;
       c.top ??= floor + 8;
     }
-    const edge = d ? 17.8 : 145;
+    // Sanctuary side walls hold the player; the margin leaves room for the alcove.
+    const edge = d ? 30 : 145;
     const minZ = d ? -54 : -145,
       maxZ = d ? 34 : 145;
     const boundaries: Collider[] = [
@@ -602,7 +607,9 @@ export class Game {
     ];
     this.collision = new CollisionWorld(
       [...this.world.colliders, ...boundaries],
-      (c) => c.gate === undefined || this.world.gates[c.gate].visible,
+      (c) =>
+        (c.gate === undefined || this.world.gates[c.gate].visible) &&
+        !(c.crack && this.crackBroken),
     );
     this.movingBlock = this.world.block
       ? {
@@ -633,6 +640,9 @@ export class Game {
     this.puzzleSolved = false;
     this.arenaClear = false;
     this.bossDead = false;
+    // A carving already read means its wall was broken on an earlier visit.
+    this.crackHits = 0;
+    this.setCrackBroken(!!d && this.save.carvings.includes(d.id));
     this.mirrorTurns = [1, 2, 3];
     if (d?.puzzle === "mirrors") this.updateMirrorBeams();
     this.torchStates = [false, false, false];
@@ -1435,6 +1445,27 @@ export class Game {
         `A wandering light found its way home · ${s.fireflies.length} / 3`,
       );
       this.persist();
+    } else if (i.kind === "crack") {
+      this.ui.toast(
+        "The stone here is cracked, and it sounds hollow. A few strong blows from your sword might break it.",
+      );
+    } else if (i.kind === "carving") {
+      const d = this.world.dungeon!;
+      const carving = CARVINGS[d.id];
+      if (!carving) return;
+      const first = !s.carvings.includes(d.id);
+      if (first) {
+        s.carvings.push(d.id);
+        this.sound.chime();
+        this.persist();
+      }
+      this.ui.dialogue(
+        carving.by,
+        carving.text +
+          (first
+            ? `<br><small class="carving-note">Copied into your journal · ${s.carvings.length} / 7 carvings</small>`
+            : ""),
+      );
     } else if (i.kind === "exit") {
       this.loadWorld();
       this.persist();
@@ -1450,6 +1481,33 @@ export class Game {
       }
     }
     this.refreshHUD();
+  }
+  setCrackBroken(broken: boolean) {
+    this.crackBroken = broken;
+    const crack = this.world.crack;
+    if (!crack) return;
+    crack.wall.visible = !broken;
+    crack.rubble.visible = broken;
+  }
+  /** Three sword strikes break the cracked wall open. */
+  strikeCrack() {
+    const crack = this.world.crack!;
+    this.crackHits++;
+    if (this.crackHits < 3) {
+      this.sound.tone(82, 0.35, "triangle", 0.06);
+      this.ui.toast(
+        this.crackHits === 1
+          ? "The cracked stone shudders."
+          : "Dust pours from the cracks. One more blow.",
+      );
+      return;
+    }
+    this.setCrackBroken(true);
+    this.renderer.shadowMap.needsUpdate = true;
+    this.sound.tone(58, 0.9, "triangle", 0.09);
+    this.sound.tone(96, 0.5, "sawtooth", 0.025, 0.05);
+    this.burst(crack.x, 1.4, crack.z, "#8f9a8e", 18);
+    this.ui.toast("The wall gives way. Something was hidden behind it.");
   }
   transitionAge() {
     if (!grow(this.save)) return;
@@ -1736,6 +1794,15 @@ export class Game {
             .lerp(this.bladeTip, obstruction);
           this.burst(contact.x, contact.y, contact.z, "#c6b497", 4);
           this.sound.clang();
+          const crack = this.world.crack;
+          if (
+            crack &&
+            !this.crackBroken &&
+            Math.abs(contact.x - crack.x) < 1.2 &&
+            Math.abs(contact.z - crack.z) < ALCOVE.door / 2 + 0.3 &&
+            contact.y < 3.6
+          )
+            this.strikeCrack();
           this.recoil = 0;
           this.recoilPose = attackPose(time, this.combo);
           this.attackQueued = false;
@@ -2658,6 +2725,15 @@ export class Game {
       ctx.strokeStyle = "#cbbb8288";
       ctx.lineWidth = 1;
       ctx.strokeRect(mx(-18), mz(-54), 36 * scale, 88 * scale);
+      if (this.crackBroken && this.world.crack) {
+        const x = this.world.crack.x > 0 ? 18 : -18 - (ALCOVE.outer - 18);
+        ctx.strokeRect(
+          mx(x),
+          mz(ALCOVE.z - ALCOVE.half),
+          (ALCOVE.outer - 18) * scale,
+          2 * ALCOVE.half * scale,
+        );
+      }
       ctx.fillStyle = "#dab987";
       ctx.fillRect(mx(0) - 2, mz(-45) - 2, 4, 4);
     }
@@ -2820,6 +2896,8 @@ export class Game {
         region: this.region,
         dungeon: this.world.dungeon?.id || null,
         puzzleSolved: this.puzzleSolved,
+        alcove: { hits: this.crackHits, broken: this.crackBroken },
+        carvings: [...this.save.carvings],
         puzzleProgress: this.puzzleProgress,
         arenaClear: this.arenaClear,
         bossDead: this.bossDead,

@@ -76,6 +76,7 @@ await inPage(
   "layouts: halls and arenas",
   async () => (await foeQA.layouts()).length,
 );
+await inPage("alcoves", async () => (await foeQA.alcoves()).length);
 for (const id of ["root", "ember", "tide"])
   await inPage(
     `campaign: ${id}`,

@@ -1342,6 +1342,20 @@ body[data-device="gamepad"] #panel button:focus {
   font-size: 13px;
   color: #f0d79b;
 }
+/* The note under a carving read for the first time. */
+.carving-note {
+  display: block;
+  margin-top: 12px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: #c9b57c;
+}
+.carvings summary small {
+  margin-left: 8px;
+  font-size: 10px;
+  color: #a9b6a5;
+}
 /* Keyboard bindings: two columns of rows, one waiting for a key. */
 .bind-grid {
   display: grid;

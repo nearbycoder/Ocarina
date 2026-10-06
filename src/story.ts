@@ -368,6 +368,53 @@ export function storyGate(s: SaveData): string | null {
     return "Go home first. Mira is waiting beside the village well.";
   return null;
 }
+// One carving waits in each sanctuary's hidden alcove. Readable in any order:
+// the childhood ones never say what the Tidal Archive reveals, and none names
+// the king or his daughter. Tomas hid the notes and their answers in six of
+// these places (Rowan and Mira say so); nothing says he reached the Crown.
+export interface Carving {
+  title: string;
+  /** Who left it, as the dialogue heading shows it. */
+  by: string;
+  text: string;
+}
+export const CARVINGS: Record<string, Carving> = {
+  root: {
+    title: "Roots that hum",
+    by: "A KEEPER’S MARK · THE ROOTBOUND HOLLOW",
+    text: "A bell no bigger than your thumb is scratched into the stone, the way your father marked every door he ever mended. Beneath it: ‘Third night out. The roots in here hum when it rains. Alder would have climbed every one of them by now. — T.’",
+  },
+  ember: {
+    title: "Soren’s pin",
+    by: "A KEEPER’S MARK · THE EMBER VAULT",
+    text: "‘Soren’s new pin holds. The heat in these walls smells like his forge, where Alder used to fall asleep on the bench waiting for me to finish. I would give a great deal for one more of those evenings. — T.’",
+  },
+  tide: {
+    title: "Counting waves",
+    by: "A KEEPER’S MARK · THE TIDAL ARCHIVE",
+    text: "‘The tide comes up to the third step and no further. I sat and counted waves for an hour, just to hear something keep its rhythm. Alder plays the flute like this sea: loud, then sudden, then very gentle. — T.’",
+  },
+  frost: {
+    title: "A list instead of a letter",
+    by: "A KEEPER’S MARK · THE GLASS MONASTERY",
+    text: "Frost fills an older inscription, but one line is fresh, cut by a steady hand: ‘Too cold for ink, so I carve. I keep meaning to write Alder a proper letter and keep writing lists instead. Mend the lantern handle. Plane the sticking door. Tell him. — T.’",
+  },
+  sun: {
+    title: "One clock, wound",
+    by: "A KEEPER’S MARK · THE SUNKEN OBSERVATORY",
+    text: "‘Every clock in this place stopped at a different hour. I wound one, just to watch it go. Whatever comes of this, let the world keep its ordinary mornings: bread, chores, a boy late for supper. — T.’",
+  },
+  moon: {
+    title: "Names over the dead",
+    by: "A KEEPER’S MARK · THE MOONWELL CRYPT",
+    text: "‘Every tomb here has a name cut over it. Someone cared enough to remember each one. If I am remembered, let it be as a man who mended doors and burned the porridge, not as the keeper of anything. — T.’",
+  },
+  crown: {
+    title: "Five small dots",
+    by: "MARKS IN THE PLASTER · THE SILENT CROWN",
+    text: "No keeper’s bell is carved here. Low on the wall, a child has pressed five dots into the soft plaster, low to high and back again, and beside them drawn a crooked man trying to play a flute. They were never meant for you. You leave them as you found them.",
+  },
+};
 export function journalEntries(s: SaveData) {
   return s.story.seen
     .filter((id) => SCENES[id])

@@ -11,6 +11,8 @@ export interface Collider {
   label?: string;
   /** Above head height (lintels): stops camera, blade and sight casts only. */
   overhead?: boolean;
+  /** A cracked wall the sword can break; inactive once broken. */
+  crack?: boolean;
 }
 export interface Point {
   x: number;

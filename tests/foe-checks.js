@@ -282,10 +282,11 @@ window.foeQA = (() => {
   // Flood-fills the walkable floor (the game's own collision, 0.5 m grid)
   // from the sanctuary entrance with both seals open.
   function reachable() {
+    // Wide enough to take in the hidden alcoves beyond the side walls.
     const step = 0.5,
-      cols = 69,
+      cols = 103,
       rows = 175,
-      x0 = -17,
+      x0 = -25.5,
       z0 = 33.5;
     const cell = (x, z) =>
       Math.round((x - x0) / step) + Math.round((z0 - z) / step) * cols;
@@ -385,5 +386,147 @@ window.foeQA = (() => {
     assert(signatures.size === 7, "Every sanctuary's layout is different");
     return results;
   }
-  return { wardens, kinds, layouts, results, arena, attack, hall };
+  // Every hall's cracked wall: real sword swings break it, the alcove beyond
+  // becomes reachable over the game's collision, and its carving is recorded.
+  async function alcoves() {
+    const before = [...game.save.carvings];
+    game.save.carvings = [];
+    const press = async (code) => bellQA.key(code);
+    const open = (id) => {
+      api.debug.enter(id);
+      bellQA.close();
+      game.puzzleSolved = true;
+      for (let i = 0; i < 4; i++) api.debug.damageEnemy(i, 100);
+      game.world.gates.forEach((g) => (g.visible = false));
+      bellQA.close();
+      api.debug.advance(1.5);
+    };
+    const swing = (side) => {
+      api.debug.teleport(side * 16.1, game.world.crack.z);
+      api.debug.face((-side * Math.PI) / 2);
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      for (let t = 0; t < 15 && (t < 2 || game.attackElapsed >= 0); t++)
+        api.debug.advance(0.12);
+    };
+    // Cells reached beyond the main walls must all lie inside the alcove.
+    const outside = (can, side, z) => {
+      const stray = [];
+      // can() looks 0.75 m around a spot, so start clear of the hall floor.
+      for (let x = 18.5; x <= 26; x += 0.5)
+        for (let cz = -54; cz <= 34; cz += 0.5)
+          if (can(side * x, cz)) {
+            const inside = x <= 25 && Math.abs(cz - z) <= 4;
+            if (!inside) stray.push(`${side * x},${cz}`);
+          }
+      return stray;
+    };
+    for (const id of [
+      "root",
+      "ember",
+      "tide",
+      "frost",
+      "sun",
+      "moon",
+      "crown",
+    ]) {
+      open(id);
+      const name = game.world.dungeon.name,
+        crack = game.world.crack,
+        side = crack.x > 0 ? 1 : -1,
+        z = crack.z;
+      const read = { x: side * 23.2, z };
+      assert(
+        !game.crackBroken && game.world.crack.wall.visible,
+        `${name}: the cracked wall starts whole`,
+      );
+      const shut = reachable();
+      assert(
+        !shut(read.x, read.z) && outside(shut, side, z).length === 0,
+        `${name}: the alcove can't be reached before the wall breaks`,
+      );
+      api.debug.teleport(side * 16.5, z);
+      api.debug.advance(0.05);
+      assert(
+        api.getState().interaction === "crack",
+        `${name}: the cracked wall offers a prompt`,
+      );
+      await press("KeyE");
+      assert(
+        document.getElementById("toast").textContent.includes("cracked") &&
+          game.crackHits === 0 &&
+          !game.crackBroken,
+        `${name}: examining it explains it, but doesn't break it`,
+      );
+      swing(side);
+      swing(side);
+      assert(
+        game.crackHits === 2 && !game.crackBroken,
+        `${name}: two sword strikes crack it further`,
+      );
+      swing(side);
+      assert(
+        game.crackBroken && !crack.wall.visible && crack.rubble.visible,
+        `${name}: the third strike breaks it open`,
+      );
+      const open3 = reachable();
+      assert(
+        open3(read.x, read.z) && outside(open3, side, z).length === 0,
+        `${name}: the tablet is reachable on foot, and nothing beyond the alcove is`,
+      );
+      if (id === "root") {
+        // Leaving without reading puts the wall back for the next visit.
+        await bellQA.interactAt(0, 31);
+        bellQA.close();
+        api.debug.enter(id);
+        bellQA.close();
+        assert(
+          !game.crackBroken &&
+            crack !== game.world.crack &&
+            game.world.crack.wall.visible,
+          `${name}: an unread alcove closes again on a new visit`,
+        );
+        open(id);
+        for (let n = 0; n < 3; n++) swing(side);
+      }
+      api.debug.teleport(read.x, read.z);
+      api.debug.advance(0.05);
+      assert(
+        api.getState().interaction === "carving",
+        `${name}: the tablet offers a prompt`,
+      );
+      await press("KeyE");
+      assert(
+        api.getState().panel === "dialogue" &&
+          game.save.carvings.includes(id) &&
+          document.querySelector(".dialogue-box").textContent.length > 120,
+        `${name}: reading the tablet records its carving`,
+      );
+      bellQA.close();
+      game.restartChamber();
+      assert(
+        game.crackBroken,
+        `${name}: a checkpoint return keeps the wall open`,
+      );
+      await bellQA.interactAt(0, 31);
+      bellQA.close();
+      api.debug.enter(id);
+      bellQA.close();
+      assert(
+        game.crackBroken && !game.world.crack.wall.visible,
+        `${name}: once read, the alcove stays open on later visits`,
+      );
+      await bellQA.interactAt(0, 31);
+      bellQA.close();
+    }
+    api.debug.action("journal");
+    assert(
+      document.querySelectorAll(".carvings details").length === 7,
+      "The journal lists all seven carvings",
+    );
+    api.debug.action("close");
+    game.save.carvings = before;
+    return results;
+  }
+  return { wardens, kinds, layouts, alcoves, results, arena, attack, hall };
 })();

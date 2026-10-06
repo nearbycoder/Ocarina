@@ -40,6 +40,39 @@ export interface Layout {
   decals: Decal[];
   /** Hall guardian spawns, in the same order as HALL_KINDS. */
   guardians: [number, number][];
+  /** Which side wall of the guardian hall hides the alcove: west -1, east 1. */
+  alcove: -1 | 1;
+}
+
+// Every hall hides one alcove behind a cracked section of a side wall, between
+// two wall piers. The room sits outside the sanctuary's main walls (|x| > 18).
+export const ALCOVE = {
+  /** Doorway centre along the hall (midway between two piers), and width. */
+  z: -4,
+  door: 2.6,
+  /** Inner face of the side wall, and the wall's centre line. */
+  face: 17.25,
+  wall: 18,
+  /** Room interior, measured outward from the wall's outer face. */
+  inner: 18.75,
+  outer: 24.75,
+  /** Half the room's length along the hall, centred on the doorway. */
+  half: 3.25,
+  /** The tablet, and where to stand to read it or to examine the crack. */
+  tablet: 24.1,
+  read: 23.2,
+  examine: 16.5,
+};
+/** World-space alcove spots for a sanctuary, on its chosen side. */
+export function alcoveSpots(id: string) {
+  const side = LAYOUTS[id]?.alcove ?? 1;
+  return {
+    side,
+    crack: { x: side * ALCOVE.wall, z: ALCOVE.z },
+    examine: { x: side * ALCOVE.examine, z: ALCOVE.z },
+    read: { x: side * ALCOVE.read, z: ALCOVE.z },
+    tablet: { x: side * ALCOVE.tablet, z: ALCOVE.z },
+  };
 }
 
 const pair = (
@@ -77,6 +110,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [-4, -13],
       [5, -15],
     ],
+    alcove: -1,
   },
   ember: {
     theme:
@@ -101,6 +135,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [8, -15],
       [-3, -12],
     ],
+    alcove: 1,
   },
   tide: {
     theme: "Fallen archive shelves lie across the hall between tide pools.",
@@ -123,6 +158,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [-5, -2],
       [7, -18],
     ],
+    alcove: 1,
   },
   frost: {
     theme:
@@ -144,6 +180,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [5, -1],
       [-6, -17],
     ],
+    alcove: -1,
   },
   sun: {
     theme:
@@ -165,6 +202,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [5, -14],
       [-11, -3],
     ],
+    alcove: 1,
   },
   moon: {
     theme:
@@ -187,6 +225,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [9.5, -7.5],
       [-4, -1],
     ],
+    alcove: -1,
   },
   crown: {
     theme:
@@ -202,6 +241,7 @@ export const LAYOUTS: Record<string, Layout> = {
       [0, -4],
       [0, -15],
     ],
+    alcove: -1,
   },
 };
 

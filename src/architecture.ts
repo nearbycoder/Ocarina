@@ -11,7 +11,7 @@ import {
 } from "./world";
 import { stoneMaterial } from "./surfaces";
 import type { Dungeon } from "./data";
-import { LAYOUTS, type Feature } from "./layouts";
+import { ALCOVE, LAYOUTS, type Feature } from "./layouts";
 
 export function stone(
   w: number,
@@ -55,7 +55,7 @@ export function addCottage(
   for (const side of [-1, 1]) bound(side * 1.1, 3.25, 0.22, 0.22);
 }
 
-export function addDungeonDetails(w: World, d: Dungeon) {
+export function addDungeonDetails(w: World, d: Dungeon, alcoveSide = 0) {
   const g = w.group;
   const stoneColor =
     d.id === "sun" ? "#bdab83" : d.id === "ember" ? "#797e76" : "#a0b7ad";
@@ -96,7 +96,15 @@ export function addDungeonDetails(w: World, d: Dungeon) {
     }
   }
   for (const x of [-17, 17])
-    for (const y of [0.4, 7.6]) stone(0.4, 0.35, 87, stoneColor, x, y, -10, g);
+    for (const y of [0.4, 7.6]) {
+      // The floor band breaks for the alcove doorway on that side.
+      if (y < 1 && x === alcoveSide * 17) {
+        const start = ALCOVE.z - ALCOVE.door / 2,
+          end = ALCOVE.z + ALCOVE.door / 2;
+        stone(0.4, 0.35, start + 53.5, stoneColor, x, y, (start - 53.5) / 2, g);
+        stone(0.4, 0.35, 33.5 - end, stoneColor, x, y, (end + 33.5) / 2, g);
+      } else stone(0.4, 0.35, 87, stoneColor, x, y, -10, g);
+    }
   for (const z of [17, -8, -39]) {
     const ring = mesh(
       new T.RingGeometry(4.5, 4.65, 48),
@@ -371,4 +379,210 @@ function buildFeature(f: Feature, g: T.Group, accent: string) {
     mesh(box(0.12, 0.04, f.d * 0.6), accent, 0, f.h + 0.18, 0, g).material =
       mat(accent, true);
   }
+}
+
+/**
+ * The hidden alcove off the guardian hall: a cracked section of side wall
+ * that the sword breaks, and a small room beyond it with a carved tablet.
+ */
+export function addAlcove(
+  w: World,
+  d: Dungeon,
+  side: number,
+  wallColor: string,
+  floorColor: string,
+) {
+  const g = w.group;
+  const X = (x: number) => side * x;
+  const { z, door } = ALCOVE;
+  const start = z - door / 2,
+    end = z + door / 2;
+  // Wall pieces either side of the doorway, and the lintel over it.
+  stone(1.2, 8, start + 6, wallColor, X(18), 4, (start - 6) / 2, g);
+  stone(1.2, 8, -end, wallColor, X(18), 4, end / 2, g);
+  stone(1.2, 4.6, door, wallColor, X(18), 5.7, z, g);
+  w.colliders.push({
+    x: X(18),
+    z,
+    w: 1.5,
+    d: door,
+    bottom: 3.3,
+    top: 8,
+    overhead: true,
+    label: "Alcove lintel",
+  });
+  // The cracked section: darker stone with seams that glow in the
+  // sanctuary's color, facing into the hall.
+  const wall = new T.Group();
+  wall.position.set(X(18), 0, z);
+  g.add(wall);
+  stone(1, 3.4, door, "#5b6763", 0, 1.7, 0, wall);
+  const seam = mat(d.color, true);
+  const face = -side * 0.51;
+  // Thin jagged cracks branching from one point, seeded per sanctuary.
+  let seed = [...d.id].reduce((n, c) => n * 31 + c.charCodeAt(0), 7) % 9973;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let branch = 0; branch < 6; branch++) {
+    let cz = 0.1,
+      cy = 1.55,
+      angle = (branch / 6) * Math.PI * 2 + random() * 0.6;
+    for (let step = 0; step < 4; step++) {
+      const length = 0.22 + random() * 0.2;
+      angle += (random() - 0.5) * 1.1;
+      const nz = cz + Math.cos(angle) * length,
+        ny = cy + Math.sin(angle) * length;
+      if (Math.abs(nz) > door / 2 - 0.12 || ny < 0.15 || ny > 3.25) break;
+      const line = mesh(
+        box(0.02, 0.03 - step * 0.004, length + 0.02),
+        d.color,
+        face,
+        (cy + ny) / 2,
+        (cz + nz) / 2,
+        wall,
+      );
+      line.rotation.x = -angle;
+      line.material = seam;
+      line.castShadow = false;
+      cz = nz;
+      cy = ny;
+    }
+  }
+  w.colliders.push({
+    x: X(18),
+    z,
+    w: 1.5,
+    d: door,
+    top: 3.4,
+    crack: true,
+    label: "Cracked wall",
+  });
+  // Rubble at the doorway's edges once the wall breaks. No collision.
+  const rubble = new T.Group();
+  rubble.visible = false;
+  g.add(rubble);
+  const chunks: [number, number, number, number][] = [
+    [17.0, start + 0.3, 0.55, 0.3],
+    [16.6, start + 0.15, 0.35, 1.1],
+    [17.3, end - 0.25, 0.5, 0.7],
+    [16.7, end - 0.1, 0.3, 2.1],
+    [19.4, start + 0.2, 0.45, 1.6],
+    [19.6, end - 0.2, 0.4, 0.2],
+  ];
+  for (const [cx, cz, size, turn] of chunks) {
+    const chunk = stone(
+      size,
+      size * 0.7,
+      size * 1.2,
+      "#5b6763",
+      0,
+      0,
+      0,
+      rubble,
+    );
+    chunk.position.set(X(cx), size * 0.35, cz);
+    chunk.rotation.set(turn * 0.3, turn, turn * 0.2);
+  }
+  w.crack = { wall, rubble, x: X(18), z };
+  w.interactables.push({
+    id: "crack",
+    kind: "crack",
+    x: X(ALCOVE.examine),
+    z,
+    label: "Examine the cracked wall",
+    mesh: wall,
+  });
+  // The room: floor, three walls from the dungeon kit, and a roof.
+  const mid = (ALCOVE.inner + ALCOVE.outer) / 2,
+    width = ALCOVE.outer - ALCOVE.inner,
+    depth = 2 * ALCOVE.half;
+  mesh(box(width + 1.6, 1, depth + 2), floorColor, X(mid), -0.5, z, g);
+  mesh(box(width, 0.025, depth), floorColor, X(mid), 0.015, z, g);
+  const back = asset("Dungeon_Wall");
+  back.position.set(X(ALCOVE.outer + 0.5), 0, z);
+  back.rotation.y = -side * (Math.PI / 2);
+  g.add(back);
+  for (const [wz, turn] of [
+    [ALCOVE.z - ALCOVE.half - 0.5, 0],
+    [ALCOVE.z + ALCOVE.half + 0.5, Math.PI],
+  ]) {
+    const piece = asset("Dungeon_Wall");
+    piece.position.set(X(mid), 0, wz);
+    piece.rotation.y = turn;
+    g.add(piece);
+    w.colliders.push({
+      x: X(mid),
+      z: wz,
+      w: width + 1,
+      d: 1,
+      label: "Alcove wall",
+    });
+  }
+  w.colliders.push({
+    x: X(ALCOVE.outer + 0.5),
+    z,
+    w: 1,
+    d: depth + 2,
+    label: "Alcove wall",
+  });
+  // Corner posts close the gaps between the kit walls.
+  for (const cz of [
+    ALCOVE.z - ALCOVE.half - 0.25,
+    ALCOVE.z + ALCOVE.half + 0.25,
+  ])
+    stone(0.6, 8, 0.6, wallColor, X(ALCOVE.outer + 0.2), 4, cz, g);
+  stone(width + 2.2, 0.5, depth + 2.4, "#697e7c", X(mid), 8.2, z, g);
+  // The tablet, its keeper's bell, and two small lamps.
+  const tablet = new T.Group();
+  tablet.position.set(X(ALCOVE.tablet), 0, z);
+  tablet.rotation.y = -side * (Math.PI / 2);
+  g.add(tablet);
+  stone(1.7, 0.3, 0.8, "#8d9887", 0, 0.15, 0, tablet);
+  stone(1.5, 2.1, 0.35, "#a5ae9d", 0, 1.35, 0, tablet);
+  const bell = mesh(
+    cylinder(0.08, 0.2, 0.26, 10),
+    d.color,
+    0,
+    1.95,
+    0.2,
+    tablet,
+  );
+  bell.material = mat(d.color, true);
+  for (let i = 0; i < 4; i++) {
+    const line = mesh(
+      box(0.9 - i * 0.12, 0.035, 0.02),
+      d.color,
+      0,
+      1.6 - i * 0.18,
+      0.19,
+      tablet,
+    );
+    line.material = seam;
+  }
+  for (const lx of [-1.3, 1.3]) {
+    mesh(cylinder(0.12, 0.16, 0.5), "#8b7756", lx, 0.25, 0.3, tablet);
+    mesh(
+      new T.OctahedronGeometry(0.12),
+      "#ffce8e",
+      lx,
+      0.6,
+      0.3,
+      tablet,
+    ).material = mat("#ffce8e", true);
+  }
+  w.colliders.push({
+    x: X(ALCOVE.tablet),
+    z,
+    w: 0.8,
+    d: 1.8,
+    top: 2.4,
+    label: "Carved tablet",
+  });
+  w.interactables.push({
+    id: "carving",
+    kind: "carving",
+    x: X(ALCOVE.read),
+    z,
+    label: "Read the carved tablet",
+    mesh: tablet,
+  });
 }

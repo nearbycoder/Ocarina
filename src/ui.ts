@@ -28,6 +28,7 @@ const HELP: Record<Device, (k: KeyLabels) => string> = {
     "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on · <b>Flute</b> · <b>Ⅱ</b> pause",
 };
 import {
+  CARVINGS,
   journalEntries,
   storyPageText,
   type StoryScene,
@@ -244,7 +245,16 @@ export class UI {
     const memories = journalEntries(s);
     this.setPanel(
       "journal",
-      `<div class="sheet wide"><button class="close" data-action="close" aria-label="Close journal">×</button><div class="eyebrow">THE WANDERER’S JOURNAL</div><h2>A promise, kept.</h2><div class="journal-layout"><section><h3>${q.title}</h3><p>${this.say(q.detail)}</p><blockquote>“When the last bell falls silent, listen for the small things that still sing.”</blockquote><div class="equipment"><h4>IN YOUR SATCHEL</h4><p>⚔ ${s.story.prologue < 4 ? "No blade yet" : s.sword === 3 ? "Star-forged blade" : s.age === "adult" ? "Keeper’s longsword" : "Practice sword"} <small>${s.sword} damage</small></p><p>◈ ${s.story.prologue < 4 ? "Visit Soren for equipment" : "Oak shield"} <small>${this.say("{Shield}")}</small></p><p>♫ Reed flute <small>${this.say("{Flute}")}</small></p><p>✧ Wandering lights <small>${s.fireflies.length} / 3</small></p></div><p class="journal-tip">Mira is looking for three lights near the orchard, Whisperwood path, and coastal road. The smith can temper your sword for 60 crystals.</p></section><section class="relic-list">${DUNGEONS.map((d) => `<div class="relic-row ${s.completed.includes(d.id) ? "complete" : ""}"><span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><div><h4>${d.name}</h4><p>${d.region} · ${d.age === "child" ? "First age" : "Second age"}</p></div><small>${s.completed.includes(d.id) ? "RESTORED" : d.age === s.age ? "UNDISCOVERED" : "ANOTHER AGE"}</small></div>`).join("")}</section></div><section class="story-journal"><h3>What I remember</h3>${s.story.promise ? `<p class="promise-entry">My promise to Mira: “${s.story.promise === "home" ? "I’ll find my way home." : "I’ll remember us as we are."}”</p>` : ""}${memories.length ? memories.map((m) => `<details><summary>${m.title}</summary>${m.pages.map((line) => `<p><b>${line.speaker}</b><br>${this.say(line.text)}</p>`).join("")}</details>`).join("") : "<p>The first page is still waiting.</p>"}</section></div>`,
+      `<div class="sheet wide"><button class="close" data-action="close" aria-label="Close journal">×</button><div class="eyebrow">THE WANDERER’S JOURNAL</div><h2>A promise, kept.</h2><div class="journal-layout"><section><h3>${q.title}</h3><p>${this.say(q.detail)}</p><blockquote>“When the last bell falls silent, listen for the small things that still sing.”</blockquote><div class="equipment"><h4>IN YOUR SATCHEL</h4><p>⚔ ${s.story.prologue < 4 ? "No blade yet" : s.sword === 3 ? "Star-forged blade" : s.age === "adult" ? "Keeper’s longsword" : "Practice sword"} <small>${s.sword} damage</small></p><p>◈ ${s.story.prologue < 4 ? "Visit Soren for equipment" : "Oak shield"} <small>${this.say("{Shield}")}</small></p><p>♫ Reed flute <small>${this.say("{Flute}")}</small></p><p>✧ Wandering lights <small>${s.fireflies.length} / 3</small></p><p>✎ Hidden carvings <small>${s.carvings.length} / 7</small></p></div><p class="journal-tip">Mira is looking for three lights near the orchard, Whisperwood path, and coastal road. The smith can temper your sword for 60 crystals.</p></section><section class="relic-list">${DUNGEONS.map((d) => `<div class="relic-row ${s.completed.includes(d.id) ? "complete" : ""}"><span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><div><h4>${d.name}</h4><p>${d.region} · ${d.age === "child" ? "First age" : "Second age"}</p></div><small>${s.completed.includes(d.id) ? "RESTORED" : d.age === s.age ? "UNDISCOVERED" : "ANOTHER AGE"}</small></div>`).join("")}</section></div><section class="story-journal"><h3>What I remember</h3>${s.story.promise ? `<p class="promise-entry">My promise to Mira: “${s.story.promise === "home" ? "I’ll find my way home." : "I’ll remember us as we are."}”</p>` : ""}${memories.length ? memories.map((m) => `<details><summary>${m.title}</summary>${m.pages.map((line) => `<p><b>${line.speaker}</b><br>${this.say(line.text)}</p>`).join("")}</details>`).join("") : "<p>The first page is still waiting.</p>"}</section><section class="story-journal carvings"><h3>Carvings in hidden places</h3>${
+        s.carvings.length
+          ? DUNGEONS.filter((d) => s.carvings.includes(d.id) && CARVINGS[d.id])
+              .map(
+                (d) =>
+                  `<details><summary>${CARVINGS[d.id].title} <small>${d.name}</small></summary><p>${CARVINGS[d.id].text}</p></details>`,
+              )
+              .join("")
+          : "<p>Some sanctuary walls sound hollow. Listen for them in the guardian halls.</p>"
+      }</section></div>`,
     );
   }
   map(s: SaveData, x: number, z: number) {
