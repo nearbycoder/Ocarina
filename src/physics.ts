@@ -9,6 +9,8 @@ export interface Collider {
   top?: number;
   gate?: number;
   label?: string;
+  /** Above head height (lintels): stops camera, blade and sight casts only. */
+  overhead?: boolean;
 }
 export interface Point {
   x: number;
@@ -209,15 +211,19 @@ export class CollisionWorld {
         for (const c of this.cells.get(`${x},${z}`) || []) found.add(c);
     return [...found].filter(this.active);
   }
+  /** Colliders that stop walking actors; overhead ones are passed beneath. */
+  solid(a: Point, b = a, pad = 1) {
+    return this.query(a, b, pad).filter((c) => !c.overhead);
+  }
   blocked(p: Point, radius = 0.4) {
-    return this.query(p, p, radius).some((c) => penetration(p, radius, c));
+    return this.solid(p, p, radius).some((c) => penetration(p, radius, c));
   }
   move(start: Point, displacement: Point, radius = 0.4): Point {
     const p = { ...start };
     // Resolve loaded saves / moving obstacles before attempting a sweep.
     for (let pass = 0; pass < 8; pass++) {
       let changed = false;
-      for (const c of this.query(p, p, radius)) {
+      for (const c of this.solid(p, p, radius)) {
         const overlap = penetration(p, radius, c);
         if (overlap) {
           p.x += overlap.x * (overlap.depth + EPS);
@@ -230,7 +236,7 @@ export class CollisionWorld {
     let v = { ...displacement };
     for (let iteration = 0; iteration < 5; iteration++) {
       let first: Hit | null = null;
-      for (const c of this.query(p, { x: p.x + v.x, z: p.z + v.z }, radius)) {
+      for (const c of this.solid(p, { x: p.x + v.x, z: p.z + v.z }, radius)) {
         const hit = sweep(p, v, radius, c);
         if (hit && (!first || hit.t < first.t)) first = hit;
       }

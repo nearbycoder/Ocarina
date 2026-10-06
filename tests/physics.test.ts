@@ -88,4 +88,24 @@ describe("continuous movement and obstruction", () => {
       }
     }
   });
+  it("lets walkers pass beneath overhead colliders that still stop the camera", () => {
+    const lintel = {
+      x: 0,
+      z: 0,
+      w: 8,
+      d: 1.5,
+      bottom: 6.5,
+      top: 7.5,
+      overhead: true,
+    };
+    const world = new CollisionWorld([lintel]);
+    expect(world.blocked({ x: 0, z: 0 })).toBe(false);
+    const walked = world.move({ x: 0, z: 3 }, { x: 0, z: -6 });
+    expect(walked.z).toBeCloseTo(-3);
+    // A camera ray through the stone is stopped; one beneath it is not.
+    expect(
+      world.cast({ x: 0, z: -4, y: 1.4 }, { x: 0, z: 4, y: 12 }),
+    ).toBeLessThan(1);
+    expect(world.cast({ x: 0, z: -4, y: 1.4 }, { x: 0, z: 4, y: 2 })).toBe(1);
+  });
 });

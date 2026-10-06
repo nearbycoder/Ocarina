@@ -717,6 +717,17 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
       w.colliders.push({ x, z, w: 14, d: 1 });
     }
     mesh(box(8, 1, 1.5), wall, 0, 7, z, group);
+    // The lintel keeps the follow camera out of its stone when zoomed out.
+    w.colliders.push({
+      x: 0,
+      z,
+      w: 8,
+      d: 1.5,
+      bottom: 6.5,
+      top: 7.5,
+      overhead: true,
+      label: "Gate lintel",
+    });
     for (let x = -3; x <= 3; x += 1)
       mesh(box(0.18, 6.8, 0.25), "#adad91", x, 3.4, z, gate);
     mesh(box(7, 0.16, 0.4), "#c5b27c", 0, 3, z, gate);
