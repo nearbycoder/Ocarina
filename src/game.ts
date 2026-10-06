@@ -54,10 +54,17 @@ import {
 } from "./foes";
 import { LAYOUTS } from "./layouts";
 import {
+  DEFAULT_KEYS,
+  KEY_ACTION_NAMES,
+  bindKey,
+  keyLabel,
+  keyLabels,
+  normalizeCode,
   padActions,
   padShield,
   shapeStick,
   type Device,
+  type KeyAction,
   type PadContext,
 } from "./input";
 import {
@@ -250,6 +257,10 @@ export class Game {
   private padNav = 0;
   private touchMove = { x: 0, y: 0 };
   private touchShield = false;
+  /** The action waiting for a new key in the settings sheet. */
+  private binding: KeyAction | null = null;
+  /** The browser's keyboard layout map, when it offers one. */
+  private keyLayout?: ReadonlyMap<string, string>;
   constructor() {
     const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
     this.renderer = new T.WebGLRenderer({
@@ -360,6 +371,7 @@ export class Game {
   }
   applySettings(store = false) {
     this.sound.configure(this.settings);
+    this.ui.setKeys(keyLabels(this.settings.keys, this.keyLayout));
     document.body.classList.toggle(
       "reduced-motion",
       this.settings.reducedMotion,
@@ -371,6 +383,31 @@ export class Game {
     } catch {
       // Settings still apply for this session.
     }
+  }
+  /** Takes the key pressed while a binding row waits, or explains why not. */
+  captureKey(code: string) {
+    const action = this.binding!;
+    const name = KEY_ACTION_NAMES[action];
+    const label = (c: string) => keyLabel(c, this.keyLayout);
+    let note: string;
+    this.binding = null;
+    if (code === "Escape")
+      note = `${name} stays on ${label(this.settings.keys[action])}.`;
+    else {
+      const result = bindKey(this.settings.keys, action, code);
+      if (!result) {
+        this.binding = action;
+        note = `${label(code)} is kept for the menu, camera, or flute. Choose another key, or Esc to cancel.`;
+      } else {
+        this.settings.keys = result.keys;
+        this.applySettings(true);
+        note = `${name} is now ${label(code)}.`;
+        if (result.swapped)
+          note += ` ${KEY_ACTION_NAMES[result.swapped]} moved to ${label(result.keys[result.swapped])}.`;
+        this.sound.ui();
+      }
+    }
+    this.ui.settings(this.settings, this.binding, note);
   }
   changeSetting(a: string) {
     const s = this.settings;
@@ -821,7 +858,29 @@ export class Game {
     return heightAt(x, z);
   }
   bindInput() {
+    // Chrome and Edge can say what each key is called on this keyboard.
+    const keyboard = (
+      navigator as Navigator & {
+        keyboard?: {
+          getLayoutMap?: () => Promise<ReadonlyMap<string, string>>;
+        };
+      }
+    ).keyboard;
+    keyboard
+      ?.getLayoutMap?.()
+      .then((layout) => {
+        this.keyLayout = layout;
+        this.applySettings();
+      })
+      .catch(() => {});
     window.addEventListener("keydown", (e) => {
+      const code = normalizeCode(e.code),
+        bound = this.settings.keys;
+      if (this.binding && this.ui.panel === "settings") {
+        e.preventDefault();
+        if (!e.repeat) this.captureKey(code);
+        return;
+      }
       if (
         [
           "Space",
@@ -830,24 +889,25 @@ export class Game {
           "ArrowDown",
           "ArrowLeft",
           "ArrowRight",
-        ].includes(e.code)
+        ].includes(code) ||
+        (this.started && !this.ui.panel && Object.values(bound).includes(code))
       )
         e.preventDefault();
       if (e.repeat) return;
-      this.keys.add(e.code);
+      this.keys.add(code);
       this.setDevice("keyboard");
       if (this.ui.panel === "flute") {
-        if (["Digit1", "Digit2", "Digit3"].includes(e.code))
-          this.action(`note-${e.code.slice(-1)}`);
-        if (e.code === "Escape" || e.code === "KeyF") this.action("close");
+        if (["Digit1", "Digit2", "Digit3"].includes(code))
+          this.action(`note-${code.slice(-1)}`);
+        if (code === "Escape" || code === bound.flute) this.action("close");
         return;
       }
-      if (e.code === "Escape") {
+      if (code === "Escape") {
         if (this.ui.panel === "title") return;
         this.action(this.ui.panel ? "close" : "pause");
         return;
       }
-      if (this.ui.panel === "dialogue" && e.code === "Enter") {
+      if (this.ui.panel === "dialogue" && code === "Enter") {
         this.ui
           .el("panel")
           .querySelector<HTMLButtonElement>("[data-action]")
@@ -856,25 +916,27 @@ export class Game {
       }
       if (!this.started || this.ui.panel) {
         if (
-          (e.code === "Tab" && this.ui.panel === "journal") ||
-          (e.code === "KeyM" && this.ui.panel === "map")
+          (code === bound.journal && this.ui.panel === "journal") ||
+          (code === bound.map && this.ui.panel === "map")
         )
           this.action("close");
         return;
       }
       const actions: Record<string, string> = {
-        KeyE: "interact",
-        KeyJ: "attack",
-        Space: "dodge",
-        KeyQ: "target",
-        KeyF: "flute",
-        Tab: "journal",
-        KeyM: "map",
-        KeyR: "checkpoint",
+        [bound.interact]: "interact",
+        [bound.attack]: "attack",
+        [bound.dodge]: "dodge",
+        [bound.target]: "target",
+        [bound.flute]: "flute",
+        [bound.journal]: "journal",
+        [bound.map]: "map",
+        [bound.checkpoint]: "checkpoint",
       };
-      if (actions[e.code]) this.action(actions[e.code]);
+      if (actions[code]) this.action(actions[code]);
     });
-    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    window.addEventListener("keyup", (e) =>
+      this.keys.delete(normalizeCode(e.code)),
+    );
     const importFile = this.ui.el("import-file") as HTMLInputElement;
     importFile.addEventListener("change", () => {
       const file = importFile.files?.[0];
@@ -977,8 +1039,7 @@ export class Game {
   }
   shieldHeld() {
     return (
-      this.keys.has("ShiftLeft") ||
-      this.keys.has("ShiftRight") ||
+      this.keys.has(this.settings.keys.shield) ||
       this.padShield ||
       this.touchShield
     );
@@ -1064,6 +1125,7 @@ export class Game {
     } else if (a === "map" && panel === "map") this.action("close");
   }
   action(a: string) {
+    if (this.binding && !a.startsWith("bind-")) this.binding = null;
     if (
       a === "story-next" ||
       a === "promise-home" ||
@@ -1173,6 +1235,23 @@ export class Game {
     }
     if (a.startsWith("set-") || a.startsWith("toggle-")) {
       this.changeSetting(a);
+      return;
+    }
+    if (a === "bind-reset") {
+      this.settings.keys = { ...DEFAULT_KEYS };
+      this.applySettings(true);
+      this.ui.settings(this.settings, null, "Keys reset to the defaults.");
+      return;
+    }
+    if (a.startsWith("bind-")) {
+      const action = a.slice(5) as KeyAction;
+      if (!(action in KEY_ACTION_NAMES)) return;
+      this.binding = action;
+      this.ui.settings(
+        this.settings,
+        action,
+        `Press the new key for ${KEY_ACTION_NAMES[action].toLowerCase()}. Esc cancels.`,
+      );
       return;
     }
     if (a === "home") {
@@ -1843,8 +1922,12 @@ export class Game {
   }
   /** Camera-relative movement; keys give full speed, sticks give partial. */
   movementVector() {
-    let x = Number(this.keys.has("KeyD")) - Number(this.keys.has("KeyA")),
-      z = Number(this.keys.has("KeyS")) - Number(this.keys.has("KeyW"));
+    const bound = this.settings.keys;
+    let x =
+        Number(this.keys.has(bound.right)) - Number(this.keys.has(bound.left)),
+      z =
+        Number(this.keys.has(bound.back)) -
+        Number(this.keys.has(bound.forward));
     const keys = Math.hypot(x, z);
     if (keys > 0) {
       x /= keys;

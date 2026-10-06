@@ -101,6 +101,37 @@ await inPage("polish: sword", async () => (await polishQA.sword()).length);
 await inPage("polish: combo", async () => (await polishQA.combo()).length);
 await page.close();
 
+// Keyboard remapping on its own page, so rebinds can't leak into other groups.
+await run("keys: remapping", async () => {
+  const keyPage = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    const count = await keyPage.evaluate(async () => {
+      await bellQA.start();
+      return (await settingsQA.keys()).length;
+    });
+    // A reload reads the bindings back from storage.
+    await keyPage.reload();
+    await keyPage.waitForFunction(() => window.__BELL_OF_AGES__?.debug);
+    const kept = await keyPage.evaluate(
+      () => window.__BELL_OF_AGES__.debug.game().settings.keys,
+    );
+    if (kept.attack !== "KeyK" || kept.forward !== "KeyZ")
+      throw new Error("Bindings did not survive a reload");
+    for (const name of ["browser-checks.js", "settings-checks.js"])
+      await keyPage.addScriptTag({ content: suite(name) });
+    const reset = await keyPage.evaluate(async () => {
+      window.BELL_TEST_MANUAL = true;
+      // The prologue helper presses E, which is no longer interact here.
+      window.__BELL_OF_AGES__.debug.reset();
+      bellQA.close();
+      return settingsQA.resetKeys().length;
+    });
+    return count + 1 + reset;
+  } finally {
+    await keyPage.close();
+  }
+});
+
 // Journey files: export through the pause menu, import on a fresh page.
 await run("journey files", async () => {
   const results = [];

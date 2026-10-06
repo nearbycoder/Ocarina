@@ -1342,6 +1342,43 @@ body[data-device="gamepad"] #panel button:focus {
   font-size: 13px;
   color: #f0d79b;
 }
+/* Keyboard bindings: two columns of rows, one waiting for a key. */
+.bind-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 8px;
+}
+.setting-row.bind {
+  font-size: 12px;
+  min-height: 34px;
+}
+.setting-row.bind:hover {
+  background: #c4c89b18;
+}
+.setting-row.bind kbd {
+  min-width: 28px;
+  text-align: center;
+  white-space: nowrap;
+}
+.setting-row.bind.capturing {
+  border-color: #e7d3a0;
+  background: #e7d3a01a;
+}
+.setting-row.bind.capturing kbd {
+  color: #f0d79b;
+}
+.bind-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #c8cdb8;
+  margin: 10px 0 2px;
+  min-height: 2.4em;
+}
+@media (max-width: 520px) {
+  .bind-grid {
+    grid-template-columns: 1fr;
+  }
+}
 /* Comfort: reduced motion removes interface movement. */
 body.reduced-motion *,
 body.reduced-motion *::before,

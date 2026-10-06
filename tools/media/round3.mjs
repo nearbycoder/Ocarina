@@ -50,7 +50,56 @@ const started = async (page) =>
     bellQA.close();
   });
 
+const press = (page, code) =>
+  page.evaluate((code) => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { code }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code }));
+  }, code);
+const rebind = async (page, pairs) => {
+  for (const [action, code] of pairs) {
+    await page.click(`[data-action="bind-${action}"]`);
+    await press(page, code);
+  }
+};
+
 const SHOTS = {
+  async "b-settings-keys"(page) {
+    await started(page);
+    await page.evaluate(() => {
+      window.__BELL_OF_AGES__.debug.action("pause");
+      window.__BELL_OF_AGES__.debug.action("settings");
+    });
+    await rebind(page, [
+      ["attack", "KeyK"],
+      ["map", "KeyQ"],
+    ]);
+    await page.click('[data-action="bind-forward"]');
+    await page.evaluate(() =>
+      document.querySelector(".bind-grid").scrollIntoView({ block: "center" }),
+    );
+    await shoot(page, "b-settings-keys");
+  },
+  async "b-hud-remapped"(page) {
+    await started(page);
+    await page.evaluate(() => {
+      window.__BELL_OF_AGES__.debug.action("pause");
+      window.__BELL_OF_AGES__.debug.action("settings");
+    });
+    await rebind(page, [
+      ["forward", "KeyZ"],
+      ["left", "KeyQ"],
+      ["attack", "KeyK"],
+      ["interact", "KeyG"],
+    ]);
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.action("close");
+      api.debug.teleport(3.1, 52.4);
+      api.debug.game().yaw = 0.5;
+      api.debug.advance(0.3);
+    });
+    await shoot(page, "b-hud-remapped");
+  },
   async "a-title-import"(page) {
     await shoot(page, "a-title-import");
   },

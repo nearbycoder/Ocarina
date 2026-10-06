@@ -1,5 +1,6 @@
 // Player preferences, stored apart from the campaign save so starting a new
 // story never resets them. Every field is validated and clamped on load.
+import { DEFAULT_KEYS, parseBindings, type KeyBindings } from "./input";
 export interface Settings {
   version: 1;
   /** Percent, 0–100 in steps of 10. */
@@ -15,6 +16,8 @@ export interface Settings {
   /** Removes hit-stop pauses, the damage flash, and interface motion. */
   reducedMotion: boolean;
   largeText: boolean;
+  /** Keyboard bindings. Older stored settings get the default keys. */
+  keys: KeyBindings;
 }
 export const SETTINGS_KEY = "bell-of-ages-settings-v1";
 export const VOLUME_STEP = 10;
@@ -31,6 +34,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     invertY: false,
     reducedMotion: prefersReducedMotion,
     largeText: false,
+    keys: { ...DEFAULT_KEYS },
   };
 }
 const clamp = (n: number, min: number, max: number) =>
@@ -71,6 +75,7 @@ export function parseSettings(
     invertY: flag("invertY"),
     reducedMotion: flag("reducedMotion"),
     largeText: flag("largeText"),
+    keys: parseBindings(s.keys),
   };
 }
 /** Linear gain for a voice on the given bus; 0 means the voice is silent. */

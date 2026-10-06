@@ -1,19 +1,30 @@
 import { DUNGEONS, objective, type SaveData } from "./data";
 import type { Settings } from "./settings";
-import { controlText, interactGlyph, noteGlyphs, type Device } from "./input";
-const CONTROLS: Record<Device, string> = {
-  keyboard:
-    "<span><kbd>W A S D</kbd> Move</span><span><kbd>J</kbd> Sword</span><span><kbd>SPACE</kbd> Dodge</span><span><kbd>Q</kbd> Lock on</span><span><kbd>F</kbd> Flute</span><span><kbd>TAB</kbd> Journal</span>",
-  gamepad:
+import {
+  KEY_ACTIONS,
+  KEY_ACTION_NAMES,
+  controlText,
+  interactGlyph,
+  keyLabels,
+  moveKeys,
+  noteGlyphs,
+  type Device,
+  type KeyAction,
+  type KeyLabels,
+} from "./input";
+const CONTROLS: Record<Device, (k: KeyLabels) => string> = {
+  keyboard: (k) =>
+    `<span><kbd>${moveKeys(k).toUpperCase()}</kbd> Move</span><span><kbd>${k.attack}</kbd> Sword</span><span><kbd>${k.dodge.toUpperCase()}</kbd> Dodge</span><span><kbd>${k.target}</kbd> Lock on</span><span><kbd>${k.flute}</kbd> Flute</span><span><kbd>${k.journal.toUpperCase()}</kbd> Journal</span>`,
+  gamepad: () =>
     "<span><kbd>LS</kbd> Move</span><span><kbd>X</kbd> Sword</span><span><kbd>B</kbd> Dodge</span><span><kbd>RB</kbd> Shield</span><span><kbd>LB</kbd> Lock on</span><span><kbd>Y</kbd> Flute</span><span><kbd>START</kbd> Pause</span>",
-  touch: "",
+  touch: () => "",
 };
-const HELP: Record<Device, string> = {
-  keyboard:
-    "<b>WASD</b> move · <b>Mouse drag / arrows</b> camera · <b>E</b> interact<br><b>J / click</b> sword · <b>Space</b> dodge · <b>Shift</b> shield<br><b>Q</b> lock on · <b>F</b> flute · <b>R</b> return to checkpoint",
-  gamepad:
+const HELP: Record<Device, (k: KeyLabels) => string> = {
+  keyboard: (k) =>
+    `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint`,
+  gamepad: () =>
     "<b>Left stick</b> move · <b>Right stick</b> camera · <b>A</b> interact<br><b>X</b> sword · <b>B</b> dodge · <b>RB / RT</b> shield · <b>LB</b> lock on<br><b>Y</b> flute · <b>Back</b> map · <b>D-pad up</b> journal · <b>Start</b> pause",
-  touch:
+  touch: () =>
     "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on · <b>Flute</b> · <b>Ⅱ</b> pause",
 };
 import {
@@ -38,6 +49,8 @@ export class UI {
   onAction: (action: string) => void = () => {};
   private toastTimer = 0;
   device: Device = "keyboard";
+  /** What the player's keyboard keys are called, after any remapping. */
+  keys: KeyLabels = keyLabels();
   constructor() {
     this.root.innerHTML = `
  <div id="vignette"></div><div id="hud" hidden>
@@ -71,17 +84,23 @@ export class UI {
   setDevice(device: Device) {
     this.device = device;
     document.body.dataset.device = device;
-    this.el("controls").innerHTML = CONTROLS[device];
-    this.el("map-key").textContent = device === "gamepad" ? "BACK" : "M";
+    this.el("controls").innerHTML = CONTROLS[device](this.keys);
+    this.el("map-key").textContent =
+      device === "gamepad" ? "BACK" : this.keys.map;
     this.el("map-key").hidden = device === "touch";
     this.hudSignature = "";
     const prompt = this.lastPrompt;
     this.lastPrompt = "";
     this.prompt(prompt);
   }
+  /** Uses new key names everywhere controls are shown. */
+  setKeys(keys: KeyLabels) {
+    this.keys = keys;
+    this.setDevice(this.device);
+  }
   /** Fills {control} placeholders for the active device. */
   say(text: string) {
-    return controlText(text, this.device);
+    return controlText(text, this.device, this.keys);
   }
   el(id: string) {
     return document.getElementById(id)!;
@@ -146,7 +165,7 @@ export class UI {
     this.lastPrompt = text;
     this.el("prompt").hidden = !text;
     this.el("prompt").innerHTML = text
-      ? `<kbd>${interactGlyph(this.device)}</kbd><span>${text}</span>`
+      ? `<kbd>${interactGlyph(this.device, this.keys)}</kbd><span>${text}</span>`
       : "";
   }
   toast(text: string) {
@@ -197,7 +216,7 @@ export class UI {
       ?.action;
     this.setPanel(
       "pause",
-      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>Tab</span></button><button data-action="map">Map of the kingdom <span>M</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? "R" : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device]}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
+      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>${this.keys.journal}</span></button><button data-action="map">Map of the kingdom <span>${this.keys.map}</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? this.keys.checkpoint : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device](this.keys)}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
     );
     this.refocus(focused);
   }
@@ -207,7 +226,7 @@ export class UI {
       .querySelector<HTMLElement>(`[data-action="${action}"]`)
       ?.focus({ preventScroll: true });
   }
-  settings(s: Settings) {
+  settings(s: Settings, binding: KeyAction | null = null, note = "") {
     const focused = (document.activeElement as HTMLElement | null)?.dataset
       ?.action;
     const stepper = (key: string, label: string, value: string) =>
@@ -216,7 +235,7 @@ export class UI {
       `<button class="setting-row toggle" data-action="toggle-${key}" aria-pressed="${on}"><span>${label}<small>${note}</small></span><b>${on ? "ON" : "OFF"}</b></button>`;
     this.setPanel(
       "settings",
-      `<div class="sheet settings-sheet"><button class="close" data-action="pause" aria-label="Back to the pause menu">×</button><div class="eyebrow">SETTINGS</div><h2>Make the journey yours.</h2><section><h4>SOUND</h4>${stepper("master", "Master volume", `${s.master}%`)}${stepper("effects", "Effects", `${s.effects}%`)}${stepper("ambience", "Ambience", `${s.ambience}%`)}${stepper("music", "Music", `${s.music}%`)}${toggle("muted", "Mute all sound", s.muted, "")}</section><section><h4>CAMERA</h4>${stepper("sensitivity", "Camera speed", `${Math.round(s.sensitivity * 100)}%`)}${toggle("invertY", "Invert vertical camera", s.invertY, "")}</section><section><h4>COMFORT</h4>${toggle("reducedMotion", "Reduced motion", s.reducedMotion, "No hit-stop pauses, camera shake, damage flash, or sliding interface")}${toggle("largeText", "Larger interface text", s.largeText, "")}</section><div class="menu-list"><button class="primary" data-action="pause">Back <span>←</span></button></div><p class="save-note">Settings stay in this browser and apply to every journey.</p></div>`,
+      `<div class="sheet settings-sheet"><button class="close" data-action="pause" aria-label="Back to the pause menu">×</button><div class="eyebrow">SETTINGS</div><h2>Make the journey yours.</h2><section><h4>SOUND</h4>${stepper("master", "Master volume", `${s.master}%`)}${stepper("effects", "Effects", `${s.effects}%`)}${stepper("ambience", "Ambience", `${s.ambience}%`)}${stepper("music", "Music", `${s.music}%`)}${toggle("muted", "Mute all sound", s.muted, "")}</section><section><h4>CAMERA</h4>${stepper("sensitivity", "Camera speed", `${Math.round(s.sensitivity * 100)}%`)}${toggle("invertY", "Invert vertical camera", s.invertY, "")}</section><section><h4>COMFORT</h4>${toggle("reducedMotion", "Reduced motion", s.reducedMotion, "No hit-stop pauses, camera shake, damage flash, or sliding interface")}${toggle("largeText", "Larger interface text", s.largeText, "")}</section><section><h4>KEYBOARD</h4><div class="bind-grid">${KEY_ACTIONS.map((a) => `<button class="setting-row bind${binding === a ? " capturing" : ""}" data-action="bind-${a}" aria-label="${KEY_ACTION_NAMES[a]}: ${binding === a ? "press a key" : this.keys[a]}"><span>${KEY_ACTION_NAMES[a]}</span><kbd>${binding === a ? "Press a key" : this.keys[a]}</kbd></button>`).join("")}</div><p class="bind-note" role="status">${note || "Choose an action, then press its new key. Esc cancels. Escape, the arrow keys, and 1 to 3 stay as they are."}</p><button class="setting-row toggle" data-action="bind-reset"><span>Reset keys to defaults</span><b>↺</b></button></section><div class="menu-list"><button class="primary" data-action="pause">Back <span>←</span></button></div><p class="save-note">Settings stay in this browser and apply to every journey.</p></div>`,
     );
     this.refocus(focused);
   }

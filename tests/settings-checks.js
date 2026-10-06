@@ -211,5 +211,113 @@ window.settingsQA = (() => {
     bellQA.close();
     return results;
   }
-  return { run, audio, results };
+  // Keyboard remapping through the settings sheet, with real key events.
+  async function keys() {
+    const press = (code) => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { code }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code }));
+    };
+    const note = () => document.querySelector(".bind-note").textContent;
+    const bind = (action, code) => {
+      click(`bind-${action}`);
+      press(code);
+    };
+    bellQA.close();
+    api.debug.action("pause");
+    click("settings");
+    click("bind-attack");
+    const row = document.querySelector('[data-action="bind-attack"]');
+    assert(
+      row.classList.contains("capturing") &&
+        row.textContent.includes("Press a key"),
+      "Choosing Sword waits for a key",
+    );
+    press("KeyK");
+    assert(
+      game.settings.keys.attack === "KeyK" && note().includes("Sword is now K"),
+      `Pressing K binds the sword (${note()})`,
+    );
+    bind("forward", "KeyZ");
+    bind("interact", "KeyG");
+    bind("dodge", "ArrowUp");
+    assert(
+      game.settings.keys.dodge === "Space" &&
+        document
+          .querySelector('[data-action="bind-dodge"]')
+          .classList.contains("capturing") &&
+        note().includes("kept"),
+      "The camera arrows can't be taken, and the row keeps waiting",
+    );
+    press("Escape");
+    assert(
+      game.settings.keys.dodge === "Space" &&
+        api.getState().panel === "settings" &&
+        !document.querySelector(".capturing"),
+      "Escape cancels the wait without leaving Settings",
+    );
+    bind("map", "KeyQ");
+    assert(
+      game.settings.keys.map === "KeyQ" &&
+        game.settings.keys.target === "KeyM" &&
+        note().includes("Lock on moved to M"),
+      `A key in use trades places (${note()})`,
+    );
+    assert(
+      stored().keys?.attack === "KeyK",
+      "Bindings are saved with settings",
+    );
+    api.debug.action("close");
+    // Play with the new keys: K swings, J doesn't; Z walks, W doesn't.
+    api.debug.teleport(-8, 66);
+    game.yaw = 0;
+    api.debug.advance(1);
+    await bellQA.key("KeyJ");
+    assert(api.getState().combat.elapsed < 0, "J no longer swings the sword");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyK" }));
+    assert(api.getState().combat.elapsed >= 0, "K swings the sword");
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyK" }));
+    api.debug.advance(1);
+    const z = api.getState().position.z;
+    await bellQA.key("KeyW", 400);
+    assert(Math.abs(api.getState().position.z - z) < 0.05, "W no longer walks");
+    await bellQA.key("KeyZ", 400);
+    const walked = z - api.getState().position.z;
+    assert(walked > 1, `Z walks forward (${walked.toFixed(2)} m)`);
+    const strip = document.getElementById("controls").textContent;
+    assert(
+      strip.includes("ZASD") && strip.includes("K"),
+      `The controls strip names the new keys (${strip})`,
+    );
+    api.debug.teleport(3.1, 51);
+    api.debug.advance(0.05);
+    assert(
+      document.querySelector("#prompt kbd")?.textContent === "G",
+      "The interaction prompt names G",
+    );
+    await bellQA.key("KeyG");
+    assert(api.getState().panel === "dialogue", "G talks to Elder Rowan");
+    bellQA.close();
+    await bellQA.key("Escape");
+    assert(
+      document.querySelector(".help").textContent.includes("ZASD move"),
+      "Pause help names the new keys",
+    );
+    api.debug.action("close");
+    return results;
+  }
+  // Puts the default keys back through the sheet's reset button.
+  function resetKeys() {
+    api.debug.action("pause");
+    click("settings");
+    click("bind-reset");
+    assert(
+      game.settings.keys.attack === "KeyJ" &&
+        game.settings.keys.forward === "KeyW" &&
+        stored().keys.attack === "KeyJ",
+      "Reset restores and saves the default keys",
+    );
+    api.debug.action("close");
+    return results;
+  }
+  return { run, audio, keys, resetKeys, results };
 })();

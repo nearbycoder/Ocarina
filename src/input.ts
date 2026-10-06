@@ -77,44 +77,227 @@ export function padShield(current: readonly boolean[]) {
   return !!current[PAD.RB] || !!current[PAD.RT];
 }
 
-const WORDS: Record<string, Record<Device, string>> = {
-  move: {
-    keyboard: "WASD",
-    gamepad: "the left stick",
-    touch: "the thumbstick",
-  },
-  moveShort: { keyboard: "WASD", gamepad: "Left stick", touch: "Thumbstick" },
-  look: {
-    keyboard: "drag the mouse",
-    gamepad: "use the right stick",
-    touch: "drag the scene",
-  },
-  talk: { keyboard: "press E", gamepad: "press A", touch: "tap Use" },
-  use: { keyboard: "E", gamepad: "A", touch: "Use" },
-  sword: { keyboard: "press J", gamepad: "press X", touch: "tap Sword" },
-  shield: { keyboard: "hold Shift", gamepad: "hold RB", touch: "hold Shield" },
-  dodge: { keyboard: "press Space", gamepad: "press B", touch: "tap Dodge" },
-  flute: { keyboard: "press F", gamepad: "press Y", touch: "tap Flute" },
-  fluteKey: { keyboard: "F", gamepad: "Y", touch: "Flute" },
-  lock: { keyboard: "Q", gamepad: "LB", touch: "Lock" },
+// Keyboard bindings: each action keeps one physical key (KeyboardEvent.code),
+// so a binding means the same place on any layout.
+export const KEY_ACTIONS = [
+  "forward",
+  "back",
+  "left",
+  "right",
+  "interact",
+  "attack",
+  "shield",
+  "dodge",
+  "target",
+  "flute",
+  "journal",
+  "map",
+  "checkpoint",
+] as const;
+export type KeyAction = (typeof KEY_ACTIONS)[number];
+export type KeyBindings = Record<KeyAction, string>;
+export const DEFAULT_KEYS: KeyBindings = {
+  forward: "KeyW",
+  back: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  interact: "KeyE",
+  attack: "KeyJ",
+  shield: "ShiftLeft",
+  dodge: "Space",
+  target: "KeyQ",
+  flute: "KeyF",
+  journal: "Tab",
+  map: "KeyM",
+  checkpoint: "KeyR",
 };
+export const KEY_ACTION_NAMES: Record<KeyAction, string> = {
+  forward: "Move forward",
+  back: "Move back",
+  left: "Move left",
+  right: "Move right",
+  interact: "Interact",
+  attack: "Sword",
+  shield: "Shield (hold)",
+  dodge: "Dodge roll",
+  target: "Lock on",
+  flute: "Reed flute",
+  journal: "Journal",
+  map: "Kingdom map",
+  checkpoint: "Return to checkpoint",
+};
+/** Escape pauses, the arrows turn the camera, and 1–3 play the flute. */
+const RESERVED = new Set([
+  "Escape",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Digit1",
+  "Digit2",
+  "Digit3",
+]);
+/** Left and right modifier keys count as one key, as Shift always has. */
+export function normalizeCode(code: string) {
+  return code.replace(/^(Shift|Control|Alt|Meta)Right$/, "$1Left");
+}
+export function reservedKey(code: string) {
+  return RESERVED.has(normalizeCode(code));
+}
+const usableCode = (code: unknown): code is string =>
+  typeof code === "string" &&
+  /^[A-Z][A-Za-z0-9]{1,24}$/.test(code) &&
+  !reservedKey(code) &&
+  normalizeCode(code) === code;
+/** Repairs stored bindings; any clash or bad key falls back to the defaults. */
+export function parseBindings(raw: unknown): KeyBindings {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    return { ...DEFAULT_KEYS };
+  const stored = raw as Record<string, unknown>;
+  const keys = { ...DEFAULT_KEYS };
+  for (const action of KEY_ACTIONS)
+    if (usableCode(stored[action])) keys[action] = stored[action];
+  const used = new Set(Object.values(keys));
+  return used.size === KEY_ACTIONS.length ? keys : { ...DEFAULT_KEYS };
+}
+/**
+ * Binds `code` to `action`. If another action already uses it, the two
+ * trade keys. Returns null for keys that can't be bound.
+ */
+export function bindKey(
+  keys: KeyBindings,
+  action: KeyAction,
+  code: string,
+): { keys: KeyBindings; swapped: KeyAction | null } | null {
+  code = normalizeCode(code);
+  if (!usableCode(code)) return null;
+  const next = { ...keys };
+  const other =
+    KEY_ACTIONS.find((a) => a !== action && keys[a] === code) ?? null;
+  if (other) next[other] = keys[action];
+  next[action] = code;
+  return { keys: next, swapped: other };
+}
+const NAMED: Record<string, string> = {
+  Space: "Space",
+  ShiftLeft: "Shift",
+  ControlLeft: "Ctrl",
+  AltLeft: "Alt",
+  MetaLeft: "Meta",
+  CapsLock: "Caps Lock",
+  Backquote: "`",
+  Minus: "-",
+  Equal: "=",
+  BracketLeft: "[",
+  BracketRight: "]",
+  Backslash: "\\",
+  Semicolon: ";",
+  Quote: "'",
+  Comma: ",",
+  Period: ".",
+  Slash: "/",
+  IntlBackslash: "\\",
+};
+/**
+ * What a key is called. With the browser's layout map (Chrome, Edge), keys
+ * show the letter printed on the player's own keyboard: Z, Q, S, D on AZERTY.
+ */
+export function keyLabel(code: string, layout?: ReadonlyMap<string, string>) {
+  const printed = layout?.get(code);
+  if (printed?.trim()) return printed.toUpperCase();
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  if (/^Numpad\d$/.test(code)) return `Num ${code.slice(6)}`;
+  return NAMED[code] ?? code.replace(/(Left|Right)$/, "");
+}
+export type KeyLabels = Record<KeyAction, string>;
+export function keyLabels(
+  keys: KeyBindings = DEFAULT_KEYS,
+  layout?: ReadonlyMap<string, string>,
+): KeyLabels {
+  const labels = {} as KeyLabels;
+  for (const action of KEY_ACTIONS)
+    labels[action] = keyLabel(keys[action], layout);
+  return labels;
+}
+/** "WASD" for single letters, "Up / Left / Down / Right" otherwise. */
+export function moveKeys(k: KeyLabels) {
+  const four = [k.forward, k.left, k.back, k.right];
+  return four.every((l) => l.length === 1) ? four.join("") : four.join(" / ");
+}
+const DEFAULT_LABELS = keyLabels();
+function words(k: KeyLabels): Record<string, Record<Device, string>> {
+  return {
+    move: {
+      keyboard: moveKeys(k),
+      gamepad: "the left stick",
+      touch: "the thumbstick",
+    },
+    moveShort: {
+      keyboard: moveKeys(k),
+      gamepad: "Left stick",
+      touch: "Thumbstick",
+    },
+    look: {
+      keyboard: "drag the mouse",
+      gamepad: "use the right stick",
+      touch: "drag the scene",
+    },
+    talk: {
+      keyboard: `press ${k.interact}`,
+      gamepad: "press A",
+      touch: "tap Use",
+    },
+    use: { keyboard: k.interact, gamepad: "A", touch: "Use" },
+    sword: {
+      keyboard: `press ${k.attack}`,
+      gamepad: "press X",
+      touch: "tap Sword",
+    },
+    shield: {
+      keyboard: `hold ${k.shield}`,
+      gamepad: "hold RB",
+      touch: "hold Shield",
+    },
+    dodge: {
+      keyboard: `press ${k.dodge}`,
+      gamepad: "press B",
+      touch: "tap Dodge",
+    },
+    flute: {
+      keyboard: `press ${k.flute}`,
+      gamepad: "press Y",
+      touch: "tap Flute",
+    },
+    fluteKey: { keyboard: k.flute, gamepad: "Y", touch: "Flute" },
+    lock: { keyboard: k.target, gamepad: "LB", touch: "Lock" },
+  };
+}
 /**
  * Replaces {word} placeholders with the active device's controls.
  * A capitalized placeholder ({Sword}) capitalizes the result.
  */
-export function controlText(text: string, device: Device) {
+export function controlText(
+  text: string,
+  device: Device,
+  labels: KeyLabels = DEFAULT_LABELS,
+) {
+  const table = words(labels);
   return text.replace(/\{(\w+)\}/g, (match, name: string) => {
-    const words = WORDS[name[0].toLowerCase() + name.slice(1)];
-    if (!words) return match;
-    const word = words[device];
+    const entry = table[name[0].toLowerCase() + name.slice(1)];
+    if (!entry) return match;
+    const word = entry[device];
     return name[0] === name[0].toUpperCase()
       ? word[0].toUpperCase() + word.slice(1)
       : word;
   });
 }
 /** The short label for the interact prompt badge. */
-export function interactGlyph(device: Device) {
-  return WORDS.use[device];
+export function interactGlyph(
+  device: Device,
+  labels: KeyLabels = DEFAULT_LABELS,
+) {
+  return words(labels).use[device];
 }
 /** Note controls shown on the reed flute. */
 export function noteGlyphs(device: Device): [string, string, string] | null {
