@@ -8,7 +8,14 @@ license texts are reproduced below.
 | [three.js](https://threejs.org/) (including `three/addons`: GLTFLoader, EffectComposer, GTAOPass, FXAA, RoomEnvironment, BufferGeometryUtils) | 0.186.1 | MIT | Rendering, model loading, post-processing |
 | [meshoptimizer](https://github.com/zeux/meshoptimizer) (decoder) | 1.3.0 | MIT | Decoding the compressed model pack |
 
-Fonts are not bundled. The interface requests **Cormorant Garamond** and **DM Sans** from Google Fonts at runtime; both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/). Local serif and sans-serif fallbacks are used when they are unavailable.
+The web build also bundles two fonts, Latin subsets only, packaged by [Fontsource](https://fontsource.org/):
+
+| Font | Package | Version | License |
+| --- | --- | --- | --- |
+| [Cormorant Garamond](https://github.com/CatharsisFonts/Cormorant) (400, 500, 600; italic 400, 500) | `@fontsource/cormorant-garamond` | 5.3.0 | SIL Open Font License 1.1 |
+| [DM Sans](https://github.com/googlefonts/dm-fonts) (400, 500, 600, 700) | `@fontsource/dm-sans` | 5.3.0 | SIL Open Font License 1.1 |
+
+Their copyright notices and the full license text ship with the build as `licenses/fonts-OFL.txt` (source: `public/licenses/fonts-OFL.txt`). No font is requested from a third-party server.
 
 Development-only tools (Vite, Vitest, TypeScript, glTF Transform, gltf-validator, sharp, Prettier, Playwright, Blender) are not redistributed in the build. See `package.json` for their versions.
 

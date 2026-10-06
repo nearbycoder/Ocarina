@@ -1,3 +1,14 @@
+// UI fonts ship with the game (SIL OFL 1.1, via Fontsource): Latin subsets of
+// the weights the interface uses, so nothing is fetched from a third party.
+import "@fontsource/cormorant-garamond/latin-400.css";
+import "@fontsource/cormorant-garamond/latin-500.css";
+import "@fontsource/cormorant-garamond/latin-600.css";
+import "@fontsource/cormorant-garamond/latin-400-italic.css";
+import "@fontsource/cormorant-garamond/latin-500-italic.css";
+import "@fontsource/dm-sans/latin-400.css";
+import "@fontsource/dm-sans/latin-500.css";
+import "@fontsource/dm-sans/latin-600.css";
+import "@fontsource/dm-sans/latin-700.css";
 import "./style.css";
 import { loadAssets } from "./assets";
 
