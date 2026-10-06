@@ -66,7 +66,7 @@ Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the 
 
 <img src="docs/media/screenshots/07-mirrors.jpg" alt="Turning star mirrors in the Glass Monastery" width="100%">
 
-Every sanctuary runs from a puzzle chamber, to a sealed guardian hall, to a warden's arena, and each one asks something different of you: touch memory stones in the order the roots remember, push a stone onto a seal, echo a melody on the reed flute, turn star mirrors toward the north, balance light and shadow across three flames, and ring bells in the order the inscription names.
+Every sanctuary runs from a puzzle chamber, to a sealed guardian hall, to a warden's arena, and each one asks something different of you: touch memory stones in the order the roots remember, push a stone onto a seal, echo a melody on the reed flute, turn star mirrors toward the north, balance light and shadow across three flames, and ring bells in the order the inscription names. Each hall and arena is laid out differently, too: root pillars in the Rootbound Hollow, low basalt walls and ember vents in the Ember Vault, fallen shelves and tide pools in the Tidal Archive, glass crystals in the Glass Monastery, sundial obelisks in the Sunken Observatory, rows of sarcophagi in the Moonwell Crypt, and a colonnade in the Silent Crown. Each sanctuary fields its own mix of guardians.
 
 ### Your father's reed flute
 
@@ -120,7 +120,7 @@ Spoiler-light.
 | **Relics** | Three childhood relics open the crossing | Three elder echoes open the way to the last sanctuary |
 
 - **10 regions** on one continuous overworld, with field guardians patrolling the wilds.
-- **7 sanctuaries**, each with a puzzle chamber, a four-guardian hall, and a warden arena.
+- **7 sanctuaries**, each with a puzzle chamber, a four-guardian hall, and a warden arena. Every hall and arena has its own layout of cover and obstacles.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
 - **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), a sword upgrade, and campfire healing.
 - **Visual quality modes:** Adaptive, High detail, and Performance (<kbd>Esc</kbd> → Visual quality).
@@ -248,7 +248,7 @@ Design, code, story, Blender models, and audio synthesis: **[nearbycoder](https:
 
 The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from the opening to the epilogue. It is not a finished commercial game. Honestly:
 
-- **Short, similar dungeons.** All seven sanctuaries share the same three-chamber layout and differ in their puzzle, palette, and warden. A full playthrough is short.
+- **Short dungeons on one spine.** All seven sanctuaries still follow the same three chambers in a straight line: puzzle, guardian hall, then warden arena. Halls and arenas now have their own cover, obstacles, and guardian mix, and the wardens fight differently, but there are no branching rooms, keys, or shortcuts. A full playthrough is short.
 - **One enemy model.** All three guardian kinds and all seven wardens use a single Blender model, reshaped with scale, accessories, and tint. Behavior differs (melee, lunge, thrown stone, and the wardens' signature attacks), but none has unique sculpted art or animation, and health and damage stay on one scale.
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.

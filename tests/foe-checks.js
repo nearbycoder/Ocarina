@@ -279,5 +279,111 @@ window.foeQA = (() => {
     bellQA.close();
     return results;
   }
-  return { wardens, kinds, results, arena, attack, hall };
+  // Flood-fills the walkable floor (the game's own collision, 0.5 m grid)
+  // from the sanctuary entrance with both seals open.
+  function reachable() {
+    const step = 0.5,
+      cols = 69,
+      rows = 175,
+      x0 = -17,
+      z0 = 33.5;
+    const cell = (x, z) =>
+      Math.round((x - x0) / step) + Math.round((z0 - z) / step) * cols;
+    const seen = new Uint8Array(cols * rows);
+    const queue = [cell(0, 28)];
+    seen[queue[0]] = 1;
+    while (queue.length) {
+      const c = queue.pop();
+      const cx = c % cols,
+        cz = Math.floor(c / cols);
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nx = cx + dx,
+          nz = cz + dz;
+        if (nx < 0 || nz < 0 || nx >= cols || nz >= rows) continue;
+        const n = nx + nz * cols;
+        if (seen[n]) continue;
+        if (api.debug.blocked(x0 + nx * step, z0 - nz * step)) continue;
+        seen[n] = 1;
+        queue.push(n);
+      }
+    }
+    // A spot counts as reachable if any grid point within 0.75 m is.
+    return (x, z) => {
+      for (let dx = -0.75; dx <= 0.75; dx += 0.25)
+        for (let dz = -0.75; dz <= 0.75; dz += 0.25) {
+          const c = cell(x + dx, z + dz);
+          if (c >= 0 && c < seen.length && seen[c]) return true;
+        }
+      return false;
+    };
+  }
+  async function layouts() {
+    const signatures = new Set();
+    for (const id of [
+      "root",
+      "ember",
+      "tide",
+      "frost",
+      "sun",
+      "moon",
+      "crown",
+    ]) {
+      api.debug.enter(id);
+      bellQA.close();
+      const name = game.world.dungeon.name;
+      const features = api.debug
+        .colliders()
+        .filter((c) => (c.label || "").startsWith("Sanctuary"));
+      signatures.add(
+        features
+          .map((c) => `${c.label}@${c.x},${c.z}`)
+          .sort()
+          .join(";"),
+      );
+      assert(
+        features.length >= 6,
+        `${name}: ${features.length} authored features with collision`,
+      );
+      game.puzzleSolved = true;
+      game.arenaClear = true;
+      game.world.gates.forEach((g) => (g.visible = false));
+      const can = reachable();
+      const foes = game.enemies;
+      assert(
+        foes.every(
+          (e) =>
+            !game.collision.blocked(
+              { x: e.homeX, z: e.homeZ },
+              e.boss ? 0.95 : 0.5,
+            ),
+        ),
+        `${name}: no guardian or warden spawns inside geometry`,
+      );
+      assert(
+        foes.every((e) => can(e.homeX, e.homeZ)),
+        `${name}: every guardian and the warden can be reached on foot`,
+      );
+      assert(
+        can(0, -45) && can(0, 31),
+        `${name}: the relic and the exit can be reached`,
+      );
+      // With the seals closed, the hall and arena are shut off as before.
+      game.world.gates.forEach((g) => (g.visible = true));
+      const shut = reachable();
+      assert(
+        !shut(foes[0].homeX, foes[0].homeZ) && !shut(0, -45),
+        `${name}: closed seals still wall off the hall and arena`,
+      );
+      await bellQA.interactAt(0, 31);
+      bellQA.close();
+    }
+    assert(signatures.size === 7, "Every sanctuary's layout is different");
+    return results;
+  }
+  return { wardens, kinds, layouts, results, arena, attack, hall };
 })();

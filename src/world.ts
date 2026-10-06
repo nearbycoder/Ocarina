@@ -6,7 +6,11 @@ import {
   bakeGeometryTransform,
 } from "./assets";
 import { addNature, type NatureCell } from "./nature";
-import { addCottage, addDungeonDetails } from "./architecture";
+import {
+  addCottage,
+  addDungeonDetails,
+  addSanctuaryLayout,
+} from "./architecture";
 import { buildTerrain } from "./terrain";
 import { stoneMaterial, waterMaterial } from "./surfaces";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -842,6 +846,7 @@ export function buildDungeon(d: Dungeon, s: SaveData): World {
   relic.visible = false;
   interact(w, "relic", "relic", 0, -45, `Claim ${d.relic}`, relic);
   addDungeonDetails(w, d);
+  addSanctuaryLayout(w, d);
   batchStatic(
     group,
     [

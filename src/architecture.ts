@@ -11,6 +11,7 @@ import {
 } from "./world";
 import { stoneMaterial } from "./surfaces";
 import type { Dungeon } from "./data";
+import { LAYOUTS, type Feature } from "./layouts";
 
 export function stone(
   w: number,
@@ -184,5 +185,190 @@ export function addDungeonDetails(w: World, d: Dungeon) {
     glow.position.set(x, 3.65, z);
     glow.scale.setScalar(3.5);
     g.add(glow);
+  }
+}
+
+/** Builds a sanctuary's authored hall and arena features, with collision. */
+export function addSanctuaryLayout(w: World, d: Dungeon) {
+  const layout = LAYOUTS[d.id];
+  if (!layout) return;
+  const g = w.group;
+  const accent = d.color;
+  for (const f of [...layout.hall, ...layout.arena]) {
+    const piece = new T.Group();
+    piece.position.set(f.x, 0, f.z);
+    piece.rotation.y = f.rotation ?? 0;
+    g.add(piece);
+    buildFeature(f, piece, accent);
+    const round = !["wall", "shelf", "tomb", "obelisk"].includes(f.shape);
+    w.colliders.push({
+      x: f.x,
+      z: f.z,
+      w: f.w,
+      d: round ? f.w : f.d,
+      rotation: round ? undefined : f.rotation,
+      radius: round ? f.w / 2 : undefined,
+      top: f.h,
+      label: `Sanctuary ${f.shape}`,
+    });
+  }
+  for (const decal of layout.decals) {
+    if (decal.shape === "pool") {
+      const pool = mesh(
+        new T.CircleGeometry(decal.r, 32).rotateX(-Math.PI / 2),
+        "#2f6f7d",
+        decal.x,
+        0.04,
+        decal.z,
+        g,
+      );
+      pool.material = new T.MeshStandardMaterial({
+        color: "#2f6f7d",
+        roughness: 0.15,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.8,
+      });
+      pool.castShadow = false;
+      mesh(
+        new T.RingGeometry(decal.r, decal.r + 0.25, 32).rotateX(-Math.PI / 2),
+        "#8fa9a3",
+        decal.x,
+        0.05,
+        decal.z,
+        g,
+      ).castShadow = false;
+    } else if (decal.shape === "vent") {
+      const glow = mesh(
+        new T.CircleGeometry(decal.r, 6).rotateX(-Math.PI / 2),
+        "#f08a4a",
+        decal.x,
+        0.04,
+        decal.z,
+        g,
+      );
+      glow.material = mat("#f08a4a", true);
+      glow.castShadow = false;
+      mesh(
+        new T.RingGeometry(decal.r, decal.r + 0.35, 6).rotateX(-Math.PI / 2),
+        "#3e3836",
+        decal.x,
+        0.05,
+        decal.z,
+        g,
+      ).castShadow = false;
+    } else {
+      const inlay = mesh(
+        new T.RingGeometry(decal.r - 0.12, decal.r, 64).rotateX(-Math.PI / 2),
+        accent,
+        decal.x,
+        0.035,
+        decal.z,
+        g,
+      );
+      inlay.material = mat(accent, true);
+      inlay.castShadow = false;
+    }
+  }
+}
+
+function buildFeature(f: Feature, g: T.Group, accent: string) {
+  const r = f.w / 2;
+  if (f.shape === "root") {
+    mesh(cylinder(r * 0.55, r, f.h, 7), "#5b4632", 0, f.h / 2, 0, g);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.4;
+      const flare = mesh(
+        new T.ConeGeometry(r * 0.45, r * 2.2, 5),
+        "#4d3b2a",
+        Math.cos(a) * r * 0.9,
+        r * 0.5,
+        Math.sin(a) * r * 0.9,
+        g,
+      );
+      flare.rotation.set(Math.sin(a) * 1.1, 0, -Math.cos(a) * 1.1);
+    }
+    if (f.h > 4)
+      mesh(sphere(r * 0.35), accent, 0, f.h * 0.6, r * 0.7, g).material = mat(
+        accent,
+        true,
+      );
+  } else if (f.shape === "column" || f.shape === "basalt") {
+    const sides = f.shape === "basalt" ? 6 : 14;
+    const color = f.shape === "basalt" ? "#3e3836" : "#8d9887";
+    stone(f.w * 1.25, 0.4, f.w * 1.25, color, 0, 0.2, 0, g);
+    const shaft = mesh(
+      cylinder(r * 0.9, r, f.h - 0.4, sides),
+      color,
+      0,
+      0.4 + (f.h - 0.4) / 2,
+      0,
+      g,
+    );
+    shaft.material = stoneMaterial(color);
+    if (f.shape === "column")
+      mesh(sphere(0.18), accent, 0, Math.min(f.h, 3.2), r * 0.95, g).material =
+        mat(accent, true);
+    else
+      mesh(
+        box(0.08, f.h * 0.6, 0.08),
+        "#f08a4a",
+        r * 0.86,
+        f.h * 0.4,
+        0,
+        g,
+      ).material = mat("#f08a4a", true);
+  } else if (f.shape === "crystal") {
+    for (const [x, z, s, tilt] of [
+      [0, 0, 1, 0],
+      [r * 0.55, r * 0.3, 0.65, 0.35],
+      [-r * 0.45, -r * 0.35, 0.7, -0.3],
+      [r * 0.1, -r * 0.6, 0.5, 0.25],
+    ]) {
+      const shard = mesh(
+        new T.OctahedronGeometry(r * 0.55 * s),
+        "#bfe3ec",
+        x,
+        f.h * 0.5 * s,
+        z,
+        g,
+      );
+      shard.scale.set(1, (f.h / (r * 1.1)) * 0.9, 1);
+      shard.rotation.z = tilt;
+      if (s === 1) shard.material = mat(accent, true);
+    }
+  } else if (f.shape === "obelisk") {
+    stone(f.w, f.h, f.d, "#bdab83", 0, f.h / 2, 0, g);
+    const cap = mesh(
+      new T.ConeGeometry(f.w * 0.72, f.w * 0.9, 4),
+      accent,
+      0,
+      f.h + f.w * 0.45,
+      0,
+      g,
+    );
+    cap.rotation.y = Math.PI / 4;
+    cap.material = mat(accent, true);
+  } else if (f.shape === "wall") {
+    stone(f.w, f.h, f.d, "#4f4945", 0, f.h / 2, 0, g);
+    stone(f.w + 0.2, 0.18, f.d + 0.2, "#3e3836", 0, f.h + 0.09, 0, g);
+  } else if (f.shape === "shelf") {
+    mesh(box(f.w, f.h, f.d), "#5e4632", 0, f.h / 2, 0, g).rotation.z = 0.06;
+    for (const y of [0.55, 1.15, 1.75].filter((y) => y < f.h))
+      mesh(box(f.w * 0.94, 0.08, f.d + 0.04), "#8a6a46", 0, y, 0, g);
+    for (let i = 0; i < 5; i++)
+      mesh(
+        box(0.22, 0.32, 0.5),
+        ["#7d4c3a", "#3f5d67", "#8c7a4b"][i % 3],
+        -f.w / 2 + 0.5 + i * (f.w / 5.3),
+        0.18,
+        f.d / 2 + 0.3,
+        g,
+      ).rotation.y = i * 0.7;
+  } else if (f.shape === "tomb") {
+    stone(f.w, f.h, f.d, "#73817a", 0, f.h / 2, 0, g);
+    stone(f.w + 0.16, 0.16, f.d + 0.16, "#a2aa97", 0, f.h + 0.08, 0, g);
+    mesh(box(0.12, 0.04, f.d * 0.6), accent, 0, f.h + 0.18, 0, g).material =
+      mat(accent, true);
   }
 }

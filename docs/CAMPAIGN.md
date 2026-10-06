@@ -1,6 +1,6 @@
 # Expanding the adventure
 
-The current release is a compact, playable campaign with seven short three-chamber dungeons. Growing it into a full-length adventure remains a production objective, not a claim about this build.
+The current release is a compact, playable campaign with seven short three-chamber dungeons. Since round 2 of the improvement work, each sanctuary's guardian hall and warden arena has its own layout, guardian mix, and warden attacks, but the chambers still run in the same straight line. Growing it into a full-length adventure remains a production objective, not a claim about this build.
 
 ## Current playable spine
 

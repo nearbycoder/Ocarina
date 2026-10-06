@@ -48,6 +48,7 @@ import {
   type FoeKind,
   type WardenMove,
 } from "./foes";
+import { LAYOUTS } from "./layouts";
 import {
   padActions,
   padShield,
@@ -638,12 +639,7 @@ export class Game {
     this.sun.target.position.set(this.hero.group.position.x, 0, centerZ);
     if (d) {
       const kinds = HALL_KINDS[d.id] ?? [];
-      for (const [i, [x, z]] of [
-        [-7, -5],
-        [7, -7],
-        [-4, -13],
-        [5, -15],
-      ].entries())
+      for (const [i, [x, z]] of (LAYOUTS[d.id]?.guardians ?? []).entries())
         this.spawnEnemy(x, z, false, kinds[i]);
       this.spawnEnemy(0, -39, true);
       this.ui.toast(`${d.name} · ${d.hint}`);
