@@ -153,5 +153,131 @@ window.foeQA = (() => {
     bellQA.close();
     return results;
   }
-  return { wardens, results, arena, attack };
+  // Opens a hall with only guardian `index` left standing, at (x, z).
+  function hall(id, index, x, z) {
+    api.debug.enter(id);
+    bellQA.close();
+    game.puzzleSolved = true;
+    game.world.gates[0].visible = false;
+    for (let i = 0; i < 4; i++) if (i !== index) api.debug.damageEnemy(i, 100);
+    bellQA.close();
+    api.debug.placeEnemy(index, x, z);
+    game.enemies[index].cooldown = 0;
+    game.invulnerable = 0;
+    game.hitStop = 0;
+    api.debug.setHealth(12);
+  }
+  const foe = (i) => api.getState().enemies[i];
+  const gap = (i) => {
+    const s = api.getState();
+    return Math.hypot(s.position.x - foe(i).x, s.position.z - foe(i).z);
+  };
+  async function kinds() {
+    // Ember Vault hall: index 1 is a skirmisher, index 2 a warder.
+    hall("ember", 1, 0, -12);
+    assert(foe(1).kind === "skirmisher", "Ember hall fields a skirmisher");
+    assert(foe(1).hp === 2, "Child skirmishers have 2 health");
+    api.debug.teleport(0, -2);
+    api.debug.face(0);
+    api.debug.advance(0.6);
+    assert(
+      10 - gap(1) > 2.2,
+      `Skirmishers close distance fast (${(10 - gap(1)).toFixed(2)} m in 0.6 s)`,
+    );
+    // Lunge: hit when standing in the lane, safe after stepping aside,
+    // guarded (and staggered) when facing it with the shield.
+    const lunge = (options = {}) => {
+      hall("ember", 1, 0, -5);
+      api.debug.teleport(0, -2.5);
+      api.debug.face(0);
+      if (options.shield) shield(true);
+      api.debug.advance(0.05);
+      const windup = foe(1).state === "windup" && foe(1).move === "charge";
+      if (options.stepAside) api.debug.teleport(...options.stepAside);
+      api.debug.advance(0.8 + 0.24 + 0.1);
+      if (options.shield) shield(false);
+      return { windup, lost: 12 - api.getState().health };
+    };
+    let r = lunge();
+    assert(r.windup, "A skirmisher in reach winds up a lunge");
+    assert(r.lost === 1, "The lunge lands for 1");
+    assert(
+      lunge({ stepAside: [2.6, -2.5] }).lost === 0,
+      "Stepping out of the lunge lane avoids it",
+    );
+    r = lunge({ shield: true });
+    assert(
+      r.lost === 0 && foe(1).state === "stagger",
+      "A guarded lunge staggers the skirmisher",
+    );
+
+    hall("ember", 2, 0, -5);
+    assert(foe(2).kind === "warder", "Ember hall fields a warder");
+    api.debug.teleport(0, -2.5);
+    game.enemies[2].cooldown = 9;
+    api.debug.advance(1.2);
+    assert(
+      gap(2) > 4.5,
+      `Warders back away when crowded (${gap(2).toFixed(1)} m)`,
+    );
+    hall("ember", 2, 0, -8);
+    api.debug.teleport(0, 0);
+    game.enemies[2].cooldown = 9;
+    api.debug.advance(1.2);
+    assert(
+      Math.abs(gap(2) - 8) < 0.5,
+      `Warders hold their range inside their band (${gap(2).toFixed(1)} m)`,
+    );
+    hall("ember", 2, 0, -14);
+    api.debug.teleport(0, 0);
+    game.enemies[2].cooldown = 9;
+    api.debug.advance(3);
+    assert(
+      gap(2) < 9.8 && gap(2) > 8.5,
+      `Warders close in to their band from afar (${gap(2).toFixed(1)} m)`,
+    );
+    const lob = (options = {}) => {
+      hall("ember", 2, 0, -10);
+      api.debug.teleport(0, -2);
+      api.debug.face(options.facing ?? 0);
+      if (options.shield) shield(true);
+      api.debug.advance(0.05);
+      const aiming = foe(2).state === "windup" && foe(2).move === "volley";
+      if (options.stepAside) api.debug.teleport(...options.stepAside);
+      api.debug.advance(1.1 + 0.3);
+      if (options.shield) shield(false);
+      return { aiming, lost: 12 - api.getState().health };
+    };
+    r = lob();
+    assert(r.aiming, "A warder in range marks a circle and throws");
+    assert(r.lost === 1, "The thrown stone lands for 1");
+    assert(
+      lob({ stepAside: [3.5, -2] }).lost === 0,
+      "Leaving the marked circle avoids the stone",
+    );
+    r = lob({ shield: true });
+    assert(
+      r.aiming && r.lost === 0,
+      "Facing the warder with the shield guards the stone",
+    );
+    r = lob({ shield: true, facing: Math.PI });
+    assert(
+      r.aiming && r.lost === 1,
+      "A shield turned away from the warder does not",
+    );
+    const sizes = [0, 1, 2].map((i) =>
+      game.enemies[i].mesh.children[0].scale
+        .toArray()
+        .map((n) => n.toFixed(2))
+        .join(),
+    );
+    assert(
+      new Set(sizes).size === 3,
+      "The three kinds have different silhouettes",
+    );
+    await bellQA.interactAt(0, 31);
+    bellQA.close();
+    return results;
+  }
+  return { wardens, kinds, results, arena, attack, hall };
 })();

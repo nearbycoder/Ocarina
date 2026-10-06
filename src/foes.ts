@@ -151,3 +151,76 @@ export function chargeEnd(
     l = Math.hypot(dx, dz) || 1;
   return { x: x + (dx / l) * length, z: z + (dz / l) * length };
 }
+
+export type FoeKind = "guardian" | "skirmisher" | "warder";
+
+/**
+ * Guardian kinds. Every kind deals 1 damage and telegraphs for at least the
+ * original guardian's 0.8 s; health stays on the guardian scale.
+ */
+export const KINDS = {
+  guardian: { hp: [3, 5], speed: 2.6, reach: 1.9, windup: 0.8, recover: 0.85 },
+  /** Small and quick: closes fast, then lunges down a short marked lane. */
+  skirmisher: {
+    hp: [2, 3],
+    speed: 4.3,
+    reach: 3.4,
+    windup: 0.8,
+    recover: 1.1,
+    lunge: 3.6,
+    dash: 0.24,
+    halfWidth: 0.7,
+  },
+  /** Keeps its distance and lobs a stone at a circle marked where you stand. */
+  warder: {
+    hp: [2, 4],
+    speed: 2.3,
+    near: 5.5,
+    far: 9.5,
+    reach: 13,
+    windup: 1.1,
+    recover: 1.3,
+    radius: 1.3,
+    cooldown: 2.4,
+  },
+} as const;
+export const GUARDIAN_DAMAGE = 1;
+export function kindHp(kind: FoeKind, adult: boolean) {
+  return KINDS[kind].hp[adult ? 1 : 0];
+}
+/** Warders back away when crowded, close in when far, otherwise hold. */
+export function warderStep(distance: number): -1 | 0 | 1 {
+  if (distance < KINDS.warder.near) return -1;
+  if (distance > KINDS.warder.far) return 1;
+  return 0;
+}
+
+/**
+ * Hall formations: four guardians per sanctuary, in index order. The
+ * Rootbound Hollow keeps three classic guardians first, as the first
+ * sanctuary and the fixture the browser checks rely on.
+ */
+export const HALL_KINDS: Record<string, FoeKind[]> = {
+  root: ["guardian", "guardian", "guardian", "skirmisher"],
+  ember: ["guardian", "skirmisher", "warder", "guardian"],
+  tide: ["warder", "guardian", "skirmisher", "warder"],
+  frost: ["skirmisher", "warder", "skirmisher", "guardian"],
+  sun: ["warder", "skirmisher", "guardian", "warder"],
+  moon: ["guardian", "warder", "skirmisher", "skirmisher"],
+  crown: ["skirmisher", "warder", "guardian", "warder"],
+};
+/** Overworld patrols, matched by index to the field guardian positions. */
+export const FIELD_KINDS: FoeKind[] = [
+  "guardian",
+  "skirmisher",
+  "guardian",
+  "warder",
+  "guardian",
+  "skirmisher",
+  "warder",
+  "guardian",
+  "skirmisher",
+  "guardian",
+  "warder",
+  "guardian",
+];

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  FIELD_KINDS,
+  HALL_KINDS,
+  KINDS,
+  kindHp,
+  warderStep,
   MOVES,
   WARDEN_MOVES,
   blockable,
@@ -80,5 +85,35 @@ describe("attack geometry", () => {
     expect(Math.abs(left.x)).toBeCloseTo(MOVES.volley.spread);
     expect(left.z).toBeCloseTo(-6);
     expect(right.x).toBeCloseTo(-left.x);
+  });
+});
+
+describe("guardian kinds", () => {
+  it("keeps every kind on the guardian health scale and telegraph time", () => {
+    for (const kind of ["guardian", "skirmisher", "warder"] as const) {
+      expect(kindHp(kind, false)).toBeGreaterThanOrEqual(2);
+      expect(kindHp(kind, false)).toBeLessThanOrEqual(3);
+      expect(kindHp(kind, true)).toBeLessThanOrEqual(5);
+      expect(KINDS[kind].windup).toBeGreaterThanOrEqual(KINDS.guardian.windup);
+    }
+    expect(KINDS.skirmisher.speed).toBeGreaterThan(KINDS.guardian.speed);
+  });
+  it("has warders back off when crowded and close in when far", () => {
+    expect(warderStep(3)).toBe(-1);
+    expect(warderStep(7)).toBe(0);
+    expect(warderStep(12)).toBe(1);
+  });
+  it("fields four guardians per sanctuary and mixes kinds after the first", () => {
+    for (const d of DUNGEONS) expect(HALL_KINDS[d.id]).toHaveLength(4);
+    expect(HALL_KINDS.root.slice(0, 3)).toEqual([
+      "guardian",
+      "guardian",
+      "guardian",
+    ]);
+    for (const d of DUNGEONS.filter((d) => d.id !== "root"))
+      expect(new Set(HALL_KINDS[d.id]).size).toBeGreaterThanOrEqual(2);
+    const formations = DUNGEONS.map((d) => HALL_KINDS[d.id].join());
+    expect(new Set(formations).size).toBe(DUNGEONS.length);
+    expect(FIELD_KINDS).toHaveLength(12);
   });
 });

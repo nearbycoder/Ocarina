@@ -68,6 +68,7 @@ await inPage("settings", async () => (await settingsQA.run()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);
+await inPage("foes: kinds", async () => (await foeQA.kinds()).length);
 for (const id of ["root", "ember", "tide"])
   await inPage(
     `campaign: ${id}`,

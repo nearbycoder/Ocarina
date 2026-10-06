@@ -29,6 +29,10 @@ import {
   type Dungeon,
 } from "./data";
 import {
+  FIELD_KINDS,
+  GUARDIAN_DAMAGE,
+  HALL_KINDS,
+  KINDS,
   MOVES,
   WARDEN_DAMAGE,
   WARDEN_MOVES,
@@ -38,7 +42,10 @@ import {
   laneDistance,
   ringCrossed,
   signatureCooldown,
+  kindHp,
   volleyTargets,
+  warderStep,
+  type FoeKind,
   type WardenMove,
 } from "./foes";
 import {
@@ -102,6 +109,7 @@ interface Enemy {
   indicator: T.Mesh;
   phase: number;
   facing: number;
+  kind: FoeKind;
   /** The attack being wound up or delivered. */
   move: WardenMove;
   /** Seconds until a warden may use a signature attack again. */
@@ -119,12 +127,16 @@ interface Enemy {
   from: { x: number; z: number };
   to: { x: number; z: number };
   waveRadius: number;
+  /** A warder's floating lantern and the stone it throws. */
+  orb: T.Mesh | null;
+  stone: T.Mesh | null;
 }
 // Telegraph shapes are shared; each enemy owns only its fading materials.
 const MARK = {
   plane: new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
   ring: new T.RingGeometry(0.9, 1, 56).rotateX(-Math.PI / 2),
   disc: new T.CircleGeometry(1, 40).rotateX(-Math.PI / 2),
+  stone: new T.IcosahedronGeometry(0.32, 1),
 };
 function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
   const m = new T.Mesh(
@@ -625,17 +637,18 @@ export class Game {
     this.sun.position.set(this.hero.group.position.x - 45, 70, centerZ - 55);
     this.sun.target.position.set(this.hero.group.position.x, 0, centerZ);
     if (d) {
-      for (const [x, z] of [
+      const kinds = HALL_KINDS[d.id] ?? [];
+      for (const [i, [x, z]] of [
         [-7, -5],
         [7, -7],
         [-4, -13],
         [5, -15],
-      ])
-        this.spawnEnemy(x, z, false);
+      ].entries())
+        this.spawnEnemy(x, z, false, kinds[i]);
       this.spawnEnemy(0, -39, true);
       this.ui.toast(`${d.name} · ${d.hint}`);
     } else {
-      for (const [x, z] of [
+      for (const [i, [x, z]] of [
         [-33, 4],
         [-51, 13],
         [43, -20],
@@ -648,13 +661,13 @@ export class Game {
         [-47, 53],
         [-68, 58],
         [9, -85],
-      ])
-        this.spawnEnemy(x, z, false);
+      ].entries())
+        this.spawnEnemy(x, z, false, FIELD_KINDS[i]);
     }
     this.hero.sword.visible = this.save.story.prologue >= 4;
     this.refreshHUD();
   }
-  spawnEnemy(x: number, z: number, boss: boolean) {
+  spawnEnemy(x: number, z: number, boss: boolean, kind: FoeKind = "guardian") {
     const safe = this.collision.move({ x, z }, { x: 0, z: 0 }, boss ? 1 : 0.5);
     x = safe.x;
     z = safe.z;
@@ -664,6 +677,36 @@ export class Game {
     sentinel.rotation.y = Math.PI;
     sentinel.scale.setScalar(boss ? 1.85 : 0.92);
     g.add(sentinel);
+    // Kinds share the stone model but not its silhouette.
+    let orb: T.Mesh | null = null;
+    if (!boss && kind === "skirmisher") {
+      sentinel.scale.set(0.6, 0.56, 0.68);
+      sentinel.rotation.x = 0.2;
+      for (const side of [-1, 1]) {
+        const horn = mesh(
+          new T.ConeGeometry(0.09, 0.55, 5),
+          c,
+          side * 0.26,
+          1.45,
+          0.1,
+          g,
+        );
+        horn.rotation.set(-0.7, 0, side * -0.45);
+        horn.material = mat(c, true);
+      }
+    } else if (!boss && kind === "warder") {
+      sentinel.scale.set(0.7, 1.1, 0.7);
+      mesh(
+        new T.TorusGeometry(0.42, 0.04, 5, 24),
+        c,
+        0,
+        2.95,
+        0,
+        g,
+      ).rotation.x = Math.PI / 2;
+      orb = mesh(new T.IcosahedronGeometry(0.24, 1), c, 0, 2.95, 0, g);
+      orb.material = mat(c, true);
+    }
     if (boss) {
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
@@ -690,23 +733,29 @@ export class Game {
     indicator.rotation.x = -Math.PI / 2;
     indicator.position.y = 0.08;
     g.add(indicator);
-    batchStatic(g, [indicator]);
+    batchStatic(g, orb ? [indicator, orb] : [indicator]);
     g.position.set(x, this.ground(x, z), z);
     this.scene.add(g);
     const marks = new T.Group();
     this.scene.add(marks);
-    const lane = boss ? markMesh(MARK.plane, "#e7c27a", marks) : null;
+    if (boss) kind = "guardian";
+    const lane =
+      boss || kind === "skirmisher"
+        ? markMesh(MARK.plane, "#e7c27a", marks)
+        : null;
     const wave = boss ? markMesh(MARK.ring, "#f0a35e", marks) : null;
     const spots = boss
       ? [0, 1, 2].map(() => markMesh(MARK.disc, "#e9b26c", marks))
-      : [];
+      : kind === "warder"
+        ? [markMesh(MARK.disc, "#e9b26c", marks)]
+        : [];
+    const stone =
+      kind === "warder" ? markMesh(MARK.stone, "#cdbb94", marks) : null;
     const hp = boss
       ? this.save.age === "adult"
         ? 24
         : 13
-      : this.save.age === "adult"
-        ? 5
-        : 3;
+      : kindHp(kind, this.save.age === "adult");
     this.enemies.push({
       mesh: g,
       x,
@@ -718,11 +767,12 @@ export class Game {
       boss,
       state: "idle",
       timer: Math.random(),
-      speed: boss ? 2.1 : 2.6,
+      speed: boss ? 2.1 : KINDS[kind].speed,
       hitFlash: 0,
       indicator,
       phase: 0,
       facing: 0,
+      kind,
       move: "slam",
       cooldown: 1.5 + Math.random() * 1.5,
       forced: null,
@@ -735,6 +785,8 @@ export class Game {
       from: { x, z },
       to: { x, z },
       waveRadius: 0,
+      orb,
+      stone,
     });
   }
   ground(x: number, z: number) {
@@ -1856,7 +1908,7 @@ export class Game {
         ? e.boss
           ? this.arenaClear && p.z < -22
           : this.puzzleSolved && p.z < 4 && p.z > -21
-        : distance < 11;
+        : distance < (e.kind === "warder" ? 14 : 11);
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.mesh.scale.setScalar(1 + e.hitFlash * 0.25);
       if (e.state === "idle" || e.state === "chase")
@@ -1864,6 +1916,7 @@ export class Game {
       e.mesh.rotation.y = e.facing;
       e.phase += dt;
       e.mesh.position.y = this.ground(e.x, e.z) + Math.sin(e.phase * 3) * 0.06;
+      if (e.orb) e.orb.position.y = 2.95 + Math.sin(e.phase * 2.2) * 0.12;
       if (!active) {
         e.state = "idle";
         this.clearMarks(e);
@@ -1885,14 +1938,14 @@ export class Game {
                   e.cooldown,
                   Math.random(),
                 )
-              : distance < 1.9
-                ? "slam"
-                : null;
+              : this.guardianMove(e, distance);
         if (pick) this.beginWindup(e, pick);
         else {
-          const dx = ((p.x - e.x) / distance) * dt * e.speed,
-            dz = ((p.z - e.z) / distance) * dt * e.speed;
-          this.moveEnemy(e, dx, dz);
+          // Warders hold their distance; everything else closes in.
+          const step = e.kind === "warder" ? warderStep(distance) : 1;
+          const dx = ((p.x - e.x) / distance) * dt * e.speed * step,
+            dz = ((p.z - e.z) / distance) * dt * e.speed * step;
+          if (step) this.moveEnemy(e, dx, dz);
         }
       } else if (e.state === "windup") this.windup(e, distance);
       else if (e.state === "strike") this.strike(e, dt);
@@ -1915,8 +1968,28 @@ export class Game {
       this.ui.el("boss-fill").style.width = `${(boss.hp / boss.maxHp) * 100}%`;
     }
   }
+  /** A guardian kind's attack, if it is in position to make one. */
+  private guardianMove(e: Enemy, distance: number): WardenMove | null {
+    if (e.kind === "skirmisher")
+      return distance < KINDS.skirmisher.reach ? "charge" : null;
+    if (e.kind === "warder")
+      return e.cooldown <= 0 && distance <= KINDS.warder.reach
+        ? "volley"
+        : null;
+    return distance < KINDS.guardian.reach ? "slam" : null;
+  }
   private windupTime(e: Enemy) {
-    return e.boss ? MOVES[e.move].windup : 0.8;
+    return e.boss ? MOVES[e.move].windup : KINDS[e.kind].windup;
+  }
+  /** Lane shape for a warden's charge or a skirmisher's lunge. */
+  private dashSpec(e: Enemy) {
+    return e.boss
+      ? MOVES.charge
+      : {
+          length: KINDS.skirmisher.lunge,
+          dash: KINDS.skirmisher.dash,
+          halfWidth: KINDS.skirmisher.halfWidth,
+        };
   }
   /** Commits to an attack and lays down its telegraph. */
   beginWindup(e: Enemy, move: WardenMove) {
@@ -1928,8 +2001,9 @@ export class Game {
     e.timer = this.windupTime(e);
     e.facing = Math.atan2(-(p.x - e.x), -(p.z - e.z));
     if (move === "charge" && e.lane) {
+      const spec = this.dashSpec(e);
       e.from = { x: e.x, z: e.z };
-      e.to = chargeEnd(e.x, e.z, p.x, p.z);
+      e.to = chargeEnd(e.x, e.z, p.x, p.z, spec.length);
       const dx = e.to.x - e.x,
         dz = e.to.z - e.z;
       e.lane.position.set(
@@ -1938,18 +2012,22 @@ export class Game {
         (e.z + e.to.z) / 2,
       );
       e.lane.rotation.y = Math.atan2(dx, dz);
-      e.lane.scale.set(MOVES.charge.halfWidth * 2, 1, MOVES.charge.length);
+      e.lane.scale.set(spec.halfWidth * 2, 1, spec.length);
       e.lane.visible = true;
     } else if (move === "shockwave" && e.wave) {
       e.wave.position.set(e.x, this.ground(e.x, e.z) + 0.08, e.z);
       e.wave.scale.setScalar(MOVES.shockwave.reach);
       e.wave.visible = true;
     } else if (move === "volley") {
-      e.targets = volleyTargets(e.x, e.z, p.x, p.z);
+      e.targets = e.boss
+        ? volleyTargets(e.x, e.z, p.x, p.z)
+        : [{ x: p.x, z: p.z }];
       e.spots.forEach((spot, i) => {
         const t = e.targets[i];
         spot.position.set(t.x, this.ground(t.x, t.z) + 0.07, t.z);
-        spot.scale.setScalar(MOVES.volley.radius);
+        spot.scale.setScalar(
+          e.boss ? MOVES.volley.radius : KINDS.warder.radius,
+        );
         spot.visible = true;
       });
     }
@@ -1969,24 +2047,38 @@ export class Game {
       for (const spot of e.spots)
         (spot.material as T.MeshBasicMaterial).opacity = 0.15 + grow * 0.4;
     e.mesh.rotation.x = -0.16 * grow;
+    // A warder's stone arcs toward the circle over the last half second.
+    if (e.stone && e.move === "volley") {
+      const flight = Math.max(0, Math.min(1, (0.5 - e.timer) / 0.5)),
+        t = e.targets[0];
+      e.stone.visible = flight > 0;
+      if (t)
+        e.stone.position.set(
+          e.x + (t.x - e.x) * flight,
+          this.ground(e.x, e.z) +
+            2.9 * (1 - flight) +
+            Math.sin(flight * Math.PI) * 3,
+          e.z + (t.z - e.z) * flight,
+        );
+    }
     if (e.timer > 0) return;
     e.state = "strike";
     e.mesh.rotation.x = 0.22;
     const ground = this.ground(e.x, e.z);
     if (e.move === "slam") {
       e.timer = 0.18;
-      const range = e.boss ? MOVES.slam.max : 1.9;
+      const range = e.boss ? MOVES.slam.max : KINDS.guardian.reach;
       if (
         distance < range + 0.35 &&
         inFront(e.facing, p.x - e.x, p.z - e.z, 0.15) &&
         this.clearSight(e.x, e.z, p.x, p.z)
       )
-        this.hitPlayer(e, e.boss ? WARDEN_DAMAGE : 1);
+        this.hitPlayer(e, e.boss ? WARDEN_DAMAGE : GUARDIAN_DAMAGE);
       this.burst(e.x, ground + 0.2, e.z, "#e5b06e", e.boss ? 20 : 7);
       if (e.boss) this.shakeCamera(0.55);
     } else if (e.move === "charge") {
-      e.timer = MOVES.charge.dash;
-      this.sound.swing(2);
+      e.timer = this.dashSpec(e).dash;
+      this.sound.swing(e.boss ? 2 : 0);
     } else if (e.move === "shockwave") {
       e.timer = MOVES.shockwave.travel;
       e.waveRadius = 0.8;
@@ -1995,22 +2087,27 @@ export class Game {
       this.shakeCamera(0.7);
     } else if (e.move === "volley") {
       e.timer = 0.25;
+      const radius = e.boss ? MOVES.volley.radius : KINDS.warder.radius;
       for (const t of e.targets) {
-        this.burst(t.x, this.ground(t.x, t.z) + 0.2, t.z, "#e9b26c", 9);
-        if (
-          !e.struck &&
-          Math.hypot(p.x - t.x, p.z - t.z) < MOVES.volley.radius + 0.3
-        )
-          this.hitPlayer(e, WARDEN_DAMAGE);
+        this.burst(
+          t.x,
+          this.ground(t.x, t.z) + 0.2,
+          t.z,
+          "#e9b26c",
+          e.boss ? 9 : 6,
+        );
+        if (!e.struck && Math.hypot(p.x - t.x, p.z - t.z) < radius + 0.3)
+          this.hitPlayer(e, e.boss ? WARDEN_DAMAGE : GUARDIAN_DAMAGE);
       }
       this.sound.hit();
-      this.shakeCamera(0.45);
+      if (e.boss) this.shakeCamera(0.45);
     }
   }
   private strike(e: Enemy, dt: number) {
     const p = this.hero.group.position;
     if (e.move === "charge" && e.timer > 0) {
-      const step = (MOVES.charge.length / MOVES.charge.dash) * dt,
+      const spec = this.dashSpec(e);
+      const step = (spec.length / spec.dash) * dt,
         dx = e.to.x - e.from.x,
         dz = e.to.z - e.from.z,
         l = Math.hypot(dx, dz) || 1;
@@ -2019,9 +2116,9 @@ export class Game {
       this.moveEnemy(e, (dx / l) * step, (dz / l) * step);
       if (
         !e.struck &&
-        laneDistance(x0, z0, e.x, e.z, p.x, p.z) < MOVES.charge.halfWidth + 0.4
+        laneDistance(x0, z0, e.x, e.z, p.x, p.z) < spec.halfWidth + 0.4
       )
-        this.hitPlayer(e, WARDEN_DAMAGE);
+        this.hitPlayer(e, e.boss ? WARDEN_DAMAGE : GUARDIAN_DAMAGE);
       // Walls end the charge early.
       if (Math.hypot(e.x - x0, e.z - z0) < step * 0.3) e.timer = 0;
     }
@@ -2041,7 +2138,9 @@ export class Game {
     }
     if (e.state !== "strike" || e.timer > 0) return;
     e.state = "recover";
-    e.timer = e.boss ? MOVES[e.move].recover : 0.85;
+    e.timer = e.boss ? MOVES[e.move].recover : KINDS[e.kind].recover;
+    if (e.kind === "warder" && !e.boss)
+      e.cooldown = KINDS.warder.cooldown + Math.random();
     if (e.boss && e.move !== "slam")
       e.cooldown = signatureCooldown(
         this.world.dungeon?.id === "crown" && e.hp < e.maxHp / 2,
@@ -2369,9 +2468,21 @@ export class Game {
     }
     for (const e of this.enemies) {
       if (e.state === "dead") continue;
+      const x = mx(e.x),
+        y = mz(e.z);
       ctx.fillStyle = "#d79b7b";
       ctx.beginPath();
-      ctx.arc(mx(e.x), mz(e.z), e.boss ? 3 : 1.8, 0, Math.PI * 2);
+      // Dot: guardian or warden. Triangle: skirmisher. Diamond: warder.
+      if (!e.boss && e.kind === "skirmisher") {
+        ctx.moveTo(x, y - 2.6);
+        ctx.lineTo(x + 2.4, y + 1.8);
+        ctx.lineTo(x - 2.4, y + 1.8);
+      } else if (!e.boss && e.kind === "warder") {
+        ctx.moveTo(x, y - 2.6);
+        ctx.lineTo(x + 2.2, y);
+        ctx.lineTo(x, y + 2.6);
+        ctx.lineTo(x - 2.2, y);
+      } else ctx.arc(x, y, e.boss ? 3 : 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.save();
@@ -2512,6 +2623,7 @@ export class Game {
           boss: e.boss,
           state: e.state,
           move: e.move,
+          kind: e.boss ? "warden" : e.kind,
         })),
         shake: this.shake,
         render: {
