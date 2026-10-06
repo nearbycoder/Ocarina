@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome) at the end.
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 and 3 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -288,3 +288,66 @@ Still deferred, and why:
 - **Skinned characters and new enemy art (14):** a large Blender job.
 - **Traversal tools (15):** a large job that needs new content built around it.
 - **Branching dungeon structure (the rest of 13):** a large job that needs new content built around it.
+
+## Round 3 scope — 6 October 2026
+
+Branch `improvements-3`, from `main` at `1cf042d` (in sync with `origin/main`). Baseline: 62 / 62 Vitest tests, a passing build, and every `tests/run-browser-checks.mjs` group green.
+
+Rounds 1 and 2 made the campaign playable on every input, fairer to fail, and more varied to fight. This round picks four things a real player would notice that can be verified here: keeping a journey safe, playing on your own keys, a first honest look at performance, and something to find off the straight line through each sanctuary.
+
+Ground rules:
+- **No difficulty changes.** Health, damage, enemy numbers, and crystal income stay as they are. The difficulty direction is still the owner's call.
+- **Hints unchanged.** Puzzle inscriptions are untouched.
+- **The tooling keeps working.** Guardian indices, chamber coordinates, and the debug API used by the browser checks and media scripts stay compatible.
+
+### A. Save export and import (ranked item 12)
+
+Acceptance criteria
+- The pause menu offers **Export journey**, which downloads the current journey as a small JSON file (`bell-of-ages-journey-YYYY-MM-DD.json`). It works even when browser storage is unavailable, because it exports the journey in memory.
+- The title screen and the pause menu offer **Import journey**. The file is validated with the same rules as a stored save. A bad file shows a plain message and changes nothing. A good file shows what it holds (age, relics, crystals, wandering lights) and asks before replacing the current journey.
+- Under `?review`, an import applies in memory only and never writes storage.
+
+Verification
+- Unit tests: export/import round trip, a bare save file, another game's file, corrupt JSON, and out-of-range values clamped the way `parseSave` clamps them.
+- A browser check with Playwright: export through the pause menu (download event), then import that file on a fresh page through the file picker, confirm, and compare the state. A corrupt file is rejected and nothing changes. The test page's `localStorage` save key is checked before and after.
+
+### B. Keyboard remapping (Status: "Controls can't be remapped yet")
+
+Acceptance criteria
+- Settings gets a **Controls** section listing move forward, back, left, and right, interact, sword, shield, dodge, lock on, flute, journal, map, and return to checkpoint, each with its key. Choosing one waits for a key. Escape cancels. A key already in use swaps with the other action. **Reset to defaults** restores WASD and the current layout.
+- Escape (pause) and the arrow keys (camera) can't be taken. Left and right modifier keys count as the same key, as Shift does today.
+- Every keyboard hint follows the bindings: the HUD controls strip, pause help, tutorial and quest lines, the interaction badge, the map key, and the flute sheet.
+- Bindings are stored with the settings, validated on load (unknown, reserved, or duplicate keys fall back to defaults), and older stored settings get the defaults.
+- Gamepad and touch are unchanged.
+
+Verification
+- Unit tests: binding validation, swaps, reserved keys, migration, and the control words.
+- A browser check that rebinds through the settings sheet with real key events: sword to K (K swings, J no longer does), forward to Z (Z walks; an AZERTY-style layout), interact to G (the prompt shows G and G interacts). It also checks reset and persistence after a reload.
+
+### C. A measured performance pass (ranked item 11, scoped)
+
+Acceptance criteria
+- A repeatable sampler, `tools/perf/sample.mjs`, runs the game in real time in headless Chromium at 1280×800 in three scenes: the village, the Whisperwood, and a sanctuary hall fight with real sword hits. It records mean and p95 frame time, draw calls, triangles, live geometries, and the machine's load average, and writes them to `docs/artifacts/`.
+- Hit sparks stop allocating: today each spark is a new mesh with its own geometry (7 to 20 per hit). They move to one fixed, instanced pool, so a hit adds no geometries and the sparks cost one draw call.
+- Any other change must be justified by the numbers and must not visibly change the look. If the numbers show nothing worth changing, I'll say so instead of tuning blind.
+
+Verification
+- A browser check: live geometries are the same before and after 50 sword hits, and sparks still appear and fade.
+- Before and after sampler numbers, reported with the load average. This is a shared machine, so the numbers are not a benchmark.
+- A screenshot of the sparks.
+
+### D. Hidden alcoves: one branch off every guardian hall (part of ranked item 13)
+
+Acceptance criteria
+- Each guardian hall has a **cracked section in one of its side walls** (the side varies by sanctuary). It shows glowing seams in the sanctuary's color, and coming close shows a prompt. Interacting only describes it; **three real sword hits** break it, using the existing blade-against-scenery contact.
+- Behind it is a small alcove with a **carved tablet**. Reading it records the carving in the save and in a new journal list (*n* / 7).
+- The alcove is optional and changes nothing else: no health, damage, crystals, or gate changes. The three-chamber spine and checkpoints work as before. A broken wall stays broken after a checkpoint return in the same visit, and stays open on a later visit once its carving is found.
+- Older saves load with no carvings found.
+- The seven carvings are short and readable in any order. The three childhood ones are notes Tomas left on his way to the bell, and they don't reveal what the Tidal Archive reveals. This is new story text, so the owner should review it.
+
+Verification
+- Unit tests: save validation and migration of the carvings list, and per-sanctuary alcove data that stays clear of the authored hall features.
+- A browser check in every sanctuary: real swings break the wall in three hits, interacting alone doesn't, and a flood fill over the game's collision can't reach the tablet before the break and can after. Reading records the carving and the journal shows it, the broken wall survives a checkpoint return, and the existing reachability and campaign checks still pass.
+- Screenshots of a cracked wall, an open alcove, and the journal list.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance (8, blocked on the difficulty decision), puzzle hints (an owner decision), new skinned art (14), traversal (15), and a full branching dungeon redesign with keys and shortcuts (the rest of 13).
