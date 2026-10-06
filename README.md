@@ -249,7 +249,7 @@ The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from
 - **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Controls can't be remapped yet.
 - **Hardware.** Requires WebGL 2. Performance has been sampled at about 60 FPS on a few desktop configurations and is not validated across devices or browsers.
 - **Saves are per browser.** They live in `localStorage`, and clearing site data removes them.
-- **Validation.** Automated tests and scripted browser checks cover progression, collision, and combat. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, settings, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Production notes and next steps live in [docs/CAMPAIGN.md](docs/CAMPAIGN.md), [docs/STORY.md](docs/STORY.md) (spoilers), [docs/VISUALS.md](docs/VISUALS.md), and [docs/POLISH.md](docs/POLISH.md).
 
