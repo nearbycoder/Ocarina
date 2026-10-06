@@ -1,6 +1,24 @@
 # Validation — 4 to 6 October 2026
 
-## Latest: round 2 (6 October): wardens, guardian kinds, sanctuary layouts, audio, and puzzle feel
+## Latest: round 3 (6 October): journey files, key remapping, pooled sparks, and hidden alcoves
+
+Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-3-results). Results are recorded in [improvements-round3.json](artifacts/improvements-round3.json) and [perf-round3.json](artifacts/perf-round3.json), and screenshots are in [`docs/media/improvements/round3/`](media/improvements/round3/).
+
+- **80 Vitest tests** pass (62 before, plus journey files, key bindings, sparks, and alcoves). The production build and type check pass, and the asset pack is unchanged (2,442,432 bytes, 0 glTF errors or warnings, 0 contract failures).
+- `node tests/run-browser-checks.mjs` passes every group. The earlier groups are unchanged: 92 campaign, 40 polish, 14 settings, 10 audio, 21 gamepad, 14 puzzles, 48 warden-attack, 17 guardian-kind, 36 layout, 12 touch portrait, and the landscape layout check. The new groups:
+  - **79 alcove** assertions in all seven sanctuaries. Real sword swings break each cracked wall in three strikes, and interacting alone doesn't. A flood fill over the game's collision can't reach the tablet before the break and can afterward, and nothing beyond the alcove is reachable. Reading records the carving, a checkpoint return keeps the wall open, a read alcove stays open on a new visit, and an unread one closes again (the control). The journal lists all seven.
+  - **16 key-remapping** assertions. Rebinding happens through the settings sheet with key events: K swings and J no longer does, Z walks and W no longer does, and G talks. A clash trades keys, and the arrows are refused. Bindings survive a reload, and the reset button restores the defaults.
+  - **9 journey-file** assertions using Playwright's real download and file-chooser events across two pages. A damaged file and another game's file are refused with nothing changed, and the review page's save key stays empty throughout.
+  - **4 spark** assertions over 50 real sword hits: sparks appear and fade, and no geometry is allocated. The same check fails against the previous spark code.
+- The production build loads from `/Ocarina/` with no failed or third-party requests and no console errors. It shows the import, export, and keyboard controls, and the debug API is absent.
+- `tools/media/screenshots.mjs` still runs all ten stills. Only `01-title` was regenerated, because the title now shows the import link.
+- `tools/perf/sample.mjs` produced alternating before and after samples. In a guardian-hall fight, mean draw calls fell from 220 to 200, peak draw calls from about 365 to 327, and live geometries stopped climbing (140 to 167 before, 140 after). Frame times didn't change measurably against the noise: the load average was 27 to 57 on 32 shared cores.
+
+Flaky under load: in one full run after the alcoves landed, with the load average about 36, the real-time audio drum check fell short of its game-time minimum. The gamepad and checkpoint groups after it failed in turn, because the page was left in a sanctuary. All three passed alone, and the next full runs passed.
+
+Limits: no physical controller, phone, or tablet. Gamepad import from a file picker is untested. Performance numbers are comparisons on a busy machine, not benchmarks. The carving text hasn't been reviewed by the owner. There was no manual playthrough or difficulty tuning.
+
+## Round 2 (6 October): wardens, guardian kinds, sanctuary layouts, audio, and puzzle feel
 
 Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-2-results). Results are recorded in [improvements-round2.json](artifacts/improvements-round2.json), and screenshots are in [`docs/media/improvements/round2/`](media/improvements/round2/).
 

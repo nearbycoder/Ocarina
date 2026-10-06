@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 and 3 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 and 3 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), and [Round 3 results](#round-3-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -351,3 +351,37 @@ Verification
 - Screenshots of a cracked wall, an open alcove, and the journal list.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance (8, blocked on the difficulty decision), puzzle hints (an owner decision), new skinned art (14), traversal (15), and a full branching dungeon redesign with keys and shortcuts (the rest of 13).
+
+## Round 3 results
+
+All four scoped items shipped on `improvements-3`, plus one save-loading fix found along the way. Verification is recorded in [VALIDATION.md](VALIDATION.md), [improvements-round3.json](artifacts/improvements-round3.json), and [perf-round3.json](artifacts/perf-round3.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round3/`) |
+| --- | --- | --- | --- |
+| A. Journey export and import | `0f101a1` | 5 unit tests; 9 Playwright assertions with a real download and file picker across two pages | `a-title-import`, `a-pause-export`, `a-import-confirm` |
+| B. Keyboard remapping | `a04883e` | 6 unit tests; 16 assertions that rebind through the sheet with key events and survive a reload | `b-settings-keys`, `b-hud-remapped` |
+| C. Pooled hit sparks and a frame sampler | `481b67d` | 3 unit tests; 4 assertions over 50 real sword hits, which fail on the old code; alternating before and after samples | `c-sparks`, `c-sparks-before-after` |
+| D. Hidden alcoves | `2093956` | 4 unit tests; 79 assertions across all seven sanctuaries, with flood fills over the game's collision | `d-cracked-wall`, `d-broken-wall`, `d-alcove`, `d-carving`, `d-journal` |
+| Fix: health clamp on load | in `0f101a1` | Unit test | — |
+
+What changed for a player:
+- **A journey can leave the browser.** Export journey file (pause menu) downloads it; Import (title or pause) checks it, says what it holds, and asks before replacing anything. Bad files are refused with a plain message.
+- **Your own keys.** Settings → Keyboard rebinds all thirteen keyboard actions. Keys that are already in use trade places. Every hint, prompt, and tutorial line follows the bindings, and where the browser can tell, keys are named for the player's layout (ZQSD on AZERTY).
+- **Something off the straight line.** Each guardian hall has a cracked wall. Three sword blows open an alcove with a carving; the journal collects all seven.
+- **Lighter combat.** Hit sparks no longer create and destroy meshes on every hit.
+
+Honest notes:
+- **Performance is measured, not tuned.** The sampler and pooled sparks are real, but the machine ran at a load average of 27 to 57 throughout, so frame-time differences between runs are noise. The load-independent gains are fewer draw calls in a fight (mean 220 → 200, peak about 365 → 327) and no geometry churn (140 to 167 live geometries → 140). At 1920×1080 on a 2× display, the Radeon 8060S averaged about 10 ms in Adaptive mode and 12 to 14 ms in High detail. Its 25 to 33 ms p95 may be the shared CPU rather than the game. I didn't tune foliage, shadows, or post-processing on numbers this noisy. A quiet-machine run, and a phone, are still needed.
+- **Branching is scoped.** The alcoves are optional side rooms off the existing spine. There are still no keys, shortcuts, or rooms you must choose between.
+- **New story text.** The seven carvings are new writing. Six are short notes from Tomas, which fits Rowan's line that he hid the notes in the childhood sanctuaries and Mira's that he scattered the answers in the adult ones. The Silent Crown's is a child's marks, since nothing says Tomas reached the Crown. None names the king or Ilen or mentions the floodgate, so they can be read in any order. The owner should review them; they live in `CARVINGS` in `src/story.ts`.
+- **Difficulty untouched.** No health, damage, enemy, or crystal values changed. The alcoves give no reward beyond the carving.
+- **Gamepad import untested.** Browsers usually open a file picker only after a click, key press, or tap. Import from a gamepad alone may do nothing; I couldn't test it.
+- **One flaky check.** In one full run after item D, with the load average about 36, the real-time audio drum check failed: it needs 0.7 s of game time within 2 s of real time. The two groups after it then failed because the page was left inside a sanctuary. All three passed alone, and every full run since has passed. The check predates this round.
+
+Still deferred, and why:
+- **Balance with an autopilot (8):** blocked on the difficulty-direction decision.
+- **Puzzle hints:** an owner decision.
+- **Performance tuning (rest of 11):** needs a quiet machine and a phone; the sampler is ready for it.
+- **A full branching redesign (rest of 13):** keys, shortcuts, and real choices of route need new content and a level-design pass.
+- **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
+- **Gamepad and touch remapping:** keyboard first; pads and touch would need their own binding UI.

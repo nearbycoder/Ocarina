@@ -33,7 +33,7 @@ The Bell of Ages is an **original adventure inspired by classic 3D action-advent
 
 ## How to play
 
-Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompts, and tutorial lines follow whichever you used last. Saves are automatic and stay in this browser.
+Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompts, and tutorial lines follow whichever you used last, and the keyboard keys can be changed in **Settings → Keyboard**. Saves are automatic and stay in this browser; **Export journey file** in the pause menu keeps a copy you can import in another browser.
 
 | Action | Keyboard & mouse | Gamepad (standard layout) | Touch |
 | --- | --- | --- | --- |
@@ -66,7 +66,7 @@ Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the 
 
 <img src="docs/media/screenshots/07-mirrors.jpg" alt="Turning star mirrors in the Glass Monastery" width="100%">
 
-Every sanctuary runs from a puzzle chamber, to a sealed guardian hall, to a warden's arena, and each one asks something different of you: touch memory stones in the order the roots remember, lean into a heavy stone to slide it onto a seal (or push it with the interact button), echo a melody on the reed flute, turn star mirrors until their beams of light point north, balance light and shadow across three flames, and ring bells in the order the inscription names. Each hall and arena is laid out differently, too: root pillars in the Rootbound Hollow, low basalt walls and ember vents in the Ember Vault, fallen shelves and tide pools in the Tidal Archive, glass crystals in the Glass Monastery, sundial obelisks in the Sunken Observatory, rows of sarcophagi in the Moonwell Crypt, and a colonnade in the Silent Crown. Each sanctuary fields its own mix of guardians.
+Every sanctuary runs from a puzzle chamber, to a sealed guardian hall, to a warden's arena, and each one asks something different of you: touch memory stones in the order the roots remember, lean into a heavy stone to slide it onto a seal (or push it with the interact button), echo a melody on the reed flute, turn star mirrors until their beams of light point north, balance light and shadow across three flames, and ring bells in the order the inscription names. Each hall and arena is laid out differently, too: root pillars in the Rootbound Hollow, low basalt walls and ember vents in the Ember Vault, fallen shelves and tide pools in the Tidal Archive, glass crystals in the Glass Monastery, sundial obelisks in the Sunken Observatory, rows of sarcophagi in the Moonwell Crypt, and a colonnade in the Silent Crown. Each sanctuary fields its own mix of guardians. And every guardian hall hides something: one stretch of its side wall is cracked, with seams glowing in the sanctuary's color. Three strong sword blows break it open onto a small alcove and a carving that is copied into your journal.
 
 ### Your father's reed flute
 
@@ -106,7 +106,7 @@ Treasure chests hide off the roads. Mira's three wandering lights have slipped a
 
 <img src="docs/media/screenshots/09-map.jpg" alt="The map of the kingdom of Aevora with its regions and sanctuaries" width="100%">
 
-The kingdom map marks every region and sanctuary, fades the ones that belong to another age, and pins your current story destination. A minimap, compass distance, and quest line keep you oriented. Progress autosaves to your browser, and **Continue** picks up on the exact line of dialogue you left.
+The kingdom map marks every region and sanctuary, fades the ones that belong to another age, and pins your current story destination. A minimap, compass distance, and quest line keep you oriented. Progress autosaves to your browser, and **Continue** picks up on the exact line of dialogue you left. To keep a journey safe or move it to another browser, export it as a small file from the pause menu and import it from the title screen.
 
 ## Content overview
 
@@ -120,11 +120,11 @@ Spoiler-light.
 | **Relics** | Three childhood relics open the crossing | Three elder echoes open the way to the last sanctuary |
 
 - **10 regions** on one continuous overworld, with field guardians patrolling the wilds.
-- **7 sanctuaries**, each with a puzzle chamber, a four-guardian hall, and a warden arena. Every hall and arena has its own layout of cover and obstacles.
+- **7 sanctuaries**, each with a puzzle chamber, a four-guardian hall, and a warden arena. Every hall and arena has its own layout of cover and obstacles, and every hall hides an alcove behind a cracked wall.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
-- **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), a sword upgrade, and campfire healing.
+- **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), 7 hidden carvings, a sword upgrade, and campfire healing.
 - **Visual quality modes:** Adaptive, High detail, and Performance (<kbd>Esc</kbd> → Visual quality).
-- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, ambience, and music volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); and larger interface text. Settings are stored apart from your save.
+- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, ambience, and music volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); larger interface text; and keyboard bindings for every action except Escape, the camera arrows, and the flute's 1 to 3. Where the browser can tell (Chrome and Edge), keys are named as printed on your keyboard, so an AZERTY layout shows ZQSD. Settings are stored apart from your save.
 
 ## Screenshots
 
@@ -158,7 +158,7 @@ Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://w
 ```sh
 npm install
 npm run dev        # http://localhost:5174 (dev build with debug helpers)
-npm test           # 62 Vitest tests: progression, story, saves, checkpoints, settings, input, foes, layouts, audio, assets, collision, combat, quality
+npm test           # 80 Vitest tests: progression, story, saves, journey files, checkpoints, settings, key bindings, input, foes, layouts, alcoves, audio, sparks, assets, collision, combat, quality
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
 ```
@@ -176,7 +176,9 @@ See [docs/BLENDER.md](docs/BLENDER.md) for the asset contract, budgets, and revi
 
 **Audio.** There are no audio files. Everything is synthesized at runtime with the Web Audio API in [`src/audio.ts`](src/audio.ts): flute notes, chimes, and combat sounds; footsteps that change with the surface (stone, path, grass, sand, snow); ambient beds per region (birdsong in the Whisperwood, surf on the coast, wind over Cinderpeak and the Saffron Wastes, glassy chimes in Frostveil, drips in the Fen and the sanctuaries); a drum pulse during warden fights; and soft UI and crystal pickup sounds. The browser checks confirm these voices are scheduled when they should be. Nobody has listened to the new mix yet, so its balance is untested.
 
-**Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, `tests/input-checks.js`, `tests/foe-checks.js`, and `tests/puzzle-checks.js` hold scripted campaign, checkpoint, movement, combat, enemy, layout, puzzle, audio, settings, and gamepad assertions for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174). See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
+**Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, `tests/input-checks.js`, `tests/foe-checks.js`, and `tests/puzzle-checks.js` hold scripted campaign, checkpoint, movement, combat, enemy, layout, hidden-alcove, puzzle, audio, settings, key-remapping, and gamepad assertions for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus journey-file export and import through real downloads and file pickers, and touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174).
+
+**Performance sampler.** `node tools/perf/sample.mjs [label] [out.json]` samples frame times, draw calls, and live geometries in real time in three scenes (village, Whisperwood, a guardian-hall fight), with vsync off. `BELL_PERF_VIEWPORT=1920x1080@2` and `BELL_PERF_QUALITY=adaptive` change the window and quality mode. It records the machine's load average next to the numbers, because they only mean something on a quiet machine. See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
 
 **Trailer and screenshots.** Everything under `docs/media/` is reproducible. With the dev server running:
 
@@ -208,9 +210,10 @@ src/
   surfaces.ts       custom surface shaders (wind, water, terrain)
   assets.ts         glTF/Meshopt loading, instancing-safe geometry
   audio.ts          Web Audio synthesis: effects, footsteps, ambient beds, warden drums
+  sparks.ts         pooled, instanced hit sparks
   foes.ts           warden attacks, guardian kinds, attack geometry
-  layouts.ts        authored sanctuary halls, arenas, guardian formations
-  input.ts          gamepad mapping, stick shaping, device-aware control text
+  layouts.ts        authored sanctuary halls, arenas, guardian formations, hidden alcoves
+  input.ts          gamepad mapping, key bindings, stick shaping, device-aware control text
   settings.ts       validated player settings (volume, camera, comfort)
   ui.ts             HUD, dialogue, map, journal, menus, settings
 tests/              Vitest suites + in-browser check scripts
@@ -218,6 +221,7 @@ scripts/            Blender asset build, compression, validation
 art/blender/        editable .blend source library
 public/             compressed model pack + two painted textures
 tools/media/        screenshot + trailer capture, score, assembly
+tools/perf/         real-time frame sampler
 docs/               design notes, validation records, media
 ```
 
@@ -228,7 +232,7 @@ docs/               design notes, validation records, media
 - **Blade-accurate combat.** The sword's base-to-tip segment is sampled at 120 Hz across each swing's active window and tested against enemy capsules, so hits that fall between frames still count. Scenery deflects the blade with recoil. Hit-stop, committed enemy wind-ups, and frontal-only shielding make timing readable.
 - **Camera that respects walls.** The follow camera casts against obstacle heights, retracts immediately, eases back out, and re-casts its interpolated position so smoothing can't clip through a corner.
 - **A scripted Blender pipeline.** 31 models with shared physical materials are authored in a Blender Python script, exported to glTF, then compressed with Meshopt and WebP by glTF Transform, from 13.3 MB down to a 2.4 MB runtime pack that passes the Khronos validator with zero errors. Quantized positions are decoded before instancing transforms are baked.
-- **Rendering on a budget.** Static scenery is batched by material and spatial cell. Vegetation is instanced, wind-animated in the shader, culled per cell, and swapped to lighter LODs at distance. Half-resolution GTAO contact shadows and FXAA run in High and Adaptive modes, and Adaptive mode lowers 3D resolution (never UI sharpness) under sustained load before trimming effects.
+- **Rendering on a budget.** Static scenery is batched by material and spatial cell. Vegetation is instanced, wind-animated in the shader, culled per cell, and swapped to lighter LODs at distance. Half-resolution GTAO contact shadows and FXAA run in High and Adaptive modes, and Adaptive mode lowers 3D resolution (never UI sharpness) under sustained load before trimming effects. Hit sparks come from one fixed instanced pool, so combat allocates no geometry.
 - **Durable saves.** Saves are validated field by field on load. Older saves migrate forward without losing progress, and the pending story line is stored so a reload resumes mid-conversation.
 - **No audio files.** Every sound, from flute notes to sword swings, is synthesized with oscillators and filtered noise.
 
@@ -250,14 +254,14 @@ Design, code, story, Blender models, and audio synthesis: **[nearbycoder](https:
 
 The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from the opening to the epilogue. It is not a finished commercial game. Honestly:
 
-- **Short dungeons on one spine.** All seven sanctuaries still follow the same three chambers in a straight line: puzzle, guardian hall, then warden arena. Halls and arenas now have their own cover, obstacles, and guardian mix, and the wardens fight differently, but there are no branching rooms, keys, or shortcuts. A full playthrough is short.
+- **Short dungeons on one spine.** All seven sanctuaries still follow the same three chambers in a straight line: puzzle, guardian hall, then warden arena. Halls and arenas have their own cover, obstacles, and guardian mix, the wardens fight differently, and each hall now hides one optional alcove behind a cracked wall. There are still no keys, shortcuts, or rooms you must choose between. A full playthrough is short.
 - **One enemy model.** All three guardian kinds and all seven wardens use a single Blender model, reshaped with scale, accessories, and tint. Behavior differs (melee, lunge, thrown stone, and the wardens' signature attacks), but none has unique sculpted art or animation, and health and damage stay on one scale.
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.
-- **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Controls can't be remapped yet.
-- **Hardware.** Requires WebGL 2. Performance has been sampled at about 60 FPS on a few desktop configurations and is not validated across devices or browsers.
-- **Saves are per browser.** They live in `localStorage`, and clearing site data removes them.
-- **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, warden and guardian attacks, sanctuary reachability, puzzles, audio scheduling, settings, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Keyboard keys can be remapped; gamepad buttons and touch controls can't. Importing a journey file may need a mouse, keyboard, or touch: browsers usually open a file picker only after a click, key press, or tap, and the import button hasn't been tested with a gamepad.
+- **Hardware.** Requires WebGL 2. On an AMD Radeon 8060S iGPU in headless Chromium (vsync off, on a heavily shared machine), a 1280×800 window averaged about 2 to 4 ms a frame. A 1920×1080 window on a 2× display averaged about 10 ms in Adaptive mode and 12 to 14 ms in High detail, with occasional slow frames that couldn't be told apart from load on the machine. Phones, other GPUs, and other browsers haven't been measured.
+- **Saves are per browser.** They live in `localStorage`, and clearing site data removes them, unless you've exported a journey file to import again.
+- **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, warden and guardian attacks, sanctuary reachability, hidden alcoves, puzzles, audio scheduling, settings, key remapping, journey files, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Production notes and next steps live in [docs/CAMPAIGN.md](docs/CAMPAIGN.md), [docs/STORY.md](docs/STORY.md) (spoilers), [docs/VISUALS.md](docs/VISUALS.md), and [docs/POLISH.md](docs/POLISH.md).
 

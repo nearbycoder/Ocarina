@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-06",
+  "branch": "improvements-3",
+  "base": "1cf042d (main, equal to origin/main)",
+  "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
+  "unitTests": { "files": 16, "tests": 80, "passed": 80 },
+  "build": "pass",
+  "assetCheck": {
+    "runtimeBytes": 2442432,
+    "gltfErrors": 0,
+    "gltfWarnings": 0,
+    "contractErrors": 0
+  },
+  "browserAssertions": {
+    "campaign": 92,
+    "settings": 14,
+    "audio": 10,
+    "gamepad": 21,
+    "puzzles": 14,
+    "wardens": 48,
+    "guardianKinds": 17,
+    "layouts": 36,
+    "alcoves": 79,
+    "polish": 40,
+    "sparks": 4,
+    "keyRemapping": 16,
+    "journeyFiles": 9,
+    "touchPortrait": 12,
+    "touchLandscapeLayout": 1
+  },
+  "items": {
+    "A. Journey export and import": {
+      "commit": "0f101a1",
+      "unitTests": 5,
+      "browserAssertions": 9
+    },
+    "B. Keyboard remapping": {
+      "commit": "a04883e",
+      "unitTests": 6,
+      "browserAssertions": 16
+    },
+    "C. Pooled hit sparks and frame sampler": {
+      "commit": "481b67d",
+      "unitTests": 3,
+      "browserAssertions": 4,
+      "controlAgainstOldCode": "The sparks check fails on the old code (live geometries rose 140 → 141 in stepped time; 140 → 167 in the real-time sampler)",
+      "samples": "docs/artifacts/perf-round3.json"
+    },
+    "D. Hidden alcoves": {
+      "commit": "2093956",
+      "unitTests": 4,
+      "browserAssertions": 79
+    }
+  },
+  "performance": {
+    "machine": "AMD Radeon 8060S (RADV, Vulkan ANGLE), 32 cores shared with about 15 other sessions; load average 27 to 57 during sampling",
+    "hallFightDrawCallsMean": { "before": [220, 220], "after": [200, 199] },
+    "hallFightDrawCallsMax": { "before": [365, 363], "after": [327, 327] },
+    "hallFightLiveGeometries": {
+      "before": "140 to 167",
+      "after": "140 constant"
+    },
+    "frameTime": "No change that stands out from the noise of a shared machine (hall fight mean 2.43 to 2.95 ms either way at 1280×800)",
+    "hidpi1920x1080at2": {
+      "highMeanMs": "12.7 to 14.0",
+      "highP95Ms": "30 to 33",
+      "adaptiveMeanMs": "9.7 to 11.4",
+      "performanceMeanMs": "4.1 to 6.6"
+    }
+  },
+  "subpathSmoke": {
+    "url": "/Ocarina/ via vite preview --base /Ocarina/",
+    "newGameStarts": true,
+    "importOnTitle": true,
+    "exportInPause": true,
+    "keyboardSettingsRows": 14,
+    "failedRequests": 0,
+    "consoleErrors": 0,
+    "thirdPartyHosts": 0,
+    "debugApiAbsentInProduction": true
+  },
+  "mediaTooling": "tools/media/screenshots.mjs ran all ten README stills without errors; only 01-title was kept (it now shows the import link). tools/media/round3.mjs captured the round 3 screenshots.",
+  "flakes": [
+    "One full run after item D failed the real-time audio drum check (it needs 0.7 s of game time within 2 s of real time) while the load average was about 36; the gamepad and checkpoint groups after it failed in turn. All three passed alone, and the two full runs after it passed, the last at a load average of 45 to 71."
+  ],
+  "limits": [
+    "No physical gamepad, phone, or tablet: gamepad and touch use synthetic input",
+    "Performance numbers come from a heavily shared machine and are comparisons, not benchmarks",
+    "The carvings are new story text and haven't been reviewed by the owner",
+    "No full manual playthrough or difficulty tuning; difficulty direction is an owner decision"
+  ]
+}
