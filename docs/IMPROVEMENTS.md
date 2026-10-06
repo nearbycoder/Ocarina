@@ -44,7 +44,7 @@ I also played the opening headless at 1280×800, 390×844 portrait touch, and 84
 - `audio.ts` is 100 lines. Ambience is one sine tone every 3.2 s. There are no footsteps, UI sounds, region or boss music, or master bus or limiter, and every voice connects straight to `destination`. The pause menu's "Ambient sound" toggle actually mutes all sound. There are no volume controls.
 
 **Settings and accessibility**
-- Settings are visual quality and one mute toggle. There is no camera sensitivity or invert, volume, reduced-motion option (hit-stop, damage flash, camera bob), text size, or remapping. `style.css` has no `prefers-reduced-motion` rule.
+- Settings are visual quality and one mute toggle. There is no camera sensitivity or invert, volume, reduced-motion option (hit-stop, damage flash), text size, or remapping. `style.css` has no `prefers-reduced-motion` rule.
 
 **Platform reach**
 - The only way to play is to download the release zip and run a local static server. GitHub Pages is not enabled (`gh api …/pages` returns 404), and the public write-up links to the zip. `vite.config.ts` already uses `base: "./"`, so the build can be hosted from a subpath.
