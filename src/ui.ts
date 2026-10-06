@@ -54,7 +54,17 @@ export class UI {
     this.setDevice(this.device);
     this.root.addEventListener("click", (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
-      if (b) this.onAction(b.dataset.action!);
+      // On-screen touch buttons act on press (below), not on the later click.
+      if (b && !b.closest("#touch")) this.onAction(b.dataset.action!);
+    });
+    // Acting on press keeps the touch buttons immediate and multi-touch safe:
+    // browsers may never synthesize a click for a tap made while another
+    // finger is holding the thumbstick.
+    this.el("touch").addEventListener("pointerdown", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
+      if (!b) return;
+      e.preventDefault();
+      this.onAction(b.dataset.action!);
     });
   }
   /** Swaps every control hint to the device the player last used. */
