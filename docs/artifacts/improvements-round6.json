@@ -1,0 +1,55 @@
+{
+ "date": "2026-10-07",
+ "branch": "improvements-6",
+ "base": "df6074c (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save check uses a fresh throwaway browser context on the normal URL)",
+ "unitTests": {
+  "files": 20,
+  "tests": 113,
+  "passed": 113
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "browserGroups": "All 42 groups pass (39 before this round), including every earlier group unchanged (92 campaign assertions); load average 16 to 21 during the final full run",
+ "newBrowserGroups": {
+  "keyboardMenus": 27,
+  "savesPutAway": 6,
+  "fullScreen": 9
+ },
+ "items": {
+  "A. Menus with the keyboard alone": {
+   "commit": "0d6655e",
+   "unitTests": 1,
+   "browserAssertions": 19,
+   "bugFixed": "With only a keyboard the game could not be started: nothing on the title had focus and the game swallowed Tab and the arrow keys. The check fails on the old code at its first step. Escape in Settings now steps back to the pause menu instead of closing everything.",
+   "notes": "Real Playwright key presses only: start, read the opening, pause, Settings, lower the volume with Enter and Space, rebind Sword to K, Escape back twice; Tab still opens and closes the journal, the arrows still turn the camera, K swings. The flute keeps its number keys."
+  },
+  "B. Settings before you begin": {
+   "commit": "bab3d69",
+   "browserAssertions": 8,
+   "notes": "Opened from the title by keyboard, a click, and a synthetic pad (D-pad and A, B back). Larger text and reduced motion turn on and are stored, the opening scene uses the larger text, the title view holds still under reduced motion (a control run shows it drifts otherwise), the HUD stays hidden, and no journey begins."
+  },
+  "C. Full screen": {
+   "commit": "d6cc0bc",
+   "browserAssertions": 9,
+   "bugFixed": "On a phone held sideways (844×390 and 667×375) the title ran off the bottom: Begin your journey was cut off by the footer and every link under it, including Begin a new story when a journey exists, was below the screen. The fit check fails on the old stylesheet with seven choices off screen.",
+   "notes": "Real CDP taps on a phone page: the title and pause menu enter and leave full screen and their labels follow, leaving through the browser updates the row, Enter on the row works, and with fullscreenEnabled false neither menu shows the button. Full screen from a gamepad button is refused by browsers; the game says so in a toast."
+  },
+  "D. Keep progress when a phone puts the game away": {
+   "commit": "1fdce31",
+   "browserAssertions": 6,
+   "notes": "A fresh throwaway browser context on the normal URL. Hiding the page saves at once (document.hidden set by the check, with the browser's visibilitychange event, because headless pages can't be hidden for real) and still pauses. Closing the page without beforeunload saves too: Chromium reports the page hidden as it unloads, and pagehide is the fallback. The old code lost that progress (0 crystals at the start position). A review page still writes no save."
+  },
+  "E. Measure the fights": {
+   "commit": "5a4a9ec",
+   "artifact": "combat-round6.json",
+   "notes": "tools/balance/measure.mjs plays all seven halls and arenas with three styles (steady, late, rushing), two swords each, and five seeds: 210 fights, all finished. A seed replays the same fight whatever ran before (9 replays across the batch, and two whole runs, are identical). No game values changed."
+  },
+  "productionBuild": "Loads from /Ocarina/ with no failed or third-party requests and no console errors; the title lists new, import, settings, and fullscreen; ↓, Tab, Tab, Enter opens Settings; Escape and Enter start a new journey; hiding the page leaves a stored save; the debug API is absent."
+ }
+}

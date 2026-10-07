@@ -1,6 +1,21 @@
-# Validation — 4 to 6 October 2026
+# Validation — 4 to 7 October 2026
 
-## Latest: round 5 (6 October): wayfinding, camera reset and zoom, touch layouts, and gamepad rumble
+## Latest: round 6 (7 October): keyboard menus, settings from the title, full screen, saving on hide, and fight measurements
+
+Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-6-results). Results are recorded in [improvements-round6.json](artifacts/improvements-round6.json) and [combat-round6.json](artifacts/combat-round6.json), and screenshots are in [`docs/media/improvements/round6/`](media/improvements/round6/).
+
+- **113 Vitest tests** pass (112 before, plus the keyboard menu keys). The production build and type check pass, and the asset pack is unchanged (2,442,432 bytes, 0 glTF errors or warnings, 0 contract failures).
+- `node tests/run-browser-checks.mjs` passes all 42 groups (39 before), and every earlier group is unchanged (92 campaign assertions). The final full run was at a load average of 16 to 21. The new groups:
+  - **27 keyboard-menu** assertions, with real Playwright key presses only. On the title, ↓ focuses the first choice and draws it as focused; Tab, Shift+Tab, ↑, and ↓ move and wrap. Settings open from the title by keyboard, a click, and a synthetic pad (D-pad and A, then B back), with no HUD and no journey begun. Larger text and reduced motion turn on there and are stored, Escape goes back to the title, and the title view holds still under reduced motion (a control run shows it drifts otherwise). Enter begins the journey, the opening uses the larger text, and Enter reads through it. Escape pauses; ↓ and Enter open Settings; Enter and Space lower the volume and keep the focus; Enter on Sword waits, and K binds it. Escape steps back to the pause menu, then to the world. Tab still opens and closes the journal, ← still turns the camera, and K swings. The check fails on the old code at its first step.
+  - **6 save** assertions in a fresh, throwaway browser context on the normal URL. Progress made since the last save is written at once when the page is hidden, and the game still pauses. Closing the page without `beforeunload` also keeps it; the old code lost it. A review page still writes no save. Headless Chromium can't hide a page, so the check sets `document.hidden` and fires the browser's `visibilitychange` event; closing the page is real.
+  - **9 full-screen** assertions with real CDP taps on a phone held sideways. Every title choice fits on the screen, with or without a journey to continue (the old stylesheet left seven off screen). The title and the pause menu enter and leave full screen and their labels follow; leaving through the browser updates the row; Enter on the row works. With `fullscreenEnabled` false, neither menu shows the button.
+- **Fight measurements.** `node tools/balance/measure.mjs` played 210 fights: every hall and arena, with three styles, two swords each, and five seeds. All finished. Replaying 9 fights from across the batch, and running the whole batch twice, gave identical results. This is evidence for the owner, not a pass/fail check. The table and its limits are in [IMPROVEMENTS.md](IMPROVEMENTS.md#the-fights-measured-item-e).
+- Two bugs that were already in the game: the title couldn't be used with a keyboard alone, and on a phone held sideways the title ran off the bottom of the screen. Both checks fail on the old code.
+- The production build loads from `/Ocarina/` with no failed or third-party requests and no console errors. The title lists Settings and Full screen, the keyboard reaches Settings and starts a journey, hiding the page leaves a stored save, and the debug API is absent.
+
+Limits: no physical controller, phone, or tablet. Full screen on a real phone, and whether a phone's browser fires `visibilitychange` before discarding a tab, are untested. Full screen can't be entered from a gamepad button, because browsers require a click, tap, or key press. The fight measurements come from a scripted fighter with perfect aim and timing, not a person. No frame samples were taken: nothing in this round adds work per frame in play. No manual playthrough or difficulty tuning.
+
+## Round 5 (6 October): wayfinding, camera reset and zoom, touch layouts, and gamepad rumble
 
 Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-5-results). Results are recorded in [improvements-round5.json](artifacts/improvements-round5.json) and [perf-round5.json](artifacts/perf-round5.json), and screenshots are in [`docs/media/improvements/round5/`](media/improvements/round5/).
 

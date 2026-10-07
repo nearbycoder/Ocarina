@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), and [Round 6 scope](#round-6-scope--7-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), and [Round 6 results](#round-6-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -667,3 +667,76 @@ Verification
 - I'll say plainly that a scripted fighter is not a person: it shows which fights hurt and how long they take, not how they feel.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and phone performance (needs a phone).
+
+## Round 6 results
+
+All five scoped items shipped on `improvements-6`, plus two bugs that were already in the game, found while verifying them. Verification is recorded in [VALIDATION.md](VALIDATION.md), [improvements-round6.json](artifacts/improvements-round6.json), and [combat-round6.json](artifacts/combat-round6.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round6/`) |
+| --- | --- | --- | --- |
+| A. Menus with the keyboard alone | `0d6655e` | 1 unit test; 19 assertions with real key presses only, from the title to a remapped sword swing | `a-keyboard-pause`, `a-keyboard-settings` |
+| B. Settings before you begin | `bab3d69` | 8 more assertions in the same group: keyboard, a click, and a synthetic pad; larger text reaches the opening; the title view holds still under reduced motion | `b-title-settings`, `b-title-phone`, `b-title-phone-settings` |
+| C. Full screen | `d6cc0bc` | 9 assertions with real CDP taps on a phone held sideways, plus a page where full screen isn't available | `c-title-landscape`, `c-pause-landscape` |
+| D. Keep progress when a phone puts the game away | `1fdce31` | 6 assertions in a fresh, throwaway browser context on the normal URL | — |
+| E. Measure the fights | `5a4a9ec` | 210 scripted fights; every replay identical | — (table below) |
+| Fix: the game couldn't be started with a keyboard alone | in `0d6655e` | The check fails on the old code at its first step | `a-keyboard-pause` |
+| Fix: the title ran off the screen on a phone held sideways | in `d6cc0bc` | The fit check fails on the old stylesheet, with seven choices off screen | `c-title-landscape` |
+
+What changed for a player:
+- **Every menu works with the keyboard alone.** ↑ and ↓ (or Tab and Shift+Tab) move through the title, pause menu, settings, journal, map, and dialogue; Enter or Space chooses. Key remapping needs no mouse now. Escape in Settings goes back to the pause menu, the way B does on a pad. The pause menu's help lists the menu keys. In play nothing changed: the arrows still turn the camera, and Tab still opens the journal.
+- **Settings are on the title.** Volume, larger text, reduced motion, camera, touch layout, and the key and button layouts can be set before the opening scene. Back returns to the title, and no journey begins. Under reduced motion the title view holds still.
+- **Full screen** is on the title and in the pause menu wherever the browser allows it. On a phone held sideways it gives the game the whole screen. Where it isn't available (an iPhone's Safari), there's no button.
+- **The title fits on a phone held sideways.** Before, Begin your journey ran into the footer, and Import (and Begin a new story, when a journey existed) were below the bottom of the screen.
+- **Switching apps on a phone no longer loses recent progress.** The game saves the moment the page is hidden, as well as on `pagehide`, instead of waiting for the 25-second autosave or a `beforeunload` that phones often skip.
+
+### The fights, measured (item E)
+
+`node tools/balance/measure.mjs` plays every guardian hall and warden arena with a scripted fighter that presses the real keys on the game's own clock. Nothing is placed, forced, or damaged except by the sword. It starts at the hall's checkpoint with the health the story gives at that point (3 hearts in the Rootbound Hollow up to 7 in the Silent Crown, without Mira's optional heart charm). It fights with the sword you'd have unforged (1 as a child, 2 as an adult) and forged (3). Three styles:
+- **Steady** locks on, strikes when the foe isn't winding up, and answers a wind-up 0.3 s after it starts: it guards blows from the foe it faces, and steps out of slams, lanes, shockwaves, and stone circles.
+- **Late** is the same with a 0.6 s reaction.
+- **Rushing** locks on and swings whenever in reach, and never guards or dodges.
+
+Each combination ran on five seeds: 210 fights, all finished. A seed always replays the same fight. Means over the seeds, as hall + arena time in game seconds, then hearts lost across both:
+
+| Sanctuary (health) | Sword | Steady | Late | Rushing | Rushing defeats |
+| --- | --- | --- | --- | --- | --- |
+| Rootbound Hollow (3 hearts) | 1 | 9 + 15 s, 0.5 | 10 + 15 s, 0.5 | 9 + 22 s, 2.5 | 1 in every run |
+| Rootbound Hollow (3 hearts) | 3 | 5 + 8 s, 0 | 5 + 8 s, 0 | 4 + 8 s, 1.0 | 0 |
+| Ember Vault (3.5 hearts) | 1 | 9 + 19 s, 0 | 10 + 18 s, 0.2 | 10 + 12 s, 2.5 | 0 |
+| Ember Vault (3.5 hearts) | 3 | 7 + 8 s, 0 | 7 + 8 s, 0.5 | 6 + 7 s, 1.0 | 0 |
+| Tidal Archive (4 hearts) | 1 | 13 + 14 s, 0.1 | 14 + 14 s, 1.0 | 11 + 11 s, 3.6 | 0 |
+| Tidal Archive (4 hearts) | 3 | 11 + 8 s, 0.3 | 10 + 8 s, 0.6 | 7 + 7 s, 1.0 | 0 |
+| Frostveil (5.5 hearts) | 2 | 10 + 14 s, 0 | 10 + 14 s, 0.4 | 7 + 11 s, 3.0 | 0 |
+| Frostveil (5.5 hearts) | 3 | 8 + 11 s, 0 | 8 + 11 s, 0.2 | 7 + 9 s, 2.0 | 0 |
+| Saffron Wastes (6 hearts) | 2 | 12 + 19 s, 0 | 10 + 19 s, 0.6 | 9 + 12 s, 2.4 | 0 |
+| Saffron Wastes (6 hearts) | 3 | 10 + 15 s, 0.1 | 9 + 15 s, 0.4 | 8 + 10 s, 2.4 | 0 |
+| Mourning Fen (6.5 hearts) | 2 | 10 + 19 s, 0.1 | 10 + 18 s, 0.2 | 9 + 11 s, 2.3 | 0 |
+| Mourning Fen (6.5 hearts) | 3 | 10 + 15 s, 0 | 10 + 15 s, 0.4 | 8 + 9 s, 2.0 | 0 |
+| Silent Crown (7 hearts) | 2 | 12 + 18 s, 0.1 | 11 + 20 s, 0.5 | 10 + 11 s, 2.3 | 0 |
+| Silent Crown (7 hearts) | 3 | 10 + 15 s, 0 | 10 + 15 s, 0.3 | 8 + 10 s, 2.0 | 0 |
+
+What it shows (for the owner's difficulty decision; nothing was retuned):
+- **Every hall and arena takes under 25 seconds** for every style, and every warden falls in 7 to 22 seconds.
+- **Careful play is almost never hurt:** at most 0.5 hearts per sanctuary for the steady fighter and 1.5 for the late one, with no defeats. All of it came from guardian slams and warders' stones.
+- **Never guarding still wins everywhere but the first fight.** The rushing fighter lost 2 to 4 hearts per sanctuary. It was defeated once in every Rootbound Hollow run with the practice sword (3 hearts), then won there from the checkpoint, and never anywhere else. Every hit on a guardian interrupts it, and every kill heals, which carries a fighter who only attacks.
+- **The round 2 signature attacks rarely land.** Across all rushing fights, wardens' slams took 100 hearts and shockwaves 35. Warders' stones took 8 hearts and guardian slams 7. Wardens' charges and volleys, and skirmishers' lunges, never hit anyone, because a fighter who stays close gives the warden no room for them. The shockwave was the only signature that mattered.
+- **The forged sword cuts childhood fights by a third to a half** (sword 1 → 3) and adult ones by about a sixth to a fifth (2 → 3), for the steady fighter. It costs 60 crystals, about one sanctuary and a chest.
+
+Limits: a scripted fighter isn't a person. It locks on at once, aims perfectly, never panics, and knows the hall's checkpoint. These numbers show which attacks hurt and how long fights take, not how they feel or what a first-time player loses on the way. The halls start with the puzzle already solved, at the checkpoint, so walking and puzzles aren't included. Mira's heart charm and chest herbs would add health. The fighter has two workarounds a player would also use: it circles a foe when its sword bounces off a pillar, and it stays inside the arena rather than stepping back through the doorway.
+
+Honest notes:
+- **An arena doorway resets the warden.** While measuring I found that stepping back through an arena's doorway (north of z = −22) puts the warden to sleep and cancels its wind-up, and it starts the same attack again when you return. A player could use that to wait out any wind-up. Whether that's acceptable is part of the difficulty call; I didn't change it.
+- **Synthetic hiding.** Headless Chromium can't hide a page, so the hide check sets `document.hidden` and fires the browser's own `visibilitychange` event. Closing the page is real. Whether a particular phone's browser fires these events before discarding a tab is untested on a phone.
+- **Gamepad and full screen.** Browsers allow full screen only straight after a click, tap, or key press, so the Full screen button does nothing from a gamepad button and says why in a toast. The same limit applies to journey-file import (known since round 3).
+- **Plan differences.** The scope listed the flute among the sheets the arrows move through. The flute keeps its own keys instead (1, 2, 3, and Esc), which already work without a mouse. Item E gained a third style, **late**, to show how a slower reaction changes the damage taken. Larger text chosen on the title applies from the opening scene on; the title's own lettering isn't scaled by it, as before.
+- **No difficulty change.** No health, damage, timing, enemy, or crystal values changed. The measurement only plays.
+- **No new story writing.** All new text is interface text.
+- **Performance.** Nothing here adds work per frame in play. The title's reduced-motion check is one comparison a frame. I didn't take new frame samples.
+
+Still deferred, and why:
+- **Balance and difficulty (8):** the owner's call, now with the measurements above.
+- **Puzzle hints:** the owner's call.
+- **Branching dungeons (rest of 13):** needs a level-design pass and a larger chamber layout.
+- **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Phone performance and real-device checks:** need a phone; the touch, rumble, pinch, hide, and full-screen paths are still verified only with emulated input.
