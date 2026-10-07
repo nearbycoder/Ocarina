@@ -799,3 +799,40 @@ Verification
 - Unit tests for the line. The A check reads it after the reload and finds the Ember Vault. A screenshot of the title.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and real-device checks (need a phone).
+
+## Round 7 results
+
+All four scoped items shipped on `improvements-7`, plus one bug that was already in the game, found while verifying them. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round7.json](artifacts/improvements-round7.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round7/`) |
+| --- | --- | --- | --- |
+| A. Pick up a sanctuary where you left it | `7a93e06` | 5 unit tests; 16 assertions in a fresh, throwaway browser context on the normal URL, across four real page closes and reopens | `a-resume-hall` |
+| B. Come back cleanly when the device takes the graphics or sound away | `91417ce` | 10 assertions with `WEBGL_lose_context`, a picture comparison, real key presses, and a real click | `b-graphics-lost` |
+| C. The phone HUD never covers its own controls | `d5001b6` | The touch overlap checks now include the prompt, warden bar, toast, and longest objective: 12 layout and orientation combinations, two scenes each | `c-phone-prompt`, `c-phone-warden`, `c-landscape-warden` |
+| D. The title says which journey Continue resumes | `8ee9763` | 3 unit tests; 2 assertions in the A check | `d-title-continue` |
+| Fix: the title ran into its footer on laptop screens | `3b158ed` | 7 assertions at seven desktop sizes; `main` fails at 1280×720 | `d-title-continue` |
+
+What changed for a player:
+- **Leaving mid-sanctuary no longer costs the sanctuary.** Close the tab, lose it to a phone, or choose Save & return to title inside a sanctuary, and **Continue** puts you back inside at the start of the furthest chamber you reached. Solved puzzles stay solved, broken seals stay open, and defeated guardians stay down. The warden waits at full health, or, if it already fell, its relic waits. Leaving through the exit or claiming the relic ends the visit as before.
+- **The picture and sound come back.** If a phone or a GPU reset takes the graphics away, the game saves, pauses, and says "The picture was lost. Waiting for your device to bring it back. Your journey is saved." After five seconds it offers a reload. When the graphics return, the scene looks as it did. Before, it came back noticeably darker and kept running behind the frozen picture. The sound is suspended while the page is hidden, and the next key, click, tap, or gamepad button resumes it, including after an iPhone interrupts it.
+- **On a phone the HUD stays off the controls.** Held upright, the interaction prompt sits on the right above the buttons (it used to cover the thumbstick and Lock), the warden's bar takes the objective's place at the top during its fight (it used to run across the buttons), and notices sit below the objective. Held sideways, notices and prompts keep to the middle column, the warden's bar is narrower, and the objective panel sits higher and drops its small eyebrow so it clears a right-hand thumbstick.
+- **Continue says what it continues**: for example "First age · 1 / 7 relics · The Ember Vault · 47 min played".
+- **The title fits on laptop screens.** With a journey saved, the title's chapter row ran into the footer at 1280×720 and 1366×768, a bug already in the game that the new line would have made worse. Below 860 px tall, that decorative row now gives way when a journey is saved.
+
+Honest notes:
+- **Emulated, not real devices.** The lost context was produced with the browser's `WEBGL_lose_context` extension. A real phone may discard the tab instead of restoring the context; the save made at the loss covers that case, and item A then brings the player back into the sanctuary. The iPhone audio interruption was imitated by suspending the audio context; headless Chromium's autoplay rules aren't Safari's, so whether Safari accepts the resume on the first tap is untested.
+- **Picture comparison.** On a fixed view with the clock held, the restored picture differs from the one before the loss by a mean of 0.97 per channel, against 0.62 between two ordinary frames. On `main` it differed by 25.6, and the mean level fell from 115.5 to 90.4. That is the lighting environment, a one-time render target that the lost context took with it.
+- **Controls that must fail.** The sanctuary check fails on `main` at the first Continue (Alder is outside the door). The overlap probe listed overlaps in all twelve phone layouts and orientations on the old stylesheet. The graphics check fails on `main` at its first step, and the title check fails at 1280×720.
+- **The Ember Vault's hall checkpoint.** Returning to the guardian hall of the Ember Vault, after a defeat or now after Continue, puts the camera just above the pushed stone, so its top fills the bottom of the view until you step forward. This was already the case after a defeat; I didn't move the checkpoint.
+- **A small save-format addition.** Saves gain a `visit` field. Older saves and journey files load with none, and a malformed visit, or one for a sanctuary that can't be entered, is dropped without touching the rest of the save. A save written by this version still loads in older builds, which ignore the field.
+- **No difficulty change.** No health, damage, timing, enemy, or crystal values changed. A resumed visit is exactly what a defeat at that point already gave. The arena-doorway reset is unchanged.
+- **No new story writing.** All new text is interface text; the summary uses existing place names.
+- **Performance.** Nothing here adds work per frame. Saving now also happens when a sanctuary seal opens, the alcove wall breaks, or a foe falls inside a sanctuary: one small `localStorage` write each. I didn't take new frame samples.
+
+Still deferred, and why:
+- **Balance and difficulty:** the owner's call, with round 6's measurements.
+- **Puzzle hints:** the owner's call.
+- **Branching dungeons:** need a level-design pass and a larger chamber layout.
+- **Skinned characters and new enemy art, traversal tools:** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Real-device checks:** a phone is still needed for touch, rumble, pinch, hiding, full screen, a real lost context, and Safari's audio.

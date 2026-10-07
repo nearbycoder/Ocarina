@@ -1,0 +1,63 @@
+{
+ "date": "2026-10-07",
+ "branch": "improvements-7",
+ "base": "ec8befc (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save and sanctuary-visit checks use fresh throwaway browser contexts on the normal URL). Controls ran against a worktree of main on its own dev server.",
+ "unitTests": {
+  "files": 21,
+  "tests": 121,
+  "passed": 121
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "browserGroups": "All 45 groups pass (42 before this round), including every earlier group unchanged (92 campaign assertions); load average 20 to 27 during the final full run",
+ "newBrowserGroups": {
+  "savesSanctuaryVisit": 18,
+  "graphicsAndSound": 10,
+  "titleFitsWithJourney": 7
+ },
+ "items": {
+  "A. Pick up a sanctuary where you left it": {
+   "commit": "7a93e06",
+   "unitTests": 5,
+   "browserAssertions": 16,
+   "control": "On main, Continue after closing the page mid-sanctuary puts Alder outside the Ember Vault's door with the sanctuary reset.",
+   "notes": "Four real page closes (without beforeunload) and reopens in a throwaway context: puzzle solved and two guardians down -> back at the hall checkpoint (0, 8) with those kept and the stone on its seal, and a flood fill reaches the hall but not the arena; hall cleared -> back at the warden's chamber (0, -17) with the warden at 13 / 13 and the arena reachable; warden fallen -> back with the relic waiting; left through the exit -> outside the door. Saves gain a validated 'visit' field; older saves have none."
+  },
+  "B. Come back cleanly when the device takes the graphics or sound away": {
+   "commit": "91417ce",
+   "browserAssertions": 10,
+   "picture": {
+    "meanDifferenceAfterRestore": 0.97,
+    "meanDifferenceBetweenTwoFramesBefore": 0.62,
+    "meanLevel": "115.5 -> 115.5",
+    "mainMeanDifferenceAfterRestore": 25.62,
+    "mainMeanLevel": "115.5 -> 90.4"
+   },
+   "control": "On main the game kept simulating behind the lost context (0.82 s of journey time with W held), showed no notice, came back darker (the PMREM lighting environment is a one-time render target), and a suspended audio context stayed suspended after a click.",
+   "notes": "WEBGL_lose_context loses and restores the context. Audio is suspended when the page is hidden (document.hidden set by the check with the browser's visibilitychange event) and woken by a real key press; a system-style suspension is woken by a real click. Not tried on a real phone or a real GPU reset; Safari's resume rules are untested."
+  },
+  "C. The phone HUD never covers its own controls": {
+   "commit": "d5001b6",
+   "browserAssertions": "The portrait (6) and landscape (6) layout checks in the touch groups now measure two scenes each: exploring with the longest prompt, and a warden fight with the longest warden name, both with a long toast and the longest objective.",
+   "bugFixed": "On a phone held upright the interaction prompt and the warden's bar sat on the thumbstick and buttons; held sideways the toast ran into the vitals, compass, and objective, the objective touched a right-hand thumbstick, and the warden bar ran into the largest buttons. A probe on the old stylesheet listed overlaps in all twelve layout and orientation combinations."
+  },
+  "D. The title says which journey Continue resumes": {
+   "commit": "8ee9763",
+   "unitTests": 3,
+   "browserAssertions": 2,
+   "notes": "For example 'First age · 1 / 7 relics · The Ember Vault · 47 min played'. Continue is described by the line (aria-describedby)."
+  },
+  "Fix: the title ran into its footer on laptop screens": {
+   "commit": "3b158ed",
+   "browserAssertions": 7,
+   "bugFixed": "With a journey saved, main ran the title's chapter row into the footer at 1280x720 and 1366x768; the new line would also have done so at 1280x800. Below 860 px tall the decorative row now gives way when a journey is saved."
+  },
+  "productionBuild": "Loads from /Ocarina/ in a throwaway context with no failed or third-party requests and no console errors; the debug API is absent; hiding the page saves a new journey; the reloaded title shows 'First age · 0 / 7 relics · The Long Meadow · Under a minute played' under Continue; WEBGL_lose_context shows the notice and restoring clears it."
+ }
+}
