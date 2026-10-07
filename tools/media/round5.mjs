@@ -186,6 +186,20 @@ const SHOTS = {
     });
     await shoot(page, "c-settings-touch");
   },
+  // Settings → Gamepad on a pad, with Controller vibration focused.
+  "d-settings-vibration": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      game.setDevice("gamepad");
+      api.debug.action("pause");
+      api.debug.action("settings");
+      const row = document.querySelector('[data-action="toggle-vibration"]');
+      row.focus();
+      row.scrollIntoView({ block: "center" });
+    });
+    await shoot(page, "d-settings-vibration");
+  },
 };
 const VIEWPORTS = {
   "c-touch-left-portrait": PHONE,

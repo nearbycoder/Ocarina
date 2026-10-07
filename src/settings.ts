@@ -29,6 +29,8 @@ export interface Settings {
   threatArrows: boolean;
   /** One press raises the shield and the next lowers it, on every device. */
   toggleShield: boolean;
+  /** Gamepad rumble on hits, guards, and heavy impacts. */
+  vibration: boolean;
   /** Touch: thumbstick on the right and buttons on the left. */
   touchLeft: boolean;
   /** Touch control size: 0 standard, 1 large, 2 largest. */
@@ -58,6 +60,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     largeText: false,
     threatArrows: true,
     toggleShield: false,
+    vibration: true,
     touchLeft: false,
     touchSize: 0,
     keys: { ...DEFAULT_KEYS },
@@ -116,6 +119,7 @@ export function parseSettings(
     largeText: flag("largeText"),
     threatArrows: flag("threatArrows"),
     toggleShield: flag("toggleShield"),
+    vibration: flag("vibration"),
     touchLeft: flag("touchLeft"),
     touchSize: touchSize(s.touchSize),
     keys: parseBindings(s.keys),

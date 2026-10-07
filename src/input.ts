@@ -453,3 +453,32 @@ export function noteGlyphs(device: Device): [string, string, string] | null {
   if (device === "gamepad") return ["A", "X", "Y"];
   return null;
 }
+
+/** Short gamepad rumbles: taking a hit, a heavy impact, a guard, a sword hit. */
+export type RumbleKind = "hurt" | "impact" | "guard" | "strike";
+export interface Rumble {
+  duration: number;
+  strongMagnitude: number;
+  weakMagnitude: number;
+}
+export const RUMBLES: Record<RumbleKind, Rumble> = {
+  hurt: { duration: 260, strongMagnitude: 0.9, weakMagnitude: 0.6 },
+  impact: { duration: 200, strongMagnitude: 0.6, weakMagnitude: 0.3 },
+  guard: { duration: 120, strongMagnitude: 0.25, weakMagnitude: 0.55 },
+  strike: { duration: 70, strongMagnitude: 0, weakMagnitude: 0.35 },
+};
+/**
+ * The rumble to play, or null: only for a gamepad the player is using, with
+ * vibration on, and never over a stronger one that is still playing.
+ */
+export function rumbleFor(
+  kind: RumbleKind,
+  device: Device,
+  enabled: boolean,
+  playing: Rumble | null = null,
+): Rumble | null {
+  if (!enabled || device !== "gamepad") return null;
+  const r = RUMBLES[kind];
+  if (playing && playing.strongMagnitude > r.strongMagnitude) return null;
+  return r;
+}

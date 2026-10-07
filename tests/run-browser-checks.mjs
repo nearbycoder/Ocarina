@@ -49,6 +49,7 @@ async function open(options) {
     "map-checks.js",
     "wayfinding-checks.js",
     "camera-checks.js",
+    "rumble-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -123,6 +124,10 @@ await run("lock-on: mouse drag", async () => {
 await inPage(
   "camera: recentre and distance",
   async () => (await cameraQA.run()).length,
+);
+await inPage(
+  "gamepad: rumble and pause",
+  async () => (await rumbleQA.run()).length,
 );
 for (const id of ["root", "ember", "tide"])
   await inPage(

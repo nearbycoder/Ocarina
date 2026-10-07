@@ -81,6 +81,9 @@ import {
   padPressed,
   padShield,
   shapeStick,
+  rumbleFor,
+  type Rumble,
+  type RumbleKind,
   type Device,
   type KeyAction,
   type PadAction,
@@ -233,6 +236,10 @@ export class Game {
   destination: Destination | null = null;
   compassAngle = NaN;
   pitch = 0.26;
+  /** The gamepad read this frame, for rumble and disconnects. */
+  activePad: Gamepad | null = null;
+  private rumbling: Rumble | null = null;
+  private rumbleUntil = 0;
   /** The camera is swinging back behind Alder. */
   recentering = false;
   /** Two fingers are on the scene. */
@@ -495,7 +502,8 @@ export class Game {
         key === "largeText" ||
         key === "threatArrows" ||
         key === "toggleShield" ||
-        key === "touchLeft"
+        key === "touchLeft" ||
+        key === "vibration"
       )
         s[key] = !s[key];
       this.raiseShield(false);
@@ -1042,7 +1050,17 @@ export class Game {
       const file = importFile.files?.[0];
       if (file) void this.readJourneyFile(file);
     });
-    window.addEventListener("blur", () => this.releaseHeld());
+    // Losing the window or the gamepad mid-play pauses, so nothing happens
+    // to Alder while the player can't answer it.
+    window.addEventListener("blur", () => {
+      this.releaseHeld();
+      this.pauseForInterruption();
+    });
+    window.addEventListener("gamepaddisconnected", (e) => {
+      if (this.activePad && e.gamepad.index !== this.activePad.index) return;
+      this.activePad = null;
+      if (this.ui.device === "gamepad") this.pauseForInterruption();
+    });
     // Whatever the player touches or clicks decides which controls to show.
     window.addEventListener(
       "pointerdown",
@@ -1172,6 +1190,21 @@ export class Game {
     for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
       shield.addEventListener(event, () => (this.touchShield = false));
   }
+  /** Opens the pause menu if the player is in the middle of play. */
+  pauseForInterruption() {
+    if (this.started && !this.ui.panel && !this.save.story.pending)
+      this.action("pause");
+  }
+  /** Plays a short rumble on the gamepad in use, if it can and it's wanted. */
+  rumble(kind: RumbleKind) {
+    const playing = performance.now() < this.rumbleUntil ? this.rumbling : null;
+    const r = rumbleFor(kind, this.ui.device, this.settings.vibration, playing);
+    const actuator = this.activePad?.vibrationActuator;
+    if (!r || !actuator) return;
+    this.rumbling = r;
+    this.rumbleUntil = performance.now() + r.duration;
+    actuator.playEffect("dual-rumble", { startDelay: 0, ...r }).catch(() => {});
+  }
   releaseHeld() {
     this.keys.clear();
     this.touchMove = { x: 0, y: 0 };
@@ -1205,6 +1238,7 @@ export class Game {
     let pad: Gamepad | null = null;
     for (const p of pads)
       if (p?.connected && (!pad || p.mapping === "standard")) pad = p;
+    this.activePad = pad;
     if (!pad) {
       this.padMove = { x: 0, y: 0 };
       this.padShield = false;
@@ -2108,6 +2142,7 @@ export class Game {
     e.hp -= damage;
     e.hitFlash = 0.2;
     this.sound.hit();
+    this.rumble("strike");
     this.burst(
       e.x,
       this.ground(e.x, e.z) + 1.4,
@@ -2784,6 +2819,7 @@ export class Game {
   private shake = 0;
   private shakeOffset = new T.Vector3();
   shakeCamera(amount: number) {
+    this.rumble("impact");
     if (!this.settings.reducedMotion) this.shake = Math.max(this.shake, amount);
   }
   damagePlayer(
@@ -2807,6 +2843,7 @@ export class Game {
         ))
     ) {
       this.sound.clang();
+      this.rumble("guard");
       this.hitStop = 0.035;
       this.invulnerable = 0.4;
       this.ui.toast("Guarded. Strike while the enemy recovers.");
@@ -2821,6 +2858,7 @@ export class Game {
     this.recoil = -1;
     this.invulnerable = 1;
     this.sound.hit();
+    this.rumble("hurt");
     if (!this.settings.reducedMotion) {
       this.ui.el("damage-flash").style.opacity = ".7";
       setTimeout(() => (this.ui.el("damage-flash").style.opacity = "0"), 170);

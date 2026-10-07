@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_PAD,
+  RUMBLES,
   PAD,
   bindPad,
   controlText,
@@ -12,6 +13,7 @@ import {
   padPressed,
   padShield,
   parsePadBindings,
+  rumbleFor,
 } from "../src/input";
 import { defaultSettings, parseSettings } from "../src/settings";
 
@@ -111,5 +113,29 @@ describe("gamepad bindings", () => {
     expect(stored.toggleShield).toBe(true);
     expect(stored.pad.attack).toBe(PAD.Y);
     expect(defaultSettings().pad).toEqual(DEFAULT_PAD);
+  });
+});
+
+describe("gamepad rumble", () => {
+  it("rumbles only a pad in use, with vibration on", () => {
+    expect(rumbleFor("hurt", "gamepad", true)).toBe(RUMBLES.hurt);
+    expect(rumbleFor("hurt", "gamepad", false)).toBeNull();
+    expect(rumbleFor("hurt", "keyboard", true)).toBeNull();
+    expect(rumbleFor("strike", "touch", true)).toBeNull();
+  });
+  it("orders the rumbles, and never cuts a stronger one short", () => {
+    const strength = (k: keyof typeof RUMBLES) => RUMBLES[k].strongMagnitude;
+    expect(strength("hurt")).toBeGreaterThan(strength("impact"));
+    expect(strength("impact")).toBeGreaterThan(strength("guard"));
+    expect(strength("guard")).toBeGreaterThan(strength("strike"));
+    expect(rumbleFor("strike", "gamepad", true, RUMBLES.hurt)).toBeNull();
+    expect(rumbleFor("hurt", "gamepad", true, RUMBLES.strike)).toBe(
+      RUMBLES.hurt,
+    );
+    for (const r of Object.values(RUMBLES)) {
+      expect(r.duration).toBeLessThanOrEqual(300);
+      expect(r.strongMagnitude).toBeLessThanOrEqual(1);
+      expect(r.weakMagnitude).toBeLessThanOrEqual(1);
+    }
   });
 });
