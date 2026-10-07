@@ -357,6 +357,162 @@ await run("mouse: captured look", async () => {
   return count;
 });
 
+// The hearts: half hearts drawn as halves, a warning at one heart or less,
+// a heartbeat after a real guardian strike, and a label with the value.
+await run("hud: health", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const { default: sharp } = await import("sharp");
+  const h = await open({ viewport: { width: 1280, height: 800 } });
+  const game = (fn) =>
+    h.evaluate(
+      (fn) =>
+        new Function("game", "api", fn)(
+          window.__BELL_OF_AGES__.debug.game(),
+          window.__BELL_OF_AGES__.debug,
+        ),
+      fn,
+    );
+  const setHealth = (n) => game(`api.setHealth(${n}); game.refreshHUD();`);
+  const hearts = () =>
+    h.evaluate(() =>
+      [...document.querySelectorAll("#hearts .heart")].map((e) => ({
+        state: e.classList.contains("full")
+          ? "full"
+          : e.classList.contains("half")
+            ? "half"
+            : "empty",
+        beat: getComputedStyle(e).animationName !== "none",
+      })),
+    );
+  // Counts the heart's warm fill in its left and right halves.
+  const fill = async (index) => {
+    const box = await h.locator("#hearts .heart").nth(index).boundingBox();
+    const png = await h.screenshot({
+      clip: { x: box.x, y: box.y, width: box.width, height: box.height },
+      animations: "disabled",
+    });
+    const { data, info } = await sharp(png)
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const halves = [0, 0];
+    for (let y = 0; y < info.height; y++)
+      for (let x = 0; x < info.width; x++) {
+        const i = (y * info.width + x) * info.channels;
+        if (data[i] > 150 && data[i] - data[i + 2] > 50)
+          halves[x < info.width / 2 ? 0 : 1]++;
+      }
+    return halves;
+  };
+  try {
+    await h.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    await setHealth(6);
+    let row = await hearts();
+    check(
+      row.every((x) => x.state === "full" && !x.beat),
+      "At full health three full hearts, still",
+    );
+    const full = await fill(0);
+    check(
+      full[0] > 20 && full[1] > 20,
+      `A full heart is filled on both sides (${full})`,
+    );
+    await setHealth(3);
+    row = await hearts();
+    check(
+      row.map((x) => x.state).join() === "full,half,empty",
+      "1½ hearts read as full, half, empty",
+    );
+    const half = await fill(1);
+    check(
+      half[0] > 20 && half[1] < half[0] * 0.15,
+      `The half heart is filled on its left side only (${half})`,
+    );
+    check(
+      (await h.getAttribute("#hearts", "aria-label")) ===
+        "Health: 1½ of 3 hearts" &&
+        (await h.getAttribute("#hearts", "role")) === "img",
+      "The hearts are labelled with their value",
+    );
+    check(
+      row.every((x) => !x.beat),
+      "Above one heart the hearts don't beat",
+    );
+    await setHealth(2);
+    row = await hearts();
+    check(
+      row[0].beat && !row[1].beat && !row[2].beat,
+      "At one heart the filled heart beats",
+    );
+    await game(
+      "game.settings.reducedMotion = true; game.applySettings(); game.refreshHUD();",
+    );
+    row = await hearts();
+    check(
+      !row[0].beat &&
+        (await h.evaluate(
+          () =>
+            getComputedStyle(document.querySelector("#hearts .heart"))
+              .webkitTextStrokeColor,
+        )) === "rgb(255, 178, 122)",
+      "Under reduced motion it keeps the warm outline but doesn't beat",
+    );
+    await game("game.loadSettings();");
+    // A real guardian strike in the Rootbound Hollow's hall.
+    const strike = (health) =>
+      game(`
+        const state = window.__BELL_OF_AGES__.getState;
+        game.sound.start();
+        api.enter("root");
+        for (let n = 0; n < 30 && state().story.pending; n++)
+          api.action("close");
+        api.action("close");
+        game.puzzleSolved = true;
+        game.world.gates[0].visible = false;
+        for (const i of [1, 2, 3]) api.damageEnemy(i, 100);
+        api.placeEnemy(0, -7, -5);
+        api.teleport(-7, -3.4);
+        api.face(Math.PI);
+        game.enemies[0].cooldown = 0;
+        game.invulnerable = 0;
+        api.setHealth(${health});
+        game.refreshHUD();
+        game.sound.stats = {};
+        for (let i = 0; i < 400 && state().health === ${health}; i++)
+          api.advance(1 / 60);
+        return [state().health, game.sound.stats.heartbeat ?? 0];
+      `);
+    let [after, beats] = await strike(4);
+    check(
+      after === 3 && beats === 0,
+      `A strike that leaves 1½ hearts plays no heartbeat (${after}, ${beats})`,
+    );
+    [after, beats] = await strike(3);
+    check(
+      after === 2 && beats === 6,
+      `A strike that leaves one heart plays three beats (${beats} voices)`,
+    );
+    check((await hearts())[0].beat, "and the hearts beat after the strike");
+    await game("game.settings.effects = 0; game.applySettings();");
+    [after, beats] = await strike(3);
+    check(
+      after === 2 && beats === 0,
+      `With effects at 0 the heartbeat is silent (${beats} voices)`,
+    );
+    await game("game.loadSettings();");
+  } finally {
+    await h.close();
+  }
+  return count;
+});
+
 // Keyboard remapping on its own page, so rebinds can't leak into other groups.
 await run("keys: remapping", async () => {
   const keyPage = await open({ viewport: { width: 1280, height: 800 } });

@@ -260,6 +260,12 @@ h1 em {
   position: absolute;
   left: 34px;
   top: 30px;
+  /* A soft backing keeps the hearts and counts readable over bright sky,
+     snow, and sand; the margin keeps the contents where they were. */
+  margin: -9px 0 0 -14px;
+  padding: 9px 30px 8px 14px;
+  border-radius: 4px;
+  background: linear-gradient(270deg, #142d2400, #142d24b0 30%, #142d24c4);
 }
 .vitals .eyebrow {
   font-size: 8px;
@@ -267,18 +273,54 @@ h1 em {
   text-shadow: 0 1px 6px #16352b;
 }
 .heart {
+  display: inline-block;
   font-size: 27px;
   letter-spacing: 3px;
   color: #e6b398;
   text-shadow: 0 2px 3px #213d3377;
 }
-.heart.empty {
+.heart.empty,
+.heart.half {
   color: #32463c99;
   -webkit-text-stroke: 1px #e1d1b877;
 }
+/* A half heart is the empty heart with its left half filled. */
 .heart.half {
-  color: #d3a889;
-  opacity: 0.65;
+  position: relative;
+}
+.heart.half::before {
+  content: "♥";
+  position: absolute;
+  left: 0;
+  top: 0;
+  letter-spacing: 0;
+  color: #e6b398;
+  -webkit-text-stroke: 0;
+  clip-path: inset(0 50% 0 0);
+}
+/* One heart or less: the hearts warm and beat. */
+#hearts.low .heart {
+  -webkit-text-stroke: 1px #ffb27a;
+}
+#hearts.low .heart.full,
+#hearts.low .heart.half::before {
+  color: #f0866a;
+}
+#hearts.low .heart:not(.empty) {
+  animation: heart-beat 0.85s ease-in-out infinite;
+}
+@keyframes heart-beat {
+  0%,
+  45%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.16);
+  }
+  30% {
+    transform: scale(1.06);
+  }
 }
 #hearts {
   max-width: 350px;
@@ -303,7 +345,7 @@ h1 em {
 }
 #relics {
   font-size: 10px;
-  color: #ebecd4c0;
+  color: #ebecd4e6;
 }
 .location {
   position: absolute;
@@ -1641,6 +1683,9 @@ body.reduced-motion *::after {
 body.reduced-motion #damage-flash {
   display: none;
 }
+body.reduced-motion #hearts.low .heart {
+  animation: none;
+}
 
 /* Comfort: larger interface text scales the reading surfaces, not the world. */
 body.large-text .quest,
@@ -1689,6 +1734,10 @@ body.large-text .sheet {
   }
 }
 @media (pointer: coarse) and (max-height: 500px) {
+  /* The vitals' backing stays clear of the region name in the middle. */
+  .vitals {
+    padding-right: 12px;
+  }
   /* Phone landscape: a compact minimap between the vitals and the stick. */
   .bottom-left,
   body.touch-left .bottom-left {

@@ -466,6 +466,23 @@ export function playedTime(seconds: number) {
   if (minutes < 60) return `${minutes} min played`;
   return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min played`;
 }
+export type HeartState = "full" | "half" | "empty";
+/** Each heart holds two health; an odd maximum ends in a half heart. */
+export function hearts(health: number, maxHealth: number): HeartState[] {
+  return Array.from({ length: Math.ceil(maxHealth / 2) }, (_, i) =>
+    health >= i * 2 + 2 ? "full" : health === i * 2 + 1 ? "half" : "empty",
+  );
+}
+/** One heart or less, and still standing: the hearts warn. */
+export function lowHealth(health: number) {
+  return health > 0 && health <= 2;
+}
+const inHearts = (health: number) =>
+  `${Math.floor(health / 2) || (health % 2 ? "" : "0")}${health % 2 ? "½" : ""}`;
+/** The hearts as words, for screen readers: "Health: 1½ of 3 hearts". */
+export function healthLabel(health: number, maxHealth: number) {
+  return `Health: ${inHearts(health)} of ${inHearts(maxHealth)} hearts`;
+}
 /** The line under Continue: the age, the relics, where, and the time played. */
 export function journeySummary(s: SaveData) {
   const inside = s.visit && DUNGEONS.find((d) => d.id === s.visit!.id);

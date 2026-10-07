@@ -27,6 +27,7 @@ import {
   importSave,
   saveSummary,
   journeySummary,
+  lowHealth,
   canEnter,
   canGrow,
   grow,
@@ -3213,6 +3214,7 @@ export class Game {
       setTimeout(() => (this.ui.el("damage-flash").style.opacity = "0"), 170);
     }
     this.refreshHUD();
+    if (lowHealth(this.save.health)) this.sound.heartbeat();
     if (this.save.health <= 0) {
       const where = this.checkpoint();
       this.ui.dialogue(

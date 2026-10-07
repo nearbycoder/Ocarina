@@ -2,6 +2,9 @@ import {
   CHESTS,
   DUNGEONS,
   discoveries,
+  healthLabel,
+  hearts,
+  lowHealth,
   objective,
   type SaveData,
 } from "./data";
@@ -81,7 +84,7 @@ export class UI {
   constructor() {
     this.root.innerHTML = `
  <div id="vignette"></div><div id="hud" hidden>
- <div class="vitals"><div class="eyebrow" id="age">THE FIRST AGE</div><div id="hearts" aria-label="Health"></div><div class="pocket"><span class="crystal">◆</span><span id="money">0</span><span class="pocket-rule"></span><span id="relics">0 / 7 relics</span></div></div>
+ <div class="vitals"><div class="eyebrow" id="age">THE FIRST AGE</div><div id="hearts" role="img" aria-label="Health"></div><div class="pocket"><span class="crystal">◆</span><span id="money">0</span><span class="pocket-rule"></span><span id="relics">0 / 7 relics</span></div></div>
  <div class="location"><span class="location-line"></span><span id="region">Alder Village</span><span class="location-line"></span><small id="compass"><i id="compass-arrow" aria-hidden="true" hidden></i><span id="compass-text">N</span></small></div>
  <button class="menu-button" data-action="pause" aria-label="Pause game">Ⅱ <span>ESC</span></button>
  <div class="quest"><span class="quest-mark">◇</span><div><small>THE JOURNEY</small><h3 id="quest-title"></h3><p id="quest-detail"></p></div></div>
@@ -234,11 +237,12 @@ export class UI {
       s.age === "child"
         ? "THE FIRST AGE · CHILDHOOD"
         : "THE SECOND AGE · SEVEN YEARS LATER";
-    this.el("hearts").innerHTML = Array.from(
-      { length: Math.ceil(s.maxHealth / 2) },
-      (_, i) =>
-        `<span class="heart ${s.health <= i * 2 ? "empty" : s.health === i * 2 + 1 ? "half" : ""}">♥</span>`,
-    ).join("");
+    const row = this.el("hearts");
+    row.innerHTML = hearts(s.health, s.maxHealth)
+      .map((state) => `<span class="heart ${state}">♥</span>`)
+      .join("");
+    row.classList.toggle("low", lowHealth(s.health));
+    row.setAttribute("aria-label", healthLabel(s.health, s.maxHealth));
     this.el("money").textContent = String(s.crystals);
     this.el("relics").textContent = `${s.completed.length} / 7 relics`;
     this.el("region").textContent = region;
