@@ -1654,3 +1654,38 @@ body.large-text .sheet {
     top: 14px;
   }
 }
+@media (max-height: 500px) {
+  /* A phone held sideways: the whole title, and every choice on it, fits. */
+  .title-top {
+    top: 14px;
+  }
+  .title-content {
+    top: 15%;
+  }
+  .title-content > .eyebrow,
+  .title-chapters,
+  .title-footer {
+    display: none;
+  }
+  h1 {
+    font-size: 52px;
+    margin: 4px 0 8px;
+    letter-spacing: -1.5px;
+  }
+  h1 em {
+    margin-top: 4px;
+    padding-left: 28px;
+  }
+  .title-content > p {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .title-actions {
+    margin-top: 12px;
+    gap: 10px;
+  }
+  .title-actions .primary {
+    padding: 11px 18px;
+  }
+}

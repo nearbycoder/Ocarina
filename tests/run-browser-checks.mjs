@@ -958,6 +958,126 @@ await run("touch: phone landscape layout", async () => {
   return LAYOUTS.length;
 });
 
+// Full screen from the title and the pause menu, with real taps on a phone
+// held sideways; a browser without full screen shows no button.
+await run("full screen", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const fs = await open({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 2,
+  });
+  const tapOn = async (selector) => {
+    await fs.locator(selector).first().scrollIntoViewIfNeeded();
+    const box = await fs.locator(selector).first().boundingBox();
+    if (!box) throw new Error(`${selector} is not visible`);
+    await fs.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await fs.waitForTimeout(200);
+  };
+  const full = () => fs.evaluate(() => !!document.fullscreenElement);
+  const label = () =>
+    fs.locator('[data-action="fullscreen"]').first().textContent();
+  // Every title choice must fit on a phone held sideways, with or without
+  // a journey to continue.
+  const offScreen = (hasSave) =>
+    fs.evaluate((hasSave) => {
+      window.__BELL_OF_AGES__.debug.game().ui.title(hasSave);
+      return [...document.querySelectorAll(".title-content button")]
+        .filter((b) => b.getBoundingClientRect().bottom > innerHeight)
+        .map((b) => b.dataset.action);
+    }, hasSave);
+  try {
+    const cut = [...(await offScreen(true)), ...(await offScreen(false))];
+    check(
+      !cut.length,
+      `Every title choice fits on a phone held sideways (${cut})`,
+    );
+    check((await label()) === "Full screen", "The title offers full screen");
+    await tapOn('[data-action="fullscreen"]');
+    check(
+      (await full()) && (await label()) === "Leave full screen",
+      "A tap fills the screen, and the title says how to leave",
+    );
+    await tapOn('[data-action="fullscreen"]');
+    check(
+      !(await full()) && (await label()) === "Full screen",
+      "A second tap leaves full screen",
+    );
+    await fs.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+      window.__BELL_OF_AGES__.debug.game().setDevice("touch");
+    });
+    await tapOn(".menu-button");
+    check(
+      (await fs.evaluate(() => window.__BELL_OF_AGES__.getState().panel)) ===
+        "pause",
+      "The pause button opens the pause menu",
+    );
+    await tapOn('[data-action="fullscreen"]');
+    check(
+      (await full()) && (await label()).includes("ON"),
+      "The pause menu's Full screen fills the screen and shows ON",
+    );
+    // The browser can end it on its own (its Escape or a gesture).
+    await fs.evaluate(() => document.exitFullscreen());
+    await fs.waitForTimeout(200);
+    check(
+      (await label()).includes("OFF"),
+      "Leaving through the browser updates the row",
+    );
+    await fs.evaluate(() =>
+      document.querySelector('[data-action="fullscreen"]').focus(),
+    );
+    await fs.keyboard.press("Enter");
+    await fs.waitForTimeout(200);
+    check(
+      (await full()) &&
+        (await fs.evaluate(() => document.activeElement?.dataset?.action)) ===
+          "fullscreen",
+      "Enter on the row fills the screen and keeps the focus there",
+    );
+    await fs.evaluate(() => document.exitFullscreen());
+  } finally {
+    await fs.close();
+  }
+  // An iPhone's Safari has no element full screen: no button anywhere.
+  const none = await browser.newPage({ viewport: { width: 844, height: 390 } });
+  try {
+    await none.addInitScript(() =>
+      Object.defineProperty(Document.prototype, "fullscreenEnabled", {
+        configurable: true,
+        get: () => false,
+      }),
+    );
+    await none.goto(URL);
+    await none.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+    const onTitle = await none.locator('[data-action="fullscreen"]').count();
+    await none.evaluate(() => {
+      window.BELL_TEST_MANUAL = true;
+      const api = window.__BELL_OF_AGES__;
+      api.debug.reset();
+      api.debug.action("pause");
+    });
+    const inPause = await none.locator('[data-action="fullscreen"]').count();
+    check(
+      onTitle === 0 && inPause === 0,
+      "Without full screen support, neither menu shows the button",
+    );
+  } finally {
+    await none.close();
+  }
+  return count;
+});
+
 await browser.close();
 if (errors.length) {
   failures++;

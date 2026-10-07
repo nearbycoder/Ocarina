@@ -407,6 +407,12 @@ export class Game {
       if (document.hidden && this.started && !this.ui.panel)
         this.action("pause");
     });
+    // Full screen can also end with the browser's own Escape or gesture.
+    document.addEventListener("fullscreenchange", () => {
+      if (this.ui.panel === "title") this.ui.title(!!this.readSave());
+      else if (this.ui.panel === "pause")
+        this.ui.pause(this.save, this.settings.muted, this.quality.label);
+    });
     window.addEventListener("beforeunload", () => {
       if (this.started) this.persist(false);
     });
@@ -1405,6 +1411,10 @@ export class Game {
       this.keys.clear();
       return;
     }
+    if (a === "fullscreen") {
+      this.toggleFullscreen();
+      return;
+    }
     // Settings open from the title too, before any journey begins.
     if (a === "settings") {
       this.ui.settings(this.settings);
@@ -1567,6 +1577,18 @@ export class Game {
         );
       else this.checkpoint();
     }
+  }
+  /** Fills the screen, or leaves it; the menus follow `fullscreenchange`. */
+  toggleFullscreen() {
+    const done = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    // Browsers allow it only straight after a click, tap, or key press.
+    done.catch(() =>
+      this.ui.toast(
+        "Full screen needs a click, tap, or key press: browsers don't allow it from a gamepad button.",
+      ),
+    );
   }
   /** Where the hero is on the kingdom map; inside a sanctuary, its door. */
   mapPosition() {

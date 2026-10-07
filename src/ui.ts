@@ -46,6 +46,9 @@ import {
   type StoryScene,
 } from "./story";
 import { LANDMARKS, mapToWorld, type Destination } from "./wayfinding";
+/** Browsers that can't fill the screen (an iPhone's Safari) get no button. */
+const canFullscreen = () => !!document.fullscreenEnabled;
+const inFullscreen = () => !!document.fullscreenElement;
 export type Panel =
   | "title"
   | "pause"
@@ -159,10 +162,13 @@ export class UI {
         ?.focus({ preventScroll: true });
   }
   title(hasSave: boolean) {
+    const focused = (document.activeElement as HTMLElement | null)?.dataset
+      ?.action;
     this.setPanel(
       "title",
-      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? '<button class="primary" data-action="continue">Continue your journey <span>→</span></button><button class="quiet" data-action="new">Begin a new story</button>' : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}<div class="title-links"><button class="quiet" data-action="import">Import a journey file</button><button class="quiet" data-action="settings">Settings</button></div></div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse, gamepad, or touch</span></div>`,
+      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? '<button class="primary" data-action="continue">Continue your journey <span>→</span></button><button class="quiet" data-action="new">Begin a new story</button>' : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}<div class="title-links"><button class="quiet" data-action="import">Import a journey file</button><button class="quiet" data-action="settings">Settings</button>${canFullscreen() ? `<button class="quiet" data-action="fullscreen" aria-pressed="${inFullscreen()}">${inFullscreen() ? "Leave full screen" : "Full screen"}</button>` : ""}</div></div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse, gamepad, or touch</span></div>`,
     );
+    this.refocus(focused);
   }
   private hudSignature = "";
   hud(s: SaveData, region: string, dungeonHint?: string) {
@@ -257,7 +263,7 @@ export class UI {
       ?.action;
     this.setPanel(
       "pause",
-      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>${this.keys.journal}</span></button><button data-action="map">Map of the kingdom <span>${this.keys.map}</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button><button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? this.keys.checkpoint : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device](this.keys, this.pad)}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
+      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>${this.keys.journal}</span></button><button data-action="map">Map of the kingdom <span>${this.keys.map}</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button>${canFullscreen() ? `<button data-action="fullscreen" aria-pressed="${inFullscreen()}">Full screen <span>${inFullscreen() ? "ON" : "OFF"}</span></button>` : ""}<button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? this.keys.checkpoint : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device](this.keys, this.pad)}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
     );
     this.refocus(focused);
   }

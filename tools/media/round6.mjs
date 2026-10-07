@@ -100,13 +100,34 @@ const SHOTS = {
     await page.tap('[data-action="settings"]');
     await shoot(page, "b-title-phone-settings");
   },
+  // A phone held sideways: the whole title fits, with Full screen beside
+  // Settings. Before this round the links ran off the bottom.
+  "c-title-landscape": async (page) => {
+    await shoot(page, "c-title-landscape");
+  },
+  // The pause menu on a phone held sideways, scrolled to the Full screen row.
+  "c-pause-landscape": async (page) => {
+    await page.evaluate(() => {
+      window.__BELL_OF_AGES__.debug.action("pause");
+      document
+        .querySelector('[data-action="fullscreen"]')
+        .scrollIntoView({ block: "center" });
+    });
+    await shoot(page, "c-pause-landscape");
+  },
 };
 const PHONE = { width: 390, height: 844 };
-const VIEWPORTS = { "b-title-phone": PHONE, "b-title-phone-settings": PHONE };
+const VIEWPORTS = {
+  "b-title-phone": PHONE,
+  "b-title-phone-settings": PHONE,
+  "c-title-landscape": PHONE_WIDE,
+  "c-pause-landscape": PHONE_WIDE,
+};
 const TITLE = new Set([
   "b-title-settings",
   "b-title-phone",
   "b-title-phone-settings",
+  "c-title-landscape",
 ]);
 
 const names = process.argv.slice(2).length
