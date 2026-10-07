@@ -297,10 +297,99 @@ await run("keyboard: menus", async () => {
     await press("ArrowUp");
     await press("ArrowDown");
     check((await focused()) === "new", "↑ and ↓ wrap round the choices");
+    // Settings before the journey begins, by keyboard, mouse, and pad.
+    await focusOn("settings");
+    await press("Enter");
+    check(
+      (await panel()) === "settings" &&
+        (await kb.evaluate(() => document.getElementById("hud").hidden)) &&
+        (await game("(g) => !g.started && !g.readSave()")),
+      "Settings open from the title, with no HUD and no journey begun",
+    );
+    await focusOn("toggle-largeText");
+    await press("Enter");
+    await focusOn("toggle-reducedMotion");
+    await press("Enter");
+    check(
+      (await game("(g) => g.settings.largeText && g.settings.reducedMotion")) &&
+        JSON.parse(
+          await kb.evaluate(() =>
+            localStorage.getItem("bell-of-ages-settings-v1"),
+          ),
+        ).largeText === true,
+      "Larger text and reduced motion turn on from the title and are stored",
+    );
+    await press("Escape");
+    check(
+      (await panel()) === "title" && (await game("(g) => !g.started")),
+      "Escape goes back to the title",
+    );
+    const eye = () => game("(g) => g.camera.position.toArray().join()");
+    const still = await eye();
+    await kb.waitForTimeout(400);
+    check(
+      (await eye()) === still,
+      "Under reduced motion the title view holds still",
+    );
+    await kb.click('[data-action="settings"]');
+    check((await panel()) === "settings", "A click opens Settings too");
+    await kb.click(".settings-sheet .close");
+    check((await panel()) === "title", "× goes back to the title");
+    const padPanels = await kb.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      const pad = {
+        id: "Synthetic standard gamepad",
+        index: 0,
+        connected: true,
+        mapping: "standard",
+        axes: [0, 0, 0, 0],
+        buttons: Array.from({ length: 17 }, () => ({
+          pressed: false,
+          value: 0,
+        })),
+      };
+      Object.defineProperty(navigator, "getGamepads", {
+        configurable: true,
+        value: () => [pad],
+      });
+      const tap = (b) => {
+        pad.buttons[b] = { pressed: true, value: 1 };
+        game.pollGamepad(1 / 60);
+        pad.buttons[b] = { pressed: false, value: 0 };
+        game.pollGamepad(1 / 60);
+      };
+      for (
+        let i = 0;
+        i < 6 && document.activeElement?.dataset?.action !== "settings";
+        i++
+      )
+        tap(13);
+      tap(0);
+      const opened = game.ui.panel;
+      tap(1);
+      const back = game.ui.panel;
+      Object.defineProperty(navigator, "getGamepads", {
+        configurable: true,
+        value: () => [],
+      });
+      game.pollGamepad(1 / 60);
+      game.setDevice("keyboard");
+      return [opened, back];
+    });
+    check(
+      padPanels[0] === "settings" && padPanels[1] === "title",
+      `A pad's D-pad and A open Settings, and B goes back (${padPanels})`,
+    );
     await press("Enter");
     check(
       (await game("(g) => g.save.story.pending?.id")) === "opening",
       "Enter begins the journey",
+    );
+    check(
+      (await kb.evaluate(
+        () => getComputedStyle(document.querySelector(".dialogue-box")).zoom,
+      )) === "1.2",
+      "The opening scene uses the larger text chosen on the title",
     );
     for (let i = 0; i < 8 && (await game("(g) => !!g.save.story.pending")); i++)
       await press("Enter");

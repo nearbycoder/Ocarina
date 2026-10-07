@@ -87,9 +87,27 @@ const SHOTS = {
     );
     await shoot(page, "a-keyboard-settings");
   },
+  // The title with Settings beside the journey-file link, focused with ↓.
+  "b-title-settings": async (page) => {
+    await focusOn(page, "settings");
+    await shoot(page, "b-title-settings");
+  },
+  // Settings opened from the title on a phone held upright.
+  "b-title-phone": async (page) => {
+    await shoot(page, "b-title-phone");
+  },
+  "b-title-phone-settings": async (page) => {
+    await page.tap('[data-action="settings"]');
+    await shoot(page, "b-title-phone-settings");
+  },
 };
-const VIEWPORTS = {};
-const TITLE = new Set();
+const PHONE = { width: 390, height: 844 };
+const VIEWPORTS = { "b-title-phone": PHONE, "b-title-phone-settings": PHONE };
+const TITLE = new Set([
+  "b-title-settings",
+  "b-title-phone",
+  "b-title-phone-settings",
+]);
 
 const names = process.argv.slice(2).length
   ? process.argv.slice(2)

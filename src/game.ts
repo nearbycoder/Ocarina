@@ -312,6 +312,7 @@ export class Game {
   /** The browser's keyboard layout map, when it offers one. */
   private keyLayout?: ReadonlyMap<string, string>;
   constructor() {
+    this.ui.inJourney = () => this.started;
     const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
     this.renderer = new T.WebGLRenderer({
       canvas,
@@ -1404,51 +1405,7 @@ export class Game {
       this.keys.clear();
       return;
     }
-    if (!this.started) return;
-    if (a === "pause") {
-      this.keys.clear();
-      this.ui.pause(this.save, this.settings.muted, this.quality.label);
-      return;
-    }
-    if (a === "quality") {
-      this.quality.cycle();
-      const n = this.quality.level === 0 ? 1024 : 2048;
-      this.sun.shadow.mapSize.set(n, n);
-      this.sun.shadow.map?.dispose();
-      this.sun.shadow.map = null;
-      this.renderer.shadowMap.needsUpdate = true;
-      this.ui.pause(this.save, this.settings.muted, this.quality.label);
-      return;
-    }
-    if (a === "map") {
-      this.showMap();
-      return;
-    }
-    if (a.startsWith("mark-")) {
-      const id = a.slice(5);
-      const place = LANDMARKS[id] ?? FINDS.find((f) => f.id === id);
-      if (id === "clear") this.setMarker(null);
-      else if (place) this.setMarker({ x: place.x, z: place.z });
-      return;
-    }
-    if (a === "journal") {
-      this.ui.journal(this.save);
-      return;
-    }
-    if (a === "save") {
-      this.persist();
-      return;
-    }
-    if (a === "export") {
-      this.exportJourney();
-      return;
-    }
-    if (a === "sound") {
-      this.settings.muted = !this.settings.muted;
-      this.applySettings(true);
-      this.ui.pause(this.save, this.settings.muted, this.quality.label);
-      return;
-    }
+    // Settings open from the title too, before any journey begins.
     if (a === "settings") {
       this.ui.settings(this.settings);
       return;
@@ -1497,6 +1454,56 @@ export class Game {
         action,
         `Press the new key for ${KEY_ACTION_NAMES[action].toLowerCase()}. Esc cancels.`,
       );
+      return;
+    }
+    if (!this.started) {
+      // Settings' Back, ×, Escape, and B lead back to the title.
+      if (a === "pause" && this.ui.panel === "settings")
+        this.ui.title(!!this.readSave());
+      return;
+    }
+    if (a === "pause") {
+      this.keys.clear();
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
+      return;
+    }
+    if (a === "quality") {
+      this.quality.cycle();
+      const n = this.quality.level === 0 ? 1024 : 2048;
+      this.sun.shadow.mapSize.set(n, n);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+      this.renderer.shadowMap.needsUpdate = true;
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
+      return;
+    }
+    if (a === "map") {
+      this.showMap();
+      return;
+    }
+    if (a.startsWith("mark-")) {
+      const id = a.slice(5);
+      const place = LANDMARKS[id] ?? FINDS.find((f) => f.id === id);
+      if (id === "clear") this.setMarker(null);
+      else if (place) this.setMarker({ x: place.x, z: place.z });
+      return;
+    }
+    if (a === "journal") {
+      this.ui.journal(this.save);
+      return;
+    }
+    if (a === "save") {
+      this.persist();
+      return;
+    }
+    if (a === "export") {
+      this.exportJourney();
+      return;
+    }
+    if (a === "sound") {
+      this.settings.muted = !this.settings.muted;
+      this.applySettings(true);
+      this.ui.pause(this.save, this.settings.muted, this.quality.label);
       return;
     }
     if (a === "home") {
@@ -3243,7 +3250,8 @@ export class Game {
       }
     }
     if (!this.started) {
-      const time = this.elapsed;
+      // The title view drifts slowly, unless the player asked for less motion.
+      const time = this.settings.reducedMotion ? 0 : this.elapsed;
       this.camera.position.set(
         6 + Math.sin(time * 0.025) * 0.6,
         5.6 + Math.sin(time * 0.04) * 0.12,

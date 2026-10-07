@@ -195,6 +195,11 @@ h1 em {
   font-size: 23px;
   font-weight: 400;
 }
+.title-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+}
 .quiet {
   background: none;
   border: 0;
