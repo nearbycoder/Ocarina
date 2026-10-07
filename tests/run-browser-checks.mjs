@@ -159,6 +159,148 @@ await inPage("polish: combo", async () => (await polishQA.combo()).length);
 await inPage("polish: sparks", async () => (await polishQA.sparks()).length);
 await page.close();
 
+// Captured mouse look (opt-in): real clicks and button presses; the
+// movement itself is synthetic, because headless Chromium's movementX under
+// pointer lock isn't real mouse travel.
+await run("mouse: captured look", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const m = await open({ viewport: { width: 1280, height: 800 } });
+  const game = (fn) =>
+    m.evaluate(
+      (fn) =>
+        new Function("game", "api", fn)(
+          window.__BELL_OF_AGES__.debug.game(),
+          window.__BELL_OF_AGES__.debug,
+        ),
+      fn,
+    );
+  const locked = () =>
+    m.evaluate(() => document.pointerLockElement?.tagName === "CANVAS");
+  const swinging = () => game("return game.attackElapsed >= 0");
+  const move = (dx, dy = 0) =>
+    m.evaluate(
+      ([dx, dy]) =>
+        document.querySelector("canvas").dispatchEvent(
+          new PointerEvent("pointermove", {
+            movementX: dx,
+            movementY: dy,
+            pointerType: "mouse",
+            bubbles: true,
+          }),
+        ),
+      [dx, dy],
+    );
+  const settle = () => game("api.advance(0.8)");
+  try {
+    await m.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+      window.__BELL_OF_AGES__.debug.teleport(-8, 66);
+    });
+    await m.mouse.click(640, 400);
+    await settle();
+    check(
+      !(await locked()),
+      "With the setting off, a click doesn't capture the mouse",
+    );
+    // Off: the old click swings on release.
+    await m.mouse.move(640, 400);
+    await m.mouse.down();
+    const offDown = await swinging();
+    await m.mouse.up();
+    check(
+      !offDown && (await swinging()),
+      "With it off, a click still swings on release, as before",
+    );
+    await settle();
+    // Turn it on through the settings sheet with real clicks.
+    await m.keyboard.press("Escape");
+    await m.click('[data-action="settings"]');
+    await m.click('[data-action="toggle-mouseLook"]');
+    check(
+      await game("return game.settings.mouseLook === true"),
+      "Settings → Camera turns on captured mouse look",
+    );
+    await m.keyboard.press("Escape");
+    await m.click('[data-action="close"]');
+    check(
+      await locked(),
+      "Returning to the world with a click captures the pointer",
+    );
+    await m.evaluate(() => document.exitPointerLock());
+    await m.waitForFunction(() => !document.pointerLockElement);
+    check(
+      (await m.textContent("#toast")).includes(
+        "Click the scene to capture it again",
+      ),
+      "When the browser releases it, a notice says how to capture it again",
+    );
+    check(
+      (await game("return game.ui.panel")) === null,
+      "Nothing else changes: the game isn't paused",
+    );
+    await m.mouse.click(640, 400);
+    check(await locked(), "A click on the scene captures the pointer");
+    check(!(await swinging()), "The capturing click doesn't swing");
+    await m.mouse.down();
+    check(await swinging(), "The left button swings on press, before release");
+    await m.mouse.up();
+    await settle();
+    await m.mouse.down({ button: "right" });
+    const guarding = await game("return game.shieldHeld()");
+    await m.mouse.up({ button: "right" });
+    check(
+      guarding && !(await game("return game.shieldHeld()")),
+      "The right button holds the shield",
+    );
+    const yaw = await game("return game.yaw");
+    const pitch = await game("return game.pitch");
+    await move(100, 25);
+    const turned = await game("return [game.yaw, game.pitch]");
+    check(
+      Math.abs(turned[0] - (yaw - 0.6)) < 1e-6 &&
+        Math.abs(turned[1] - (pitch + 0.1)) < 1e-6,
+      `Mouse movement turns the camera like a drag (${(turned[0] - yaw).toFixed(3)} rad, ${(turned[1] - pitch).toFixed(3)} rad)`,
+    );
+    await game("game.settings.invertY = true");
+    await move(0, 25);
+    check(
+      Math.abs((await game("return game.pitch")) - pitch) < 1e-6,
+      "Invert vertical camera applies to it",
+    );
+    await game("game.settings.invertY = false");
+    // Locked on: a sideways move switches targets, as a drag does.
+    await m.evaluate(() => lockQA.dragSetup());
+    await move(40);
+    await move(40);
+    check(await locked(), "Still captured inside the sanctuary");
+    count += (await m.evaluate(() => lockQA.afterDrag(2))).length;
+    // Any sheet releases it.
+    await m.mouse.click(640, 400);
+    await m.keyboard.press("Escape");
+    check(
+      !(await locked()) && (await game("return game.ui.panel")) === "pause",
+      "Opening the pause menu releases the pointer",
+    );
+    await m.click('[data-action="settings"]');
+    await m.click('[data-action="toggle-mouseLook"]');
+    await m.keyboard.press("Escape");
+    await m.click('[data-action="close"]');
+    check(
+      !(await locked()) && !(await game("return game.settings.mouseLook")),
+      "Turned off, returning to the world leaves the pointer free",
+    );
+  } finally {
+    await m.close();
+  }
+  return count;
+});
+
 // Keyboard remapping on its own page, so rebinds can't leak into other groups.
 await run("keys: remapping", async () => {
   const keyPage = await open({ viewport: { width: 1280, height: 800 } });

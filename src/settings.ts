@@ -22,6 +22,11 @@ export interface Settings {
   /** Camera speed multiplier, 0.5–2 in steps of 0.25. */
   sensitivity: number;
   invertY: boolean;
+  /**
+   * Captured mouse look: a click captures the pointer, the mouse turns the
+   * camera, and the buttons swing and guard. Off: drag to turn, as before.
+   */
+  mouseLook: boolean;
   /** How far the camera follows behind, in metres. */
   cameraDistance: number;
   /** Removes hit-stop pauses, the damage flash, and interface motion. */
@@ -59,6 +64,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     muted: false,
     sensitivity: 1,
     invertY: false,
+    mouseLook: false,
     cameraDistance: CAMERA_DISTANCE.normal,
     reducedMotion: prefersReducedMotion,
     largeText: false,
@@ -119,6 +125,7 @@ export function parseSettings(
     muted: flag("muted"),
     sensitivity: sensitivity(s.sensitivity, def.sensitivity),
     invertY: flag("invertY"),
+    mouseLook: flag("mouseLook"),
     cameraDistance: cameraDistance(s.cameraDistance, def.cameraDistance),
     reducedMotion: flag("reducedMotion"),
     largeText: flag("largeText"),

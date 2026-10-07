@@ -321,6 +321,8 @@ export class Game {
   private padNav = 0;
   private touchMove = { x: 0, y: 0 };
   private touchShield = false;
+  /** The right mouse button, held while the pointer is captured. */
+  private mouseShield = false;
   /** The action waiting for a new key in the settings sheet. */
   private binding: KeyAction | null = null;
   /** The action waiting for a new gamepad button in the settings sheet. */
@@ -437,6 +439,13 @@ export class Game {
       if (!this.ui.panel) this.action("pause");
     });
     window.addEventListener("pagehide", () => this.persist(false));
+    // The browser can release a captured pointer itself (Esc).
+    document.addEventListener("pointerlockchange", () => {
+      if (this.captured()) return;
+      this.mouseShield = false;
+      if (this.settings.mouseLook && this.started && !this.ui.panel)
+        this.ui.toast("Mouse released. Click the scene to capture it again.");
+    });
     // Full screen can also end with the browser's own Escape or gesture.
     document.addEventListener("fullscreenchange", () => {
       if (this.ui.panel === "title") this.showTitle();
@@ -573,6 +582,7 @@ export class Game {
       if (
         key === "muted" ||
         key === "invertY" ||
+        key === "mouseLook" ||
         key === "reducedMotion" ||
         key === "largeText" ||
         key === "threatArrows" ||
@@ -1285,6 +1295,18 @@ export class Game {
     };
     canvas.addEventListener("pointerdown", (e) => {
       if (this.ui.panel) return;
+      // Captured mouse look: the first click captures, then buttons act on
+      // press: left swings, right holds the shield.
+      if (
+        e.pointerType === "mouse" &&
+        this.settings.mouseLook &&
+        this.started
+      ) {
+        if (!this.captured()) this.capturePointer();
+        else if (e.button === 0) this.attack();
+        else if (e.button === 2) this.mouseShield = true;
+        return;
+      }
       if (e.pointerType === "touch") {
         fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (fingers.size === 2) {
@@ -1313,22 +1335,26 @@ export class Game {
         }
         return;
       }
+      if (this.captured()) {
+        if (!this.ui.panel) this.mouseTurn(e.movementX, e.movementY);
+        return;
+      }
       if (!this.dragging || this.ui.panel) return;
       const dx = e.clientX - this.lastPointer.x,
         dy = e.clientY - this.lastPointer.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) this.pointerMoved = true;
-      if (this.target) {
-        // While locked, a sideways drag switches targets; up and down tilt.
-        this.dragSwitch += dx;
-        if (Math.abs(this.dragSwitch) > 70) {
-          this.switchTarget(this.dragSwitch > 0 ? 1 : -1);
-          this.dragSwitch = 0;
-        }
-        this.turnCamera(0, dy * 0.004);
-      } else this.turnCamera(dx * 0.006, dy * 0.004);
+      this.mouseTurn(dx, dy);
       this.lastPointer = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener("pointerup", (e) => {
+      if (
+        e.pointerType === "mouse" &&
+        this.settings.mouseLook &&
+        this.started
+      ) {
+        if (e.button === 2) this.mouseShield = false;
+        return;
+      }
       const pinched = this.pinching;
       lift(e);
       if (pinched) return;
@@ -1409,6 +1435,38 @@ export class Game {
     this.keys.clear();
     this.touchMove = { x: 0, y: 0 };
     this.touchShield = false;
+    this.mouseShield = false;
+  }
+  /** Whether the pointer is captured for mouse look. */
+  captured() {
+    return document.pointerLockElement === this.renderer.domElement;
+  }
+  /**
+   * Captures the pointer for mouse look, if the player chose it and is in the
+   * world. Browsers allow it only straight after a click or key press.
+   */
+  capturePointer() {
+    if (!this.settings.mouseLook || !this.started || this.ui.panel) return;
+    if (this.ui.device !== "keyboard" || this.captured()) return;
+    try {
+      const request = this.renderer.domElement.requestPointerLock() as
+        Promise<void> | undefined;
+      request?.catch?.(() => {});
+    } catch {
+      // Not allowed here; a click on the scene tries again.
+    }
+  }
+  /** Turns the camera by a mouse movement; while locked on, switches targets. */
+  mouseTurn(dx: number, dy: number) {
+    if (this.target) {
+      // While locked, a sideways move switches targets; up and down tilt.
+      this.dragSwitch += dx;
+      if (Math.abs(this.dragSwitch) > 70) {
+        this.switchTarget(this.dragSwitch > 0 ? 1 : -1);
+        this.dragSwitch = 0;
+      }
+      this.turnCamera(0, dy * 0.004);
+    } else this.turnCamera(dx * 0.006, dy * 0.004);
   }
   setDevice(device: Device) {
     if (this.ui.device === device) return;
@@ -1429,7 +1487,8 @@ export class Game {
     return (
       this.keys.has(this.settings.keys.shield) ||
       this.padShield ||
-      this.touchShield
+      this.touchShield ||
+      this.mouseShield
     );
   }
   /** Reads the first connected gamepad once per frame. */
@@ -1632,6 +1691,8 @@ export class Game {
       }
       this.ui.setPanel(null);
       this.keys.clear();
+      // Back to the world with a click: capture the mouse again.
+      this.capturePointer();
       return;
     }
     if (a === "fullscreen") {

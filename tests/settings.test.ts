@@ -82,4 +82,10 @@ describe("player settings", () => {
     expect(parseSettings('{"touchSize":7}').touchSize).toBe(2);
     expect(parseSettings('{"touchSize":1.5}').touchSize).toBe(0);
   });
+  it("leaves captured mouse look off unless the player chose it", () => {
+    expect(defaultSettings().mouseLook).toBe(false);
+    expect(parseSettings('{"master":40}').mouseLook).toBe(false);
+    expect(parseSettings('{"mouseLook":true}').mouseLook).toBe(true);
+    expect(parseSettings('{"mouseLook":"yes"}').mouseLook).toBe(false);
+  });
 });
