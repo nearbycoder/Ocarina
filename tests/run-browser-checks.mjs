@@ -1077,6 +1077,255 @@ await run("saves: put away", async () => {
   return count;
 });
 
+// Picking up a sanctuary where you left it. A fresh, throwaway browser context
+// on the normal URL, so the game really saves; each "reload" closes the page
+// without beforeunload (as a phone discarding a tab would) and opens it again.
+// The old code put the player outside the door with the sanctuary reset.
+await run("saves: sanctuary visit", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const SAVE = "bell-of-ages-save-v1";
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
+  const ready = async (p) => {
+    p.on("pageerror", (e) => errors.push(e.message));
+    await p.goto(BASE);
+    await p.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+  };
+  const stored = (p) =>
+    p.evaluate((k) => JSON.parse(localStorage.getItem(k)), SAVE);
+  // Holds the real-time loop, so nothing moves between steps.
+  const hold = (p) =>
+    p.evaluate(() => window.__BELL_OF_AGES__.debug.advance(0));
+  const state = (p) => p.evaluate(() => window.__BELL_OF_AGES__.getState());
+  // Flood-fills the floor over the game's own collision from where Alder
+  // stands, and reports which of the given places it reaches.
+  const reaches = (p, spots) =>
+    p.evaluate((spots) => {
+      const api = window.__BELL_OF_AGES__;
+      const step = 0.5,
+        x0 = -25.5,
+        z0 = 33.5,
+        cols = 103,
+        rows = 175;
+      const cell = (x, z) =>
+        Math.round((x - x0) / step) + Math.round((z0 - z) / step) * cols;
+      const { x, z } = api.getState().position;
+      const seen = new Uint8Array(cols * rows);
+      const queue = [cell(x, z)];
+      seen[queue[0]] = 1;
+      while (queue.length) {
+        const c = queue.pop();
+        const cx = c % cols,
+          cz = Math.floor(c / cols);
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const nx = cx + dx,
+            nz = cz + dz;
+          if (nx < 0 || nz < 0 || nx >= cols || nz >= rows) continue;
+          const n = nx + nz * cols;
+          if (seen[n] || api.debug.blocked(x0 + nx * step, z0 - nz * step))
+            continue;
+          seen[n] = 1;
+          queue.push(n);
+        }
+      }
+      return spots.map(([x, z]) => !!seen[cell(x, z)]);
+    }, spots);
+  // Closes the page as a phone would, then opens the game again.
+  const reopen = async (p) => {
+    await p.close({ runBeforeUnload: false });
+    const next = await ctx.newPage();
+    await ready(next);
+    return next;
+  };
+  const resume = async (p) => {
+    await p.click('[data-action="continue"]');
+    await hold(p);
+  };
+  try {
+    let page = await ctx.newPage();
+    await ready(page);
+    await page.click('[data-action="new"]');
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      game.save.story.pending = null;
+      game.save.story.prologue = 5;
+      game.save.story.seen.push("opening", "commission");
+      game.save.talked = true;
+      game.ui.setPanel(null);
+      // Before the Ember Vault's door.
+      api.debug.teleport(68, -38.5);
+      api.debug.face(Math.PI);
+      api.debug.advance(0);
+    });
+    await page.keyboard.press("e");
+    await hold(page);
+    let s = await state(page);
+    check(s.dungeon === "ember", "E at the door enters the Ember Vault");
+    // The stone pushed onto the seal (E, the accessible way), then two of
+    // the four guardians defeated by the normal damage code.
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      const stone = game.world.interactables.find((i) => i.kind === "puzzle");
+      for (let i = 0; i < 4; i++) game.activatePuzzle(stone);
+      api.debug.damageEnemy(0, 99);
+      api.debug.damageEnemy(2, 99);
+      api.debug.advance(0);
+    });
+    s = await state(page);
+    check(
+      s.puzzleSolved &&
+        s.enemies.filter((e) => e.state === "dead").length === 2,
+      "The seal opens and two guardians fall",
+    );
+    let save = await stored(page);
+    check(
+      JSON.stringify(save.visit) ===
+        JSON.stringify({
+          id: "ember",
+          puzzle: true,
+          fallen: [0, 2],
+          seal: false,
+          wall: false,
+          warden: false,
+        }),
+      `The save records the visit at once (${JSON.stringify(save.visit)})`,
+    );
+    page = await reopen(page);
+    await resume(page);
+    s = await state(page);
+    check(
+      s.dungeon === "ember",
+      `Continuing returns to the Ember Vault (${s.dungeon ?? "outside"})`,
+    );
+    check(
+      s.puzzleSolved && !s.arenaClear,
+      "The first seal stays open, the guardian seal shut",
+    );
+    check(
+      Math.hypot(s.position.x, s.position.z - 8) < 0.5,
+      `Alder stands at the guardian hall's checkpoint (${s.position.x.toFixed(1)}, ${s.position.z.toFixed(1)})`,
+    );
+    const guardians = s.enemies.filter((e) => !e.boss);
+    check(
+      guardians[0].state === "dead" &&
+        guardians[2].state === "dead" &&
+        guardians[1].state !== "dead" &&
+        guardians[3].state !== "dead",
+      "The two fallen guardians stay down; the other two stand",
+    );
+    const stone = await page.evaluate(
+      () =>
+        window.__BELL_OF_AGES__.debug
+          .game()
+          .world.interactables.find((i) => i.kind === "puzzle").z,
+    );
+    check(stone === 14, `The stone rests on the seal (z = ${stone})`);
+    let [hall, arena] = await reaches(page, [
+      [0, -8],
+      [0, -32],
+    ]);
+    check(
+      hall && !arena,
+      "On foot, the guardian hall is open and the warden's chamber still sealed",
+    );
+    // Clear the hall, and leave again.
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.damageEnemy(1, 99);
+      api.debug.damageEnemy(3, 99);
+      api.debug.advance(0);
+    });
+    save = await stored(page);
+    check(
+      save.visit?.seal && save.visit.fallen.length === 4,
+      "Breaking the guardian seal is saved at once",
+    );
+    page = await reopen(page);
+    await resume(page);
+    s = await state(page);
+    const warden = s.enemies.find((e) => e.boss);
+    const full = await page.evaluate(
+      () =>
+        window.__BELL_OF_AGES__.debug.game().enemies.find((e) => e.boss).maxHp,
+    );
+    check(
+      s.dungeon === "ember" &&
+        s.arenaClear &&
+        Math.hypot(s.position.x, s.position.z + 17) < 0.5,
+      `Continuing again returns to the warden's chamber (${s.position.x.toFixed(1)}, ${s.position.z.toFixed(1)})`,
+    );
+    check(
+      warden.hp === full && warden.state !== "dead",
+      `The warden waits at full health (${warden.hp} / ${full})`,
+    );
+    [arena] = await reaches(page, [[0, -32]]);
+    check(arena, "On foot, the warden's chamber is open");
+    // A fallen warden stays fallen, and its relic waits to be claimed.
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      const game = api.debug.game();
+      api.debug.damageEnemy(
+        game.enemies.findIndex((e) => e.boss),
+        99,
+      );
+      api.debug.advance(0);
+    });
+    page = await reopen(page);
+    await resume(page);
+    s = await state(page);
+    const relic = await page.evaluate(
+      () =>
+        window.__BELL_OF_AGES__.debug
+          .game()
+          .world.interactables.find((i) => i.kind === "relic").mesh.visible,
+    );
+    check(
+      s.dungeon === "ember" && s.bossDead && relic && !s.completed.length,
+      "After the warden falls, Continue returns to its chamber with the relic waiting",
+    );
+    // Leaving through the exit ends the visit.
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.teleport(0, 29.5);
+      api.debug.advance(0);
+    });
+    await page.keyboard.press("e");
+    await hold(page);
+    s = await state(page);
+    check(!s.dungeon, "E at the exit returns to the meadow");
+    page = await reopen(page);
+    save = await stored(page);
+    await resume(page);
+    s = await state(page);
+    check(
+      save.visit === null &&
+        !s.dungeon &&
+        // The door's prompt stands at (68, -39).
+        Math.hypot(s.position.x - 68, s.position.z + 39) < 4,
+      `After leaving, Continue starts outside the door (${s.position.x.toFixed(1)}, ${s.position.z.toFixed(1)})`,
+    );
+    await page.close();
+  } finally {
+    await ctx.close();
+  }
+  return count;
+});
+
 // Full screen from the title and the pause menu, with real taps on a phone
 // held sideways; a browser without full screen shows no button.
 await run("full screen", async () => {

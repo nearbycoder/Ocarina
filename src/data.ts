@@ -143,9 +143,51 @@ export interface SaveData {
   noticed: string[];
   /** The player's own map marker, if one is placed. */
   marker: { x: number; z: number } | null;
+  /** The sanctuary the player is inside, if any; Continue resumes it. */
+  visit: Visit | null;
   position: { x: number; z: number };
   elapsed: number;
   won: boolean;
+}
+/**
+ * An unfinished sanctuary visit. Continuing the journey returns the player to
+ * the start of the furthest chamber reached, as a defeat there would.
+ */
+export interface Visit {
+  id: string;
+  /** The first seal (the puzzle) is open. */
+  puzzle: boolean;
+  /** Guardians that have fallen, by their place in the hall's layout. */
+  fallen: number[];
+  /** The guardian seal is broken. */
+  seal: boolean;
+  /** The alcove wall was broken on this visit. */
+  wall: boolean;
+  /** The warden has fallen and the relic waits. */
+  warden: boolean;
+}
+/** A stored visit, or null when it is missing, malformed, or can't be resumed. */
+export function parseVisit(v: unknown, s: SaveData): Visit | null {
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  const d = DUNGEONS.find((d) => d.id === r.id);
+  if (!d || canEnter(s, d)) return null;
+  if (
+    !Array.isArray(r.fallen) ||
+    r.fallen.some((i) => !Number.isInteger(i) || i < 0 || i > 15)
+  )
+    return null;
+  // Later seals imply the earlier ones.
+  const warden = r.warden === true;
+  const seal = warden || r.seal === true;
+  return {
+    id: d.id,
+    puzzle: seal || r.puzzle === true,
+    fallen: [...new Set<number>(r.fallen as number[])].sort((a, b) => a - b),
+    seal,
+    wall: r.wall === true,
+    warden,
+  };
 }
 export const SAVE_KEY = "bell-of-ages-save-v1";
 export function newSave(): SaveData {
@@ -166,6 +208,7 @@ export function newSave(): SaveData {
     carvings: [],
     noticed: [],
     marker: null,
+    visit: null,
     position: { x: -10, z: 71 },
     elapsed: 0,
     won: false,
@@ -289,7 +332,7 @@ export function parseSave(raw: string | null): SaveData | null {
       Array.isArray(s.visited) ? s.visited : s.completed,
     );
     const maxHealth = Math.min(30, Math.max(6, s.maxHealth));
-    return {
+    const save: SaveData = {
       ...def,
       ...s,
       story,
@@ -314,7 +357,11 @@ export function parseSave(raw: string | null): SaveData | null {
         x: Math.max(-140, Math.min(140, s.position.x)),
         z: Math.max(-140, Math.min(140, s.position.z)),
       },
+      visit: null,
     };
+    // Saves from before sanctuary visits were kept start outside the door.
+    save.visit = parseVisit(s.visit, save);
+    return save;
   } catch {
     return null;
   }

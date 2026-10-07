@@ -33,6 +33,7 @@ import {
   FINDS,
   type SaveData,
   type Dungeon,
+  type Visit,
 } from "./data";
 import {
   LANDMARKS,
@@ -555,13 +556,83 @@ export class Game {
       return null;
     }
   }
-  /** Records where the hero stands; inside a sanctuary, its door is kept. */
+  /**
+   * Records where the hero stands. Inside a sanctuary the door is kept as the
+   * position, and the visit records what this visit has opened.
+   */
   syncPosition() {
+    this.save.visit = this.currentVisit();
     if (!this.world.dungeon)
       this.save.position = {
         x: this.hero.group.position.x,
         z: this.hero.group.position.z,
       };
+  }
+  /** What the sanctuary visit has opened so far, or null outside one. */
+  currentVisit(): Visit | null {
+    const d = this.world.dungeon;
+    if (!d) return null;
+    return {
+      id: d.id,
+      puzzle: this.puzzleSolved,
+      fallen: this.enemies
+        .filter((e) => !e.boss)
+        .flatMap((e, i) => (e.state === "dead" ? [i] : [])),
+      seal: this.arenaClear,
+      wall: this.crackBroken,
+      warden: this.bossDead,
+    };
+  }
+  /**
+   * Puts the player back inside a sanctuary left unfinished, at the start of
+   * the furthest chamber reached, as a defeat there would.
+   */
+  resumeVisit(v: Visit) {
+    const d = DUNGEONS.find((d) => d.id === v.id)!;
+    this.loadWorld(d);
+    const guardians = this.enemies.filter((e) => !e.boss);
+    for (const i of v.fallen) {
+      const e = guardians[i];
+      if (!e) continue;
+      e.state = "dead";
+      e.mesh.visible = false;
+    }
+    if (v.puzzle) this.showSolved();
+    if (v.seal) {
+      this.arenaClear = true;
+      this.world.gates[1].visible = false;
+    }
+    if (v.wall) this.setCrackBroken(true);
+    if (v.warden) {
+      const warden = this.enemies.find((e) => e.boss)!;
+      warden.state = "dead";
+      warden.mesh.visible = false;
+      this.bossDead = true;
+      this.world.interactables.find((i) => i.kind === "relic")!.mesh.visible =
+        true;
+    }
+    this.restartChamber();
+    this.renderer.shadowMap.needsUpdate = true;
+    // With nothing opened yet, the sanctuary's own hint stays on screen.
+    if (v.puzzle) this.ui.toast(`${d.name} · Your progress here holds.`);
+  }
+  /** Opens the first seal and leaves the puzzle looking solved. */
+  showSolved() {
+    const d = this.world.dungeon!;
+    this.puzzleSolved = true;
+    this.world.gates[0].visible = false;
+    if (d.puzzle === "block") this.setBlockZ(14);
+    if (d.puzzle === "mirrors") {
+      this.mirrorTurns = [0, 0, 0];
+      this.world.puzzle.forEach((g) => (g.rotation.y = 0));
+      this.updateMirrorBeams();
+    }
+    if (d.puzzle === "torches") {
+      this.torchStates = [true, false, true];
+      this.world.puzzle.forEach(
+        (g, n) => (g.getObjectByName("flame")!.visible = this.torchStates[n]),
+      );
+    }
   }
   persist(show = true) {
     if (!this.started || this.review) return;
@@ -584,7 +655,8 @@ export class Game {
     this.started = true;
     this.sound.start();
     this.replaceHero();
-    this.loadWorld();
+    if (this.save.visit) this.resumeVisit(this.save.visit);
+    else this.loadWorld();
     this.ui.setPanel(null);
     this.yaw = 0;
     this.snapCamera();
@@ -1804,6 +1876,7 @@ export class Game {
       return;
     }
     this.setCrackBroken(true);
+    this.persist(false);
     this.renderer.shadowMap.needsUpdate = true;
     this.sound.tone(58, 0.9, "triangle", 0.09);
     this.sound.tone(96, 0.5, "sawtooth", 0.025, 0.05);
@@ -1937,6 +2010,7 @@ export class Game {
     this.sound.chime();
     this.ui.toast("The first seal opens. Defeat the guardians beyond.");
     this.refreshHUD();
+    this.persist(false);
   }
   songSequence() {
     const d = this.world.dungeon;
@@ -2221,6 +2295,8 @@ export class Game {
         this.ui.toast("The guardian seal breaks. The chamber beyond is open.");
         this.sound.chime();
       }
+      // A fallen foe stays down if the journey is continued from here.
+      if (this.world.dungeon) this.persist(false);
     } else if (!e.boss && e.state !== "strike") {
       e.state = "recover";
       e.timer = 0.4;
