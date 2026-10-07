@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 and 3 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), and [Round 3 results](#round-3-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), and [Round 4 scope](#round-4-scope--6-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -385,3 +385,73 @@ Still deferred, and why:
 - **A full branching redesign (rest of 13):** keys, shortcuts, and real choices of route need new content and a level-design pass.
 - **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
 - **Gamepad and touch remapping:** keyboard first; pads and touch would need their own binding UI.
+
+## Round 4 scope — 6 October 2026
+
+Branch `improvements-4`, from `main` at `560f9bb` (in sync with `origin/main`). Baseline: 80 / 80 Vitest tests, a passing build and asset check, and every `tests/run-browser-checks.mjs` group green (load average 11 to 16).
+
+Rounds 1 to 3 covered input, fairness, variety, saves, and a first optional branch. This round goes after things a player meets in every fight and every trip across the map, all of which can be verified here:
+
+- **Lock-on doesn't show what it's locked to.** The lock marker is a fixed ◇ in the middle of the screen, not over the enemy. In a four-guardian hall you can't tell which one you're facing, there's no way to switch targets, and when the target falls the lock simply drops.
+- **Attacks from off screen give no warning you can see.** Every attack has a ground telegraph, but a warder lobbing a stone from behind you is announced only by sound.
+- **Gamepad buttons can't be changed, and the shield must be held.** Holding a button through a whole fight is hard for some players.
+- **The map forgets what you've found.** Chests, wandering lights, and carvings appear nowhere on the map, and the journal doesn't count chests at all.
+
+Ground rules:
+- **No difficulty numbers change.** Health, damage, enemy numbers, timings, and crystal income stay as they are. The off-screen warning and the toggled shield are aids that make fights easier to read; they're settings, and the owner should decide their defaults (see the results).
+- **No new story writing.** New text is interface text only: labels, legends, and settings.
+- **The tooling keeps working.** Guardian indices, chamber coordinates, and the debug API stay compatible. Older saves and settings load.
+
+### A. Lock-on you can see and steer
+
+Acceptance criteria
+- While locked, a marker sits over the locked enemy's head and follows it on screen. If the enemy is off screen, the marker clamps to the screen edge in its direction. The fixed centre ◇ is gone.
+- When the locked enemy falls, the lock moves to the nearest living enemy in range and in sight, using the same rules as pressing lock. If there is none, it releases as today.
+- While locked, a sideways camera input switches to the nearest other enemy on that side, as seen from the camera: a right-stick flick, the ← and → arrow keys, or a sideways drag of the mouse or a finger. Up and down still tilt the camera. The lock button still releases the lock.
+- Nothing else about lock-on changes: range, sight, facing, and the camera's turn toward the target are as before.
+
+Verification
+- Unit tests for the pure choices: the next target after a kill, and the switch to the left or right (including no candidate on that side).
+- A browser check in a real guardian hall: the marker is drawn within a few pixels of the locked guardian's projected head; real sword hits defeat it and the lock moves to another living guardian; ←/→ keys, a synthetic right-stick flick, and a mouse drag each switch to the enemy on that side; the lock button releases.
+- A screenshot of the marker in a hall fight.
+
+### B. Off-screen attack warnings
+
+Acceptance criteria
+- When an enemy outside the view starts winding up an attack, an arrow at the edge of the screen points toward it for the length of the wind-up, in the telegraph gold. Enemies on screen get no arrow; their ground telegraph is enough.
+- A **Comfort** setting, "Off-screen attack warnings", turns it off. Older stored settings get the default.
+- Attack timings, damage, and the ground telegraphs are unchanged.
+
+Verification
+- Unit tests for the pure placement (screen-edge point and angle for targets to either side, above, below, and behind the camera) and settings migration.
+- A browser check that forces a guardian's wind-up behind the player (arrow shown, on the correct side), in front (no arrow), and with the setting off (no arrow).
+- A screenshot of the arrow during a hall fight.
+
+### C. Gamepad button remapping and a toggled shield
+
+Acceptance criteria
+- Settings gets a **Gamepad** section like the keyboard one: interact, sword, shield, dodge, lock on, flute, map, and journal. Choose one, then press a pad button. A button already in use trades places, Start can't be taken (it pauses), and **Reset** restores the standard layout. While waiting, the pad's press is captured, not acted on.
+- Menu navigation (A to choose, B to go back, the D-pad) and the flute's notes stay fixed, so a player can always find their way back.
+- Every gamepad hint (the controls strip, pause help, tutorial and quest lines, the interaction badge, the map key) names the bound button.
+- **Shield: hold or toggle**, a setting for every device. In toggle mode, one press raises the shield and the next lowers it; a dodge also lowers it.
+- Bindings and the shield mode are stored with the settings and validated on load; older settings get the defaults.
+
+Verification
+- Unit tests: pad binding validation, swaps, the reserved Start button, migration, actions from bound buttons, and the control words.
+- A browser check with a synthetic standard pad, rebinding through the settings sheet: sword to Y (Y swings, and flute trades to X), the hints follow, the bindings survive a reload, and reset restores them. Toggle mode: one shield press guards a real guardian strike with nothing held; a second press lowers it.
+- A screenshot of the Gamepad settings.
+
+### D. The map remembers what you've found
+
+Acceptance criteria
+- The kingdom map marks treasure chests and wandering lights that you've opened or caught (filled), and those you've come near but not yet opened or caught (hollow). Places you've never been near stay blank, so the map rewards exploring without giving away hiding spots. The map also marks Soren's forge and the village campfire.
+- Each sanctuary on the map shows ✎ once its carving is found.
+- The journal's satchel counts treasure chests (*n* / 6), next to the lights and carvings it already counts.
+- The save remembers what you've come near (validated; older saves count opened chests and caught lights as seen).
+
+Verification
+- Unit tests for save validation and migration of the new list, and for the pure discovery summary.
+- A browser check: walking up to a chest makes a hollow mark appear on the map at its position; opening it fills the mark and the journal count goes up; a chest never approached has no mark.
+- A screenshot of the map with found and seen marks.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance and difficulty (owner decision), puzzle hints (owner decision), branching dungeon structure with keys and shortcuts (needs a level-design pass), new skinned art and traversal (large jobs), touch remapping, and performance tuning (the game is already well under budget on this machine; a phone is still needed).
