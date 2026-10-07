@@ -257,10 +257,22 @@ await run("mouse: captured look", async () => {
     );
     await m.evaluate(() => document.exitPointerLock());
     await m.waitForFunction(() => !document.pointerLockElement);
+    // The notice follows the browser's pointerlockchange event, which can
+    // arrive a moment after pointerLockElement clears.
     check(
-      (await m.textContent("#toast")).includes(
-        "Click the scene to capture it again",
-      ),
+      await m
+        .waitForFunction(
+          () =>
+            document
+              .querySelector("#toast")
+              ?.textContent?.includes("Click the scene to capture it again"),
+          null,
+          { timeout: 3000 },
+        )
+        .then(
+          () => true,
+          () => false,
+        ),
       "When the browser releases it, a notice says how to capture it again",
     );
     check(
@@ -281,6 +293,20 @@ await run("mouse: captured look", async () => {
       guarding && !(await game("return game.shieldHeld()")),
       "The right button holds the shield",
     );
+    // Under pointer lock, headless Chromium sends its own pointermove events
+    // around each emulated click, one of them with a movement of minus the
+    // cursor's position (-640, -400). That isn't mouse travel, and when it
+    // landed mid-measurement it turned the camera; hold them back while
+    // measuring the synthetic moves.
+    await m.evaluate(() => {
+      window.__strayMoves = 0;
+      window.__holdStrayMoves = (e) => {
+        if (!e.isTrusted) return;
+        window.__strayMoves++;
+        e.stopImmediatePropagation();
+      };
+      window.addEventListener("pointermove", window.__holdStrayMoves, true);
+    });
     const yaw = await game("return game.yaw");
     const pitch = await game("return game.pitch");
     await move(100, 25);
@@ -292,9 +318,10 @@ await run("mouse: captured look", async () => {
     );
     await game("game.settings.invertY = true");
     await move(0, 25);
+    const inverted = await game("return game.pitch");
     check(
-      Math.abs((await game("return game.pitch")) - pitch) < 1e-6,
-      "Invert vertical camera applies to it",
+      Math.abs(inverted - pitch) < 1e-6,
+      `Invert vertical camera applies to it (${(turned[1] - pitch).toFixed(3)} then ${(inverted - pitch).toFixed(3)} rad, pitch ${pitch.toFixed(3)})`,
     );
     await game("game.settings.invertY = false");
     // Locked on: a sideways move switches targets, as a drag does.
@@ -303,6 +330,12 @@ await run("mouse: captured look", async () => {
     await move(40);
     check(await locked(), "Still captured inside the sanctuary");
     count += (await m.evaluate(() => lockQA.afterDrag(2))).length;
+    const stray = await m.evaluate(() => {
+      window.removeEventListener("pointermove", window.__holdStrayMoves, true);
+      return window.__strayMoves;
+    });
+    if (process.env.BELL_VERBOSE)
+      console.log(`  (${stray} browser pointer moves held back)`);
     // Any sheet releases it.
     await m.mouse.click(640, 400);
     await m.keyboard.press("Escape");
