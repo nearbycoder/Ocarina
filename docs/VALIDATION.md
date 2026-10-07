@@ -1,6 +1,23 @@
 # Validation — 4 to 6 October 2026
 
-## Latest: round 3 (6 October): journey files, key remapping, pooled sparks, and hidden alcoves
+## Latest: round 4 (6 October): lock-on, off-screen warnings, gamepad remapping, and map discoveries
+
+Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-4-results). Results are recorded in [improvements-round4.json](artifacts/improvements-round4.json) and [perf-round4.json](artifacts/perf-round4.json), and screenshots are in [`docs/media/improvements/round4/`](media/improvements/round4/).
+
+- **98 Vitest tests** pass (80 before, plus lock-on choices and screen anchors, pad bindings and shield words, settings migration, and map discoveries). The production build and type check pass, and the asset pack is unchanged (2,442,432 bytes, 0 glTF errors or warnings, 0 contract failures).
+- `node tests/run-browser-checks.mjs` passes all 33 groups, and every earlier group is unchanged (92 campaign assertions). The new groups:
+  - **17 lock-on** assertions in a real guardian hall, plus **3** with a real mouse drag. The marker sits over the locked guardian's head and follows it, clamps to the edge when the guardian is out of view, and hides when there is no lock. ← and → step through the guardians in screen order and stop at the ends; holding ← while locked doesn't turn the camera; a synthetic right-stick flick switches once per flick; a sideways drag switches without turning the view. Real sword hits defeat the locked guardian and the lock moves to the nearest one still standing; with none left it releases.
+  - **14 threat-warning** assertions with forced wind-ups: behind the camera (an arrow on the bottom edge), far right and far left (arrows on those edges), in view (no arrow), and with the setting turned off through the settings sheet (no arrow).
+  - **21 gamepad-remapping** assertions on their own page with a synthetic pad driving the settings sheet: A opens a row, Y takes the sword and the flute trades to X, Start cancels, B and Start still work in menus, the HUD and tutorial text follow, Y swings and hits and X raises the flute in a real hall. With Toggle shield on, one RB press raises the shield with nothing held and it guards a real guardian strike; a second press or a dodge lowers it; Shift does the same on the keyboard. The buttons and the shield mode survive a reload, and reset restores them.
+  - **29 map-discovery** assertions. Every chest and wandering light still out in the world has open ground where its prompt shows, and a flood fill from there over the game's own movement (walls, rocks, the sea) gets 25 m away. Walking up to a chest with W puts it on the map, hollow, at the right place; opening it fills it in and the journal counts it; finds you haven't been near stay off the map; a read carving shows on its sanctuary.
+- A bug that was already in the game: two of the six chests could never be opened. A seeded rock covered the chest east of the Bell Sanctuary, and the coast chest stood inside the cliff's collider. The reachability check fails on the old placement.
+- The production build loads from `/Ocarina/` with no failed or third-party requests and no console errors. It starts a new game, the settings sheet shows the keyboard, gamepad, and combat-aid rows, and the debug API is absent.
+- `tools/media/screenshots.mjs` still runs all ten stills. Only `09-map` was regenerated, because its legend now lists finds.
+- `tools/perf/sample.mjs` at 1280×800 before and after the round: village 3.6 → 3.1 ms mean, Whisperwood 2.2 → 2.2 ms, hall fight 1.7 → 2.2 ms, with the same draw calls and live geometries. The differences are noise (load average 8 to 19 during the samples). At 1920×1080 on a 2× display, High detail averaged 8 to 9 ms at a load of about 12.
+
+Limits: no physical controller, phone, or tablet. The off-screen warnings and toggled shield make fights easier to read; whether they should be on by default is the owner's call. The chest fix removes one rock near the Bell Sanctuary; the README stills (other than the map) and the trailer weren't regenerated. No manual playthrough or difficulty tuning.
+
+## Round 3 (6 October): journey files, key remapping, pooled sparks, and hidden alcoves
 
 Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-3-results). Results are recorded in [improvements-round3.json](artifacts/improvements-round3.json) and [perf-round3.json](artifacts/perf-round3.json), and screenshots are in [`docs/media/improvements/round3/`](media/improvements/round3/).
 

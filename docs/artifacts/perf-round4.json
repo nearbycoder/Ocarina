@@ -1,0 +1,210 @@
+{
+ "note": "Real-time samples from tools/perf/sample.mjs in headless Chromium on a shared 32-core machine; comparisons, not benchmarks. The 1280x800 baseline was taken at the start of the round, when the machine was quieter than in rounds 1 to 3.",
+ "baseline1280": {
+  "label": "baseline",
+  "date": "2026-10-07T00:43:29.835Z",
+  "gpu": "ANGLE (AMD, Vulkan 1.4.354 (AMD Radeon 8060S Graphics (RADV STRIX_HALO) (0x00001586)), radv)",
+  "cores": 32,
+  "loadAverageBefore": [
+   8.12,
+   2.66,
+   1.06
+  ],
+  "seconds": 8,
+  "viewport": "1280\u00d7800 at device pixel ratio 1",
+  "quality": "high",
+  "scenes": {
+   "village": {
+    "frames": 2197,
+    "meanMs": 3.64,
+    "p50Ms": 3.4,
+    "p95Ms": 5.2,
+    "p99Ms": 6.8,
+    "maxMs": 54,
+    "cpuSubmitMs": 4.24,
+    "drawCallsMean": 347,
+    "drawCallsMax": 444,
+    "trianglesMean": 1747284,
+    "geometriesMin": 96,
+    "geometriesMax": 96,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   },
+   "whisperwood": {
+    "frames": 3578,
+    "meanMs": 2.24,
+    "p50Ms": 2.1,
+    "p95Ms": 3.2,
+    "p99Ms": 4,
+    "maxMs": 14.2,
+    "cpuSubmitMs": 1.99,
+    "drawCallsMean": 148,
+    "drawCallsMax": 260,
+    "trianglesMean": 1112823,
+    "geometriesMin": 104,
+    "geometriesMax": 104,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   },
+   "hall fight": {
+    "frames": 4693,
+    "meanMs": 1.71,
+    "p50Ms": 1.5,
+    "p95Ms": 2.7,
+    "p99Ms": 4,
+    "maxMs": 16.7,
+    "cpuSubmitMs": 1.59,
+    "drawCallsMean": 198,
+    "drawCallsMax": 334,
+    "trianglesMean": 238881,
+    "geometriesMin": 145,
+    "geometriesMax": 145,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   }
+  },
+  "loadAverageAfter": [
+   13.32,
+   4.46,
+   1.71
+  ]
+ },
+ "baselineHiDPI1920x1080at2": {
+  "label": "baseline-hidpi",
+  "date": "2026-10-07T00:44:08.336Z",
+  "gpu": "ANGLE (AMD, Vulkan 1.4.354 (AMD Radeon 8060S Graphics (RADV STRIX_HALO) (0x00001586)), radv)",
+  "cores": 32,
+  "loadAverageBefore": [
+   12.58,
+   4.59,
+   1.78
+  ],
+  "seconds": 8,
+  "viewport": "1920\u00d71080 at device pixel ratio 2",
+  "quality": "high",
+  "scenes": {
+   "village": {
+    "frames": 950,
+    "meanMs": 8.43,
+    "p50Ms": 7.7,
+    "p95Ms": 24.8,
+    "p99Ms": 26.4,
+    "maxMs": 49.7,
+    "cpuSubmitMs": 7.98,
+    "drawCallsMean": 371,
+    "drawCallsMax": 455,
+    "trianglesMean": 2011074,
+    "geometriesMin": 98,
+    "geometriesMax": 98,
+    "pixelRatio": 1.75,
+    "jsHeapMB": 68.86
+   },
+   "whisperwood": {
+    "frames": 1003,
+    "meanMs": 7.99,
+    "p50Ms": 7.6,
+    "p95Ms": 14.2,
+    "p99Ms": 25.7,
+    "maxMs": 29.3,
+    "cpuSubmitMs": 7.34,
+    "drawCallsMean": 168,
+    "drawCallsMax": 266,
+    "trianglesMean": 1331253,
+    "geometriesMin": 106,
+    "geometriesMax": 106,
+    "pixelRatio": 1.75,
+    "jsHeapMB": 68.86
+   },
+   "hall fight": {
+    "frames": 904,
+    "meanMs": 8.87,
+    "p50Ms": 8.4,
+    "p95Ms": 14.6,
+    "p99Ms": 25.7,
+    "maxMs": 30.8,
+    "cpuSubmitMs": 8.54,
+    "drawCallsMean": 222,
+    "drawCallsMax": 332,
+    "trianglesMean": 271788,
+    "geometriesMin": 145,
+    "geometriesMax": 145,
+    "pixelRatio": 1.75,
+    "jsHeapMB": 68.86
+   }
+  },
+  "loadAverageAfter": [
+   12.53,
+   5.26,
+   2.08
+  ]
+ },
+ "afterRound4_1280": {
+  "label": "after-round4",
+  "date": "2026-10-07T01:28:30.196Z",
+  "gpu": "ANGLE (AMD, Vulkan 1.4.354 (AMD Radeon 8060S Graphics (RADV STRIX_HALO) (0x00001586)), radv)",
+  "cores": 32,
+  "loadAverageBefore": [
+   19.07,
+   24.38,
+   23.69
+  ],
+  "seconds": 8,
+  "viewport": "1280\u00d7800 at device pixel ratio 1",
+  "quality": "high",
+  "scenes": {
+   "village": {
+    "frames": 2561,
+    "meanMs": 3.13,
+    "p50Ms": 3,
+    "p95Ms": 4.3,
+    "p99Ms": 5.2,
+    "maxMs": 8.9,
+    "cpuSubmitMs": 3.17,
+    "drawCallsMean": 346,
+    "drawCallsMax": 444,
+    "trianglesMean": 1728598,
+    "geometriesMin": 96,
+    "geometriesMax": 96,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   },
+   "whisperwood": {
+    "frames": 3710,
+    "meanMs": 2.16,
+    "p50Ms": 2,
+    "p95Ms": 3.1,
+    "p99Ms": 4.1,
+    "maxMs": 7.7,
+    "cpuSubmitMs": 1.92,
+    "drawCallsMean": 149,
+    "drawCallsMax": 261,
+    "trianglesMean": 1109819,
+    "geometriesMin": 104,
+    "geometriesMax": 104,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   },
+   "hall fight": {
+    "frames": 3624,
+    "meanMs": 2.21,
+    "p50Ms": 1.8,
+    "p95Ms": 4.2,
+    "p99Ms": 9,
+    "maxMs": 46,
+    "cpuSubmitMs": 1.85,
+    "drawCallsMean": 201,
+    "drawCallsMax": 332,
+    "trianglesMean": 241848,
+    "geometriesMin": 145,
+    "geometriesMax": 145,
+    "pixelRatio": 1,
+    "jsHeapMB": 92.89
+   }
+  },
+  "loadAverageAfter": [
+   19.34,
+   23.91,
+   23.55
+  ]
+ }
+}

@@ -1,0 +1,72 @@
+{
+ "date": "2026-10-06",
+ "branch": "improvements-4",
+ "base": "560f9bb (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
+ "unitTests": {
+  "files": 19,
+  "tests": 98,
+  "passed": 98
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "browserGroups": "All 33 groups pass, including every earlier group unchanged (92 campaign assertions)",
+ "newBrowserAssertions": {
+  "lockOn": 17,
+  "lockOnMouseDrag": 3,
+  "threatWarnings": 14,
+  "gamepadRemapping": 21,
+  "mapDiscoveries": 29
+ },
+ "items": {
+  "A. Lock-on you can see and steer": {
+   "commit": "76230ef",
+   "unitTests": 7,
+   "browserAssertions": 20
+  },
+  "B. Off-screen attack warnings": {
+   "commit": "1a67e41",
+   "unitTests": 1,
+   "browserAssertions": 14
+  },
+  "C. Gamepad remapping and a toggled shield": {
+   "commit": "3886239",
+   "unitTests": 7,
+   "browserAssertions": 21,
+   "persistence": "Bindings and the shield mode survive a reload; reset restores them"
+  },
+  "D. The map remembers what you've found": {
+   "commit": "7876e3f",
+   "unitTests": 3,
+   "browserAssertions": 29,
+   "bugFixed": "Chests field-1 (31, 13) and field-4 (92, 30) could not be opened from any side: a seeded rock covered the first, and the coast cliff's collider covered the second. Rocks now avoid chests and lights (one rock removed, no other rock moved) and the coast chest moved to (92, 31.2).",
+   "controlAgainstOldCode": "The reachability check fails on the old placement (field-1: no open ground where its prompt shows)"
+  }
+ },
+ "subpathSmoke": {
+  "url": "/Ocarina/ via vite preview --base /Ocarina/",
+  "newGameStarts": true,
+  "settingsRows": {
+   "keyboard": "13 + reset",
+   "gamepad": "8 + reset",
+   "combatAids": 2
+  },
+  "failedRequests": 0,
+  "consoleErrors": 0,
+  "thirdPartyHosts": 0,
+  "debugApiAbsentInProduction": true
+ },
+ "mediaTooling": "tools/media/screenshots.mjs ran all ten README stills; only 09-map was kept (its legend now lists finds). tools/media/round4.mjs captured the round 4 screenshots.",
+ "loadAverages": "Full browser runs at load 21 to 30 (32 shared cores); no flaky failures this round",
+ "limits": [
+  "No physical gamepad, phone, or tablet: pad remapping, flicks, and the toggled shield on touch use synthetic input",
+  "Off-screen warnings and the toggled shield make fights easier to read; their defaults are the owner's call",
+  "The chest fix removes one rock near the Bell Sanctuary; the README stills and the trailer were not regenerated",
+  "No full manual playthrough or difficulty tuning"
+ ]
+}

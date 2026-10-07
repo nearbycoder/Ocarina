@@ -158,7 +158,7 @@ Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://w
 ```sh
 npm install
 npm run dev        # http://localhost:5174 (dev build with debug helpers)
-npm test           # 80 Vitest tests: progression, story, saves, journey files, checkpoints, settings, key bindings, input, foes, layouts, alcoves, audio, sparks, assets, collision, combat, quality
+npm test           # 98 Vitest tests: progression, story, saves, journey files, checkpoints, settings, key and pad bindings, input, lock-on, map finds, foes, layouts, alcoves, audio, sparks, assets, collision, combat, quality
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
 ```
@@ -176,7 +176,7 @@ See [docs/BLENDER.md](docs/BLENDER.md) for the asset contract, budgets, and revi
 
 **Audio.** There are no audio files. Everything is synthesized at runtime with the Web Audio API in [`src/audio.ts`](src/audio.ts): flute notes, chimes, and combat sounds; footsteps that change with the surface (stone, path, grass, sand, snow); ambient beds per region (birdsong in the Whisperwood, surf on the coast, wind over Cinderpeak and the Saffron Wastes, glassy chimes in Frostveil, drips in the Fen and the sanctuaries); a drum pulse during warden fights; and soft UI and crystal pickup sounds. The browser checks confirm these voices are scheduled when they should be. Nobody has listened to the new mix yet, so its balance is untested.
 
-**Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, `tests/input-checks.js`, `tests/foe-checks.js`, and `tests/puzzle-checks.js` hold scripted campaign, checkpoint, movement, combat, enemy, layout, hidden-alcove, puzzle, audio, settings, key-remapping, and gamepad assertions for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus journey-file export and import through real downloads and file pickers, and touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174).
+**Browser checks.** `tests/browser-checks.js`, `tests/polish-checks.js`, `tests/settings-checks.js`, `tests/input-checks.js`, `tests/foe-checks.js`, `tests/puzzle-checks.js`, `tests/lockon-checks.js`, and `tests/map-checks.js` hold scripted campaign, checkpoint, movement, combat, enemy, layout, hidden-alcove, puzzle, audio, settings, key-remapping, gamepad, gamepad-remapping, lock-on, off-screen-warning, and map-discovery assertions (including a flood fill to every chest and wandering light) for a dev-server page opened at `/?review=polish`. With the dev server running, `node tests/run-browser-checks.mjs` runs all of them in headless Chromium, plus journey-file export and import through real downloads and file pickers, a real mouse drag that switches lock-on targets, and touch checks on phone-sized pages (set `BELL_URL` if the server isn't on port 5174).
 
 **Performance sampler.** `node tools/perf/sample.mjs [label] [out.json]` samples frame times, draw calls, and live geometries in real time in three scenes (village, Whisperwood, a guardian-hall fight), with vsync off. `BELL_PERF_VIEWPORT=1920x1080@2` and `BELL_PERF_QUALITY=adaptive` change the window and quality mode. It records the machine's load average next to the numbers, because they only mean something on a quiet machine. See [docs/POLISH.md](docs/POLISH.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
 
@@ -211,6 +211,7 @@ src/
   assets.ts         glTF/Meshopt loading, instancing-safe geometry
   audio.ts          Web Audio synthesis: effects, footsteps, ambient beds, warden drums
   sparks.ts         pooled, instanced hit sparks
+  lockon.ts         lock-on target choice and screen-edge anchoring
   foes.ts           warden attacks, guardian kinds, attack geometry
   layouts.ts        authored sanctuary halls, arenas, guardian formations, hidden alcoves
   input.ts          gamepad mapping, key bindings, stick shaping, device-aware control text
@@ -259,9 +260,9 @@ The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.
 - **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Keyboard keys and gamepad buttons can be remapped; touch controls can't. Importing a journey file may need a mouse, keyboard, or touch: browsers usually open a file picker only after a click, key press, or tap, and the import button hasn't been tested with a gamepad.
-- **Hardware.** Requires WebGL 2. On an AMD Radeon 8060S iGPU in headless Chromium (vsync off, on a heavily shared machine), a 1280×800 window averaged about 2 to 4 ms a frame. A 1920×1080 window on a 2× display averaged about 10 ms in Adaptive mode and 12 to 14 ms in High detail, with occasional slow frames that couldn't be told apart from load on the machine. Phones, other GPUs, and other browsers haven't been measured.
+- **Hardware.** Requires WebGL 2. On an AMD Radeon 8060S iGPU in headless Chromium (vsync off, on a heavily shared machine), a 1280×800 window averaged about 2 to 4 ms a frame. A 1920×1080 window on a 2× display averaged about 10 ms in Adaptive mode and 12 to 14 ms in High detail at a high load average, and 8 to 9 ms in High detail on a quieter run, with occasional slow frames that couldn't be told apart from load on the machine. Phones, other GPUs, and other browsers haven't been measured.
 - **Saves are per browser.** They live in `localStorage`, and clearing site data removes them, unless you've exported a journey file to import again.
-- **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, warden and guardian attacks, sanctuary reachability, hidden alcoves, puzzles, audio scheduling, settings, key remapping, journey files, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, warden and guardian attacks, sanctuary reachability, hidden alcoves, puzzles, audio scheduling, settings, key and gamepad remapping, lock-on, off-screen warnings, map discoveries and chest reachability, journey files, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Production notes and next steps live in [docs/CAMPAIGN.md](docs/CAMPAIGN.md), [docs/STORY.md](docs/STORY.md) (spoilers), [docs/VISUALS.md](docs/VISUALS.md), and [docs/POLISH.md](docs/POLISH.md).
 

@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), and [Round 4 scope](#round-4-scope--6-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), and [Round 4 results](#round-4-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -455,3 +455,38 @@ Verification
 - A screenshot of the map with found and seen marks.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance and difficulty (owner decision), puzzle hints (owner decision), branching dungeon structure with keys and shortcuts (needs a level-design pass), new skinned art and traversal (large jobs), touch remapping, and performance tuning (the game is already well under budget on this machine; a phone is still needed).
+
+## Round 4 results
+
+All four scoped items shipped on `improvements-4`, plus a fix for two treasure chests that could never be opened, found while verifying item D. Verification is recorded in [VALIDATION.md](VALIDATION.md), [improvements-round4.json](artifacts/improvements-round4.json), and [perf-round4.json](artifacts/perf-round4.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round4/`) |
+| --- | --- | --- | --- |
+| A. Lock-on you can see and steer | `76230ef` | 7 unit tests; 17 assertions in a real hall, plus 3 with a real mouse drag | `a-lock-marker`, `a-lock-edge` |
+| B. Off-screen attack warnings | `1a67e41` | 1 unit test (plus A's anchor tests); 14 assertions with forced wind-ups | `b-threat-arrow` |
+| C. Gamepad remapping and a toggled shield | `3886239` | 7 unit tests; 21 assertions with a synthetic pad driving the settings sheet, across a reload | `c-settings-gamepad` |
+| D. The map remembers what you've found | `7876e3f` | 3 unit tests; 29 assertions, including a flood fill to every chest and light | `d-map-finds`, `d-journal-chests` |
+| Fix: two chests that couldn't be opened | in `7876e3f` | The reachability check fails on the old placement | `fix-chest-bell`, `fix-chest-coast` |
+
+What changed for a player:
+- **You can see what you're locked on to.** A gold marker rides over the locked foe, or points from the screen edge when it's out of view. A sideways nudge of the camera (← →, a right-stick flick, or a sideways drag) switches to the next foe on that side, and when the target falls the lock moves to the nearest foe still standing.
+- **Attacks from behind are visible.** An orange arrow on the screen edge points to any foe winding up out of view (Settings → Combat aids, on by default).
+- **Your own gamepad buttons, and a shield you don't have to hold.** Settings → Gamepad rebinds eight play actions. Toggle shield (Combat aids) makes one press raise the shield and the next lower it, on every device.
+- **The map remembers.** Chests and wandering lights you've passed show on the map, filled once taken; read carvings are marked; the journal counts chests.
+- **All six chests can be opened.** Before, a rock covered the chest east of the Bell Sanctuary and the coast chest stood inside a cliff's collider, so only four of the six could be opened.
+
+Honest notes:
+- **Combat aids change how fights read.** No health, damage, timing, or enemy numbers changed. But the edge arrow tells you about attacks you couldn't see before, the lock now follows the fight, and a toggled shield needs no held button. Each makes fights a little easier. The arrow is on by default and Toggle shield is off; both defaults are the owner's call.
+- **Lock-on input changed.** While locked, the horizontal camera input switches targets instead of turning the camera (the camera already turns toward the target). Vertical input still tilts the view.
+- **One rock fewer.** Rocks are seeded; skipping the one on the chest keeps the random sequence, so no other rock moves. The README stills (except the map) and the trailer still show it, but it's small and far from their framing.
+- **Plan differences.** The forge and campfire aren't marked on the map: at the map's scale they sit on the Alder Village label, and both are in plain sight from the start. RT stays a spare shield only while the shield is on RB and nothing else uses RT.
+- **Synthetic input only.** Pad remapping, flicks, and the touch toggle were verified with a synthetic gamepad and emulated input, not physical hardware.
+- **Performance unchanged.** Frame samples before and after match within noise (load average 8 to 19). The new HUD pieces add two small DOM updates a frame.
+
+Still deferred, and why:
+- **Balance and difficulty (8):** the owner's call, including the defaults for the new combat aids.
+- **Puzzle hints:** the owner's call.
+- **Branching dungeon structure (rest of 13):** keys, shortcuts, and real choices of route need a level-design pass and new content; too large to land and verify alongside this round.
+- **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
+- **Touch remapping:** touch buttons would need a layout editor, not a binding list.
+- **Performance tuning (rest of 11):** at the start of this round the machine was quiet enough for cleaner numbers: about 3.6 ms a frame in the village and 1.7 ms in a hall fight at 1280×800, and 8 to 9 ms at 1920×1080 on a 2× display. The desktop iGPU has headroom; a phone is still unmeasured.
