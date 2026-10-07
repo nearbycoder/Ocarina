@@ -542,6 +542,31 @@ kbd {
   filter: drop-shadow(0 0 3px #1a2d27);
   animation: none;
 }
+/* Off-screen attack warnings: a warm arrow on the edge toward the attacker. */
+#threats i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+#threats i::before {
+  content: "";
+  position: absolute;
+  left: -17px;
+  top: -19px;
+  border-top: 19px solid transparent;
+  border-bottom: 19px solid transparent;
+  border-left: 34px solid #f0a35e;
+  filter: drop-shadow(0 0 2px #2a160b) drop-shadow(0 0 8px #2a160bcc);
+  animation: threat-pulse 0.32s ease-in-out infinite alternate;
+}
+@keyframes threat-pulse {
+  to {
+    opacity: 0.55;
+  }
+}
 @keyframes lock-pulse {
   50% {
     opacity: 0.6;

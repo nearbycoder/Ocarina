@@ -16,6 +16,8 @@ export interface Settings {
   /** Removes hit-stop pauses, the damage flash, and interface motion. */
   reducedMotion: boolean;
   largeText: boolean;
+  /** Edge arrows toward foes winding up an attack out of view. */
+  threatArrows: boolean;
   /** Keyboard bindings. Older stored settings get the default keys. */
   keys: KeyBindings;
 }
@@ -34,6 +36,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     invertY: false,
     reducedMotion: prefersReducedMotion,
     largeText: false,
+    threatArrows: true,
     keys: { ...DEFAULT_KEYS },
   };
 }
@@ -75,6 +78,7 @@ export function parseSettings(
     invertY: flag("invertY"),
     reducedMotion: flag("reducedMotion"),
     largeText: flag("largeText"),
+    threatArrows: flag("threatArrows"),
     keys: parseBindings(s.keys),
   };
 }

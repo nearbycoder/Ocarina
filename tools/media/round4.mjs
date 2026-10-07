@@ -94,6 +94,23 @@ const SHOTS = {
     });
     await shoot(page, "a-lock-edge");
   },
+  // A guardian winds up out of view to the right while Alder faces the others.
+  "b-threat-arrow": async (page) => {
+    await hall(page);
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      api.debug.teleport(0.6, -6);
+      game.yaw = 0.12;
+      api.debug.placeEnemy(0, 12, -2);
+      api.debug.placeEnemy(1, -3, -11);
+      api.debug.placeEnemy(2, 3, -12);
+      api.debug.placeEnemy(3, 13, -16);
+      api.debug.forceMove(0, "slam");
+      api.debug.advance(0.3);
+    });
+    await shoot(page, "b-threat-arrow");
+  },
 };
 
 const names = process.argv.slice(2).length

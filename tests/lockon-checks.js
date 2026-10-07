@@ -218,6 +218,79 @@ window.lockQA = (() => {
     bellQA.close();
     assert(api.getState().dungeon === null, "Back out in the overworld");
   }
+  // Off-screen attack warnings: a forced wind-up behind, beside, and ahead.
+  async function threats() {
+    hall();
+    for (const i of [1, 2, 3]) api.debug.damageEnemy(i, 100);
+    const arrows = () => {
+      game.updateThreats();
+      return [...document.querySelectorAll("#threats i")]
+        .filter((el) => !el.hidden)
+        .map((el) => {
+          const [, x, y] = el.style.transform.match(
+            /translate\(([-\d.]+)px, ([-\d.]+)px\)/,
+          );
+          return { x: Number(x), y: Number(y) };
+        });
+    };
+    // Alder at (0, -12) looking north; the camera stands about 7 m south.
+    const windup = (x, z) => {
+      api.debug.placeEnemy(0, x, z);
+      game.yaw = 0;
+      api.debug.teleport(0, -12);
+      api.debug.setHealth(game.save.maxHealth);
+      api.debug.forceMove(0, "slam");
+      api.debug.advance(0.05);
+      return game.enemies[0].state === "windup";
+    };
+    assert(arrows().length === 0, "No warning arrows while nothing winds up");
+    assert(windup(0, 0), "The guardian behind the camera winds up");
+    let shown = arrows();
+    assert(
+      shown.length === 1 && shown[0].y > innerHeight - 60,
+      `A wind-up behind the camera shows one arrow on the bottom edge (${JSON.stringify(shown)})`,
+    );
+    assert(windup(12, -12), "The guardian far to the right winds up");
+    shown = arrows();
+    assert(
+      shown.length === 1 && shown[0].x > innerWidth - 60,
+      `A wind-up out of view to the right shows an arrow on the right edge (${JSON.stringify(shown)})`,
+    );
+    assert(windup(-12, -12), "The guardian far to the left winds up");
+    shown = arrows();
+    assert(
+      shown.length === 1 && shown[0].x < 60,
+      `…and to the left, on the left edge (${JSON.stringify(shown)})`,
+    );
+    assert(windup(0, -16), "The guardian in view winds up");
+    assert(
+      arrows().length === 0,
+      "A wind-up in view shows no arrow; its ground ring is enough",
+    );
+    // The setting, through the settings sheet.
+    windup(0, 0);
+    api.debug.action("pause");
+    api.debug.action("settings");
+    const toggle = document.querySelector(
+      '[data-action="toggle-threatArrows"]',
+    );
+    assert(
+      toggle?.getAttribute("aria-pressed") === "true",
+      "Settings list off-screen warnings, on by default",
+    );
+    toggle.click();
+    assert(game.settings.threatArrows === false, "The setting turns them off");
+    api.debug.action("close");
+    assert(
+      arrows().length === 0 && game.enemies[0].state === "windup",
+      "With the setting off, the same wind-up shows no arrow",
+    );
+    game.settings.threatArrows = true;
+    game.applySettings(true);
+    assert(arrows().length === 1, "Turned back on, the arrow returns");
+    await leave();
+    return results.splice(0);
+  }
   // The runner drags the real mouse between these two calls.
   function dragSetup() {
     hall();
@@ -238,5 +311,5 @@ window.lockQA = (() => {
     await leave();
     return results.splice(0);
   }
-  return { run, dragSetup, afterDrag };
+  return { run, threats, dragSetup, afterDrag };
 })();

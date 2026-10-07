@@ -79,6 +79,7 @@ await inPage(
 );
 await inPage("alcoves", async () => (await foeQA.alcoves()).length);
 await inPage("lock-on", async () => (await lockQA.run()).length);
+await inPage("threat warnings", async () => (await lockQA.threats()).length);
 // A real mouse drag while locked: sideways switches, and the view stays put.
 await run("lock-on: mouse drag", async () => {
   const { width, height } = await page.evaluate(() => lockQA.dragSetup());

@@ -423,7 +423,8 @@ export class Game {
         key === "muted" ||
         key === "invertY" ||
         key === "reducedMotion" ||
-        key === "largeText"
+        key === "largeText" ||
+        key === "threatArrows"
       )
         s[key] = !s[key];
     } else if (key === "sensitivity")
@@ -2020,6 +2021,32 @@ export class Game {
     }
     return !!next;
   }
+  /** Edge arrows toward foes winding up an attack out of view. */
+  updateThreats() {
+    const box = this.ui.el("threats");
+    let shown = 0;
+    if (this.started && !this.ui.panel && this.settings.threatArrows)
+      for (const e of this.enemies) {
+        if (e.state !== "windup") continue;
+        const body = new T.Vector3(
+          e.x,
+          e.mesh.position.y + e.top * 0.5,
+          e.z,
+        ).project(this.camera);
+        const a = screenAnchor(body, innerWidth, innerHeight, 46);
+        if (a.onScreen) continue;
+        let arrow = box.children[shown] as HTMLElement | undefined;
+        if (!arrow) {
+          arrow = document.createElement("i");
+          box.append(arrow);
+        }
+        arrow.hidden = false;
+        arrow.style.transform = `translate(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px) rotate(${a.angle.toFixed(3)}rad)`;
+        shown++;
+      }
+    for (let i = shown; i < box.children.length; i++)
+      (box.children[i] as HTMLElement).hidden = true;
+  }
   /** Keeps the lock marker over the locked foe, or on the edge toward it. */
   updateLockMarker() {
     const dot = this.ui.el("target-dot");
@@ -2924,6 +2951,7 @@ export class Game {
       this.shadowClock = 0;
     }
     this.updateLockMarker();
+    this.updateThreats();
     this.worldRenderer.render(this.quality.level);
     this.renderTimes.push(performance.now() - renderStart);
     if (this.renderTimes.length > 120) this.renderTimes.shift();

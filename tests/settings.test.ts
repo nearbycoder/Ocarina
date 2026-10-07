@@ -42,6 +42,13 @@ describe("player settings", () => {
     expect(sensitivity(0.6)).toBe(0.5);
     expect(sensitivity(1.4)).toBe(1.5);
   });
+  it("turns off-screen attack warnings on for older stored settings", () => {
+    // Settings saved before round 4 have no threatArrows field.
+    const older = JSON.stringify({ master: 70, largeText: true });
+    expect(parseSettings(older).threatArrows).toBe(true);
+    expect(parseSettings('{"threatArrows":false}').threatArrows).toBe(false);
+    expect(parseSettings('{"threatArrows":"no"}').threatArrows).toBe(true);
+  });
   it("combines master and bus volume, and mute silences both buses", () => {
     const s = { ...defaultSettings(), master: 50, effects: 80, ambience: 0 };
     expect(busGain(s, "effects")).toBeCloseTo(0.4);
