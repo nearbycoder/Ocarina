@@ -1,6 +1,22 @@
 # Validation — 4 to 7 October 2026
 
-## Latest: round 8 (7 October): controller button names, three journeys, the Ember Vault stone, and captured mouse look
+## Latest: round 9 (7 October): readable hearts, the hall count, a pause menu that fits, and a steady mouse-look check
+
+Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-9-results). Results are recorded in [improvements-round9.json](artifacts/improvements-round9.json), and screenshots are in [`docs/media/improvements/round9/`](media/improvements/round9/). The checks that must fail were run against an unchanged worktree of `main` on its own dev server.
+
+- **134 Vitest tests** pass (130 before, plus the heart states, the low-health threshold, and the label). The production build and type check pass, and the asset pack is unchanged (2,442,432 bytes, 0 glTF errors or warnings, 0 contract failures).
+- **Baseline.** Before any change, 48 of the 49 groups passed on `main` at a load average of 6 to 12. **mouse: captured look** failed ("Invert vertical camera applies to it"). Alone, with the game and the check unchanged, it failed on 3 of 7 runs.
+- `node tests/run-browser-checks.mjs` passes all 52 groups (49 before) in one full run at a load average of 22 to 26, with no page errors. Every earlier group is unchanged, and the campaign counter still reads 104. The new groups:
+  - **12 health** assertions. At full health three full hearts, still, each filled on both sides. At 3 of 6 health the row reads full, half, empty, and the half heart's pixels are filled on its left side only (53 on the left, 0 on the right). The hearts are an image labelled "Health: 1½ of 3 hearts", and they don't beat. At 2 of 6 the filled heart beats; under reduced motion it keeps the warm outline (rgb 255, 178, 122) but doesn't beat. In the Rootbound Hollow's hall, a real guardian strike from 4 to 3 plays no heartbeat, a strike from 3 to 2 plays six heartbeat voices and the hearts beat, and with effects at 0 the same strike plays none. On `main` the group fails at its first step: the half heart is the whole glyph at 65% opacity, and the strike plays no heartbeat.
+  - **6 hall-count** assertions in the Rootbound Hollow. The hall starts at "· 0 / 4 fallen" on one line, two guardians felled by the normal damage code read 2 / 4, a real strike at half a heart returns Alder to the hall's checkpoint still reading 2 / 4, and when the seal breaks the objective moves on to the warden. On `main` it reads "Defeat the four guardians to break the second seal." with no count.
+  - **13 pause-fit** assertions with real key presses. ↓ walks the choices in today's order. Every choice is inside the sheet's visible box, and none is cut short, at 1280×720, 1366×768, 1024×768, 1280×800, 1440×900, and 1920×1080, and with larger text at 1366×768, 1024×768, 1280×800, 1440×900, and 1920×1080. At 844×390, ↑ focuses Save & return to title and the sheet scrolls it into view. On `main`, Return to checkpoint and Save & return to title are out of view at 1280×720.
+- **mouse: captured look** passed on 10 runs in a row of the group alone at a load average of 24 to 27. It now holds back the browser's own trusted `pointermove` events while it measures, 4 to 6 a run, and waits for the recapture notice.
+- **Contrast.** Measured from screenshots with the vitals hidden, at fixed views in Alder Village, Frostveil Heights, and the Saffron Wastes (worst 5% of pixels / median). The hearts went from 1.86 / 1.92, 4.39 / 6.28, and 1.07 / 1.10 to 5.58 / 5.67, 6.91 / 7.52, and 4.66 / 4.78. The relic count went from 2.31 / 7.67, 3.30 / 4.94, and 1.35 / 1.36 to 7.06 / 10.26, 7.95 / 8.99, and 5.57 / 5.75. The crystal count went from 2.81 / 2.92 in the village to 8.16 / 8.29, and is now above 8 in all three.
+- The production build loads from `/Ocarina/` in a throwaway browser context at 1280×720 with no failed or third-party requests and no console errors, and the debug API is absent. With real clicks a journey begins, the hearts are labelled "Health: 3 of 3 hearts" on their backing, and every pause-menu choice is in view.
+
+Limits: no physical phone, tablet, or controller, and nobody has listened to the heartbeat; the checks count its voices. The contrast was measured at one fixed view per region. No frame samples were taken: nothing in this round adds meaningful work per frame. No manual playthrough or difficulty tuning.
+
+## Round 8 (7 October): controller button names, three journeys, the Ember Vault stone, and captured mouse look
 
 Planned and reported in [IMPROVEMENTS.md](IMPROVEMENTS.md#round-8-results). Results are recorded in [improvements-round8.json](artifacts/improvements-round8.json), and screenshots are in [`docs/media/improvements/round8/`](media/improvements/round8/).
 

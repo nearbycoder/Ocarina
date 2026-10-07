@@ -1,0 +1,181 @@
+{
+ "date": "2026-10-07",
+ "branch": "improvements-9",
+ "base": "af0f978 (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save and journey checks use fresh throwaway browser contexts on the normal URL). Controls ran against an unchanged worktree of main on its own dev server.",
+ "unitTests": {
+  "files": 23,
+  "tests": 134,
+  "passed": 134
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "baseline": "48 of 49 groups pass on main (af0f978) at a load average of 6 to 12; 'mouse: captured look' failed ('Invert vertical camera applies to it'), and alone it failed on 3 of 7 runs with the game and the check unchanged",
+ "browserGroups": "All 52 groups pass (49 before) in one full run at a load average of 21.9 at the start and 25.5 at the end; every earlier group unchanged (campaign counter 104); no page errors",
+ "newBrowserGroups": {
+  "hudHealth": 12,
+  "hudHallCount": 6,
+  "pauseFits": 13
+ },
+ "changedBrowserGroups": {
+  "mouseCapturedLook": "18 -> 18; holds back the browser's own trusted pointermove events (4 to 6 a run) while measuring synthetic moves, and waits for the recapture notice; 10 / 10 runs alone at a load average of 24 to 27"
+ },
+ "items": {
+  "A. Health you can read at a glance": {
+   "commit": "3fbe0df",
+   "unitTests": 4,
+   "browserAssertions": 12,
+   "control": "On main the group fails at its first step: no heart states. The half heart is the whole glyph at 65% opacity (0 fill pixels on either side by the check's measure, against 76 / 35 for a full heart), and a strike that leaves one heart plays no heartbeat.",
+   "halfHeartFillPixels": {
+    "main": [
+     0,
+     0
+    ],
+    "branch": [
+     53,
+     0
+    ]
+   },
+   "contrastWorst5Median": {
+    "Alder Village": {
+     "hearts": {
+      "main": [
+       1.86,
+       1.92
+      ],
+      "branch": [
+       5.58,
+       5.67
+      ]
+     },
+     "relics": {
+      "main": [
+       2.31,
+       7.67
+      ],
+      "branch": [
+       7.06,
+       10.26
+      ]
+     },
+     "crystals": {
+      "main": [
+       2.81,
+       2.92
+      ],
+      "branch": [
+       8.16,
+       8.29
+      ]
+     }
+    },
+    "Frostveil Heights": {
+     "hearts": {
+      "main": [
+       4.39,
+       6.28
+      ],
+      "branch": [
+       6.91,
+       7.52
+      ]
+     },
+     "relics": {
+      "main": [
+       3.3,
+       4.94
+      ],
+      "branch": [
+       7.95,
+       8.99
+      ]
+     },
+     "crystals": {
+      "main": [
+       7.76,
+       8.52
+      ],
+      "branch": [
+       10.7,
+       10.87
+      ]
+     }
+    },
+    "Saffron Wastes": {
+     "hearts": {
+      "main": [
+       1.07,
+       1.1
+      ],
+      "branch": [
+       4.66,
+       4.78
+      ]
+     },
+     "relics": {
+      "main": [
+       1.35,
+       1.36
+      ],
+      "branch": [
+       5.57,
+       5.75
+      ]
+     },
+     "crystals": {
+      "main": [
+       6.48,
+       8.76
+      ],
+      "branch": [
+       10.59,
+       10.97
+      ]
+     }
+    }
+   },
+   "notes": "WCAG contrast of each piece's text colour against the pixels behind it, from screenshots with the vitals hidden, at one fixed view per region (1280x800). Low health is 2 or less (one heart) and above 0. The heartbeat is three lub-dubs (six voices) on the effects bus after the blow that leaves one heart; it hasn't been listened to.",
+   "followUp": "65c6b2e moves a misplaced doc comment and drops a redundant reduced-motion rule; hud: health passes again after it (12)"
+  },
+  "B. The guardian hall counts the fallen": {
+   "commit": "8e38b94",
+   "browserAssertions": 6,
+   "control": "On main the objective reads 'Defeat the four guardians to break the second seal.' with no count."
+  },
+  "C. The pause menu fits on a laptop screen": {
+   "commit": "e219e09",
+   "browserAssertions": 13,
+   "control": "On main, Return to checkpoint and Save & return to title are out of view at 1280x720 (and Save & return to title at 1366x768 and 1024x768; with larger text three or four choices even at 1280x800).",
+   "sizes": {
+    "normalText": [
+     "1280x720",
+     "1366x768",
+     "1024x768",
+     "1280x800",
+     "1440x900",
+     "1920x1080"
+    ],
+    "largerText": [
+     "1366x768",
+     "1024x768",
+     "1280x800",
+     "1440x900",
+     "1920x1080"
+    ],
+    "scrollsToFocus": "844x390"
+   }
+  },
+  "D. The captured-mouse-look check stops flaking": {
+   "commit": "a219a81",
+   "result": "10 / 10 runs of the group alone at a load average of 24 to 27 (3 of 7 failed before)",
+   "notes": "The stray moves come from Playwright's emulated mouse in headless Chromium: around each click under pointer lock, one carries a movement of (-640, -400), minus the cursor's position. Not shown with a real mouse, so the game doesn't filter them."
+  }
+ },
+ "subpathSmoke": "Production build served from /Ocarina/ in a throwaway context at 1280x720: no failed or third-party requests, no console errors, debug API absent; a journey begins with real clicks, the hearts read 'Health: 3 of 3 hearts' on their backing, and every pause-menu choice is in view.",
+ "notMeasured": "No physical phone, tablet, or controller. Nobody has listened to the heartbeat. Contrast at one fixed view per region. No frame samples (nothing adds meaningful work per frame). No manual playthrough or difficulty tuning."
+}

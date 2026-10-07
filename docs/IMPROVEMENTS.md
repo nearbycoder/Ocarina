@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), and [Round 9 scope](#round-9-scope--7-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), and [Round 9 results](#round-9-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -1003,4 +1003,40 @@ Acceptance criteria and verification
 - Honest limit: these stray moves come from Playwright's emulated mouse in headless Chromium, and I couldn't show that a real mouse in a real browser sends anything like them, so the game doesn't filter them.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, and deleting a journey (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); and real-device checks (a phone and real controllers). The pre-existing nudge when a saved spot is inside a collider stays as it is, because play can't put Alder there; only test teleports have.
+
+## Round 9 results
+
+All four scoped items shipped on `improvements-9`. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round9.json](artifacts/improvements-round9.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round9/`) |
+| --- | --- | --- | --- |
+| A. Health you can read at a glance | `3fbe0df` | 4 unit tests; 12 browser assertions, including a half heart's pixels and a real guardian strike; contrast measured in three regions | `a-health-half`, `a-health-low`, `a-health-phone`, `a-vitals-saffron` (and `-before`) |
+| B. The guardian hall counts the fallen | `8e38b94` | 6 browser assertions, through a real defeat | `b-hall-count` (and `-before`) |
+| C. The pause menu fits on a laptop screen | `e219e09` | 13 browser assertions at eleven sizes and a phone held sideways, with real key presses | `c-pause-720` (and `-before`), `c-pause-large` |
+| D. The captured-mouse-look check stops flaking | `a219a81` | 10 runs in a row of the group alone at a load average of 24 to 27 | none |
+
+Unit tests: 134 / 134 (130 before). All 52 browser-check groups pass (49 before) in one full run at a load average of 22 to 26, the build and asset check pass, and the production build works from `/Ocarina/`. Every new check fails on an unchanged `main`. A last commit (`65c6b2e`) moves a misplaced doc comment and drops a reduced-motion rule the global one already covers; the health group passes again after it.
+
+What changed for a player:
+- **Hearts you can read.** A half heart is drawn as half a heart, the empty heart's outline with its left half filled, so 1½ hearts no longer looks like two. The hearts, crystals, and relic count sit on a soft dark backing, like the objective. At one heart or less the hearts take a warm outline and beat (they keep the outline but don't beat under reduced motion), and the blow that leaves you there sounds three soft heartbeats on the effects bus. Screen readers hear "Health: 1½ of 3 hearts".
+- **The hall counts the fallen**: "Defeat the four guardians to break the second seal · 2 / 4 fallen". It holds through a defeat, and the objective moves on to the warden when the seal breaks.
+- **The pause menu fits on a laptop.** Short neighbouring choices share a row (the journal and the map, quality and sound, the checkpoint and the title), so every choice is in view at 1280×720 and up with normal text, and at 768 px tall and up with larger text. ↓ still walks the choices in the same order. On a phone held sideways the sheet still scrolls, and moving the focus brings the row into view.
+
+Honest notes:
+- **Contrast, measured.** I measured the WCAG contrast of each piece against the pixels behind it, with the vitals hidden, in Alder Village, Frostveil Heights, and the Saffron Wastes. The figures are the worst 5% of pixels / the median. Over the Saffron Wastes' pale sky the hearts went from 1.07 / 1.10 to 4.66 / 4.78, and the relic count from 1.35 / 1.36 to 5.57 / 5.75 (its text is a little more opaque too). In the village the hearts went from 1.86 / 1.92 to 5.58 / 5.67. Every piece is now at least 4.5 : 1 in all three places. The camera views were fixed; other views and other regions weren't measured.
+- **The heartbeat hasn't been heard.** The check counts its voices (six, three lub-dubs), and with effects at 0 there are none. How it sounds and whether it's too loud or too quiet in the mix is untested by ear, like the rest of the audio. It plays only after the blow that leaves you at one heart or less, not continuously, so it doesn't nag.
+- **Phone layout.** The backing made the vitals wider and ran into the region name on a phone held sideways, which the overlap check caught. There the backing is narrower, and all twelve phone layouts and orientations pass again.
+- **Controls that must fail.** On an unchanged `main`, the health group fails at its first step (no heart states; the half heart is the whole glyph at 65% opacity, with no filled pixels on either side by the check's measure, and a strike that leaves one heart plays no heartbeat). The hall count reads only "Defeat the four guardians to break the second seal.", and the pause menu hides Return to checkpoint and Save & return to title at 1280×720.
+- **The flaky check.** Under pointer lock, Playwright's emulated mouse in headless Chromium sends a `pointermove` of (−640, −400) around each click, which is minus the cursor's position. I couldn't show that a real mouse in a real browser sends anything like it, so the game doesn't filter such moves. Only the check holds them back while it measures, and it counts them (4 to 6 a run).
+- **No difficulty change.** No health, damage, healing, timing, enemy, or crystal values changed. The warning only shows and sounds what the hearts already say. The arena-doorway reset is unchanged.
+- **No new story writing.** Only interface text: the count, the label, and the pause-menu layout. No save-format change.
+- **Performance.** The hearts are redrawn only when health changes, as before. The beat is a CSS animation on at most a few glyphs, and the heartbeat is six short oscillator voices. I didn't take new frame samples.
+
+Still deferred, and why:
+- **Balance and difficulty, puzzle hints, deleting a journey:** the owner's call.
+- **Branching dungeons:** need a level-design pass and a larger chamber layout.
+- **Skinned characters and new enemy art, traversal tools:** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Real-device checks:** a phone and real controllers are still needed. That includes how the heartbeat feels, and the hearts on a real phone screen.
+- **The nudge when a saved spot is inside a collider:** play can't put Alder there; only test teleports have.
 
