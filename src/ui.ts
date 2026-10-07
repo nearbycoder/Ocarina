@@ -33,7 +33,7 @@ const CONTROLS: Record<Device, (k: KeyLabels, p: PadLabels) => string> = {
 };
 const HELP: Record<Device, (k: KeyLabels, p: PadLabels) => string> = {
   keyboard: (k) =>
-    `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on (<b>← →</b> switch) · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint`,
+    `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on (<b>← →</b> switch) · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint<br>In menus: <b>↑ ↓</b> or <b>Tab</b> move · <b>Enter</b> choose · <b>Esc</b> back`,
   gamepad: (_, p) =>
     `<b>Left stick</b> move · <b>Right stick</b> camera · <b>${p.interact}</b> interact<br><b>${p.attack}</b> sword · <b>${p.dodge}</b> dodge · <b>${p.shield}</b> shield · <b>${p.target}</b> lock on (flick the right stick to switch)<br><b>${p.flute}</b> flute · <b>${p.map}</b> map · <b>${p.journal}</b> journal · <b>Start</b> pause`,
   touch: () =>

@@ -74,6 +74,7 @@ import {
   bindPad,
   keyLabel,
   keyLabels,
+  menuKey,
   normalizeCode,
   padActions,
   padLabel,
@@ -998,33 +999,40 @@ export class Game {
         (this.started && !this.ui.panel && Object.values(bound).includes(code))
       )
         e.preventDefault();
-      if (e.repeat) return;
+      const panel = this.ui.panel;
+      // Holding an arrow keeps stepping through a menu.
+      const nav = panel && panel !== "flute" ? menuKey(code, e.shiftKey) : null;
+      if (e.repeat) {
+        if (nav?.startsWith("focus-")) this.menuInput(nav);
+        return;
+      }
       this.keys.add(code);
       this.setDevice("keyboard");
-      if (this.ui.panel === "flute") {
+      if (panel === "flute") {
         if (["Digit1", "Digit2", "Digit3"].includes(code))
           this.action(`note-${code.slice(-1)}`);
         if (code === "Escape" || code === bound.flute) this.action("close");
         return;
       }
       if (code === "Escape") {
-        if (this.ui.panel === "title") return;
-        this.action(this.ui.panel ? "close" : "pause");
+        if (panel === "title") return;
+        // Settings step back to where they were opened, as B does on a pad.
+        if (panel === "settings") this.menuInput("back");
+        else this.action(panel ? "close" : "pause");
         return;
       }
-      if (this.ui.panel === "dialogue" && code === "Enter") {
-        this.ui
-          .el("panel")
-          .querySelector<HTMLButtonElement>("[data-action]")
-          ?.click();
-        return;
-      }
-      if (!this.started || this.ui.panel) {
+      if (!this.started || panel) {
         if (
-          (code === bound.journal && this.ui.panel === "journal") ||
-          (code === bound.map && this.ui.panel === "map")
+          (code === bound.journal && panel === "journal") ||
+          (code === bound.map && panel === "map")
         )
           this.action("close");
+        else if (nav) {
+          // The game answers these keys, not the browser: Enter and Space
+          // would otherwise choose twice, and Tab would leave the menu.
+          e.preventDefault();
+          this.menuInput(nav);
+        }
         return;
       }
       const actions: Record<string, string> = {
@@ -1299,7 +1307,7 @@ export class Game {
     } else if (Math.abs(move.y) < 0.3) this.padNav = 0;
     for (const a of actions) this.menuInput(a);
   }
-  /** Gamepad navigation for the title, menus, sheets, and dialogue. */
+  /** Pad and keyboard navigation for the title, menus, sheets, and dialogue. */
   menuInput(a: string) {
     const root = this.ui.el("panel");
     const buttons = [

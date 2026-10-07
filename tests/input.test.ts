@@ -3,6 +3,7 @@ import {
   PAD,
   controlText,
   interactGlyph,
+  menuKey,
   noteGlyphs,
   padActions,
   padShield,
@@ -63,6 +64,22 @@ describe("gamepad buttons", () => {
     expect(padShield(buttons(PAD.RB))).toBe(true);
     expect(padShield(buttons(PAD.RT))).toBe(true);
     expect(padShield(buttons(PAD.LB))).toBe(false);
+  });
+});
+
+describe("keyboard menus", () => {
+  it("moves with the arrows and Tab and chooses with Enter or Space, like the pad", () => {
+    expect(menuKey("ArrowDown")).toBe("focus-next");
+    expect(menuKey("ArrowRight")).toBe("focus-next");
+    expect(menuKey("Tab")).toBe("focus-next");
+    expect(menuKey("ArrowUp")).toBe("focus-prev");
+    expect(menuKey("ArrowLeft")).toBe("focus-prev");
+    expect(menuKey("Tab", true)).toBe("focus-prev");
+    for (const code of ["Enter", "NumpadEnter", "Space"])
+      expect(menuKey(code)).toBe("confirm");
+    // Every other key is left to the sheet (Escape, remapped keys, letters).
+    for (const code of ["Escape", "KeyW", "KeyE", "Digit1", "ShiftLeft"])
+      expect(menuKey(code)).toBeNull();
   });
 });
 

@@ -250,6 +250,126 @@ await run("camera: wheel and reload", async () => {
   }
 });
 
+// Menus with the keyboard alone: real key presses from the title onwards.
+await run("keyboard: menus", async () => {
+  const kb = await open({ viewport: { width: 1280, height: 800 } });
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const game = (fn) =>
+    kb.evaluate(
+      `(() => { const game = window.__BELL_OF_AGES__.debug.game(); return (${fn})(game); })()`,
+    );
+  const panel = () => game("(g) => g.ui.panel");
+  const focused = () =>
+    kb.evaluate(() => document.activeElement?.dataset?.action ?? null);
+  const press = (key) => kb.keyboard.press(key);
+  // Steps down through the open sheet until `action` has the focus.
+  const focusOn = async (action) => {
+    for (let i = 0; i < 60; i++) {
+      if ((await focused()) === action) return;
+      await press("ArrowDown");
+    }
+    throw new Error(`↓ never reaches ${action}`);
+  };
+  try {
+    check(
+      (await panel()) === "title" && (await focused()) === null,
+      "The title opens with nothing focused",
+    );
+    await press("ArrowDown");
+    check((await focused()) === "new", "↓ focuses the first title choice");
+    check(
+      await kb.evaluate(() => document.activeElement.matches(":focus-visible")),
+      "The focused choice is drawn as focused",
+    );
+    await press("Tab");
+    const second = await focused();
+    check(
+      second && second !== "new",
+      `Tab moves to the next choice (${second})`,
+    );
+    await press("Shift+Tab");
+    check((await focused()) === "new", "Shift+Tab moves back");
+    await press("ArrowUp");
+    await press("ArrowDown");
+    check((await focused()) === "new", "↑ and ↓ wrap round the choices");
+    await press("Enter");
+    check(
+      (await game("(g) => g.save.story.pending?.id")) === "opening",
+      "Enter begins the journey",
+    );
+    for (let i = 0; i < 8 && (await game("(g) => !!g.save.story.pending")); i++)
+      await press("Enter");
+    check(
+      (await game("(g) => g.started && !g.save.story.pending")) &&
+        (await panel()) === null,
+      "Enter reads through the opening into the world",
+    );
+    await press("Escape");
+    check((await panel()) === "pause", "Escape opens the pause menu");
+    await focusOn("settings");
+    await press("Enter");
+    check((await panel()) === "settings", "↓ and Enter open Settings");
+    const master = await game("(g) => g.settings.master");
+    await focusOn("set-master-down");
+    await press("Enter");
+    await press("Space");
+    const lowered = await game("(g) => g.settings.master");
+    check(
+      lowered < master && (await focused()) === "set-master-down",
+      `Enter and Space lower the master volume and keep the focus (${master} → ${lowered})`,
+    );
+    await focusOn("bind-attack");
+    await press("Enter");
+    check(
+      await kb.evaluate(
+        () => !!document.querySelector('[data-action="bind-attack"].capturing'),
+      ),
+      "Enter on Sword waits for its new key",
+    );
+    await press("k");
+    check(
+      (await game("(g) => g.settings.keys.attack")) === "KeyK",
+      "Pressing K binds the sword with no mouse",
+    );
+    await press("Escape");
+    check(
+      (await panel()) === "pause",
+      "Escape steps back from Settings to the pause menu",
+    );
+    await press("Escape");
+    check((await panel()) === null, "Escape again returns to the world");
+    // Play is unchanged: Tab opens and closes the journal, the arrows turn
+    // the camera, and the remapped K swings.
+    await press("Tab");
+    check((await panel()) === "journal", "Tab still opens the journal");
+    await press("Tab");
+    check((await panel()) === null, "Tab still closes the journal");
+    const yaw = await game("(g) => g.yaw");
+    await kb.keyboard.down("ArrowLeft");
+    await kb.evaluate(() => window.__BELL_OF_AGES__.debug.advance(0.4));
+    await kb.keyboard.up("ArrowLeft");
+    check(
+      Math.abs((await game("(g) => g.yaw")) - yaw) > 0.1,
+      "← still turns the camera in play",
+    );
+    await game("(g) => { g.save.story.prologue = 5; }");
+    await press("k");
+    await kb.evaluate(() => window.__BELL_OF_AGES__.debug.advance(0.05));
+    check(
+      (await game("(g) => g.attackElapsed")) >= 0,
+      "The remapped K swings the sword",
+    );
+    return count;
+  } finally {
+    await kb.close();
+  }
+});
+
 // Journey files: export through the pause menu, import on a fresh page.
 await run("journey files", async () => {
   const results = [];

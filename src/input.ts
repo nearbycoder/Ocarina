@@ -177,6 +177,19 @@ export function padActions(
   return out;
 }
 
+/**
+ * Menus with the keyboard alone, mirroring the pad's D-pad and A: the arrows
+ * and Tab move the focus, Enter and Space choose.
+ */
+export function menuKey(code: string, shift = false) {
+  if (code === "Tab") return shift ? "focus-prev" : "focus-next";
+  if (code === "ArrowUp" || code === "ArrowLeft") return "focus-prev";
+  if (code === "ArrowDown" || code === "ArrowRight") return "focus-next";
+  if (code === "Enter" || code === "NumpadEnter" || code === "Space")
+    return "confirm";
+  return null;
+}
+
 /** Whether the bound shield button (or the spare RT) is held. */
 export function padShield(
   current: readonly boolean[],
