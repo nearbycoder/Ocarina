@@ -20,6 +20,8 @@ export interface Settings {
   /** Camera speed multiplier, 0.5–2 in steps of 0.25. */
   sensitivity: number;
   invertY: boolean;
+  /** How far the camera follows behind, in metres. */
+  cameraDistance: number;
   /** Removes hit-stop pauses, the damage flash, and interface motion. */
   reducedMotion: boolean;
   largeText: boolean;
@@ -35,6 +37,8 @@ export interface Settings {
 export const SETTINGS_KEY = "bell-of-ages-settings-v1";
 export const VOLUME_STEP = 10;
 export const SENSITIVITY_STEP = 0.25;
+/** Camera distance: today's 7.6 m is 100 %, and each step is 10 % of it. */
+export const CAMERA_DISTANCE = { min: 4.5, max: 12, normal: 7.6, step: 0.76 };
 export function defaultSettings(prefersReducedMotion = false): Settings {
   return {
     version: 1,
@@ -45,6 +49,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     muted: false,
     sensitivity: 1,
     invertY: false,
+    cameraDistance: CAMERA_DISTANCE.normal,
     reducedMotion: prefersReducedMotion,
     largeText: false,
     threatArrows: true,
@@ -64,6 +69,11 @@ export function volume(n: unknown, fallback: number) {
 export function sensitivity(n: unknown, fallback = 1) {
   return typeof n === "number" && Number.isFinite(n)
     ? clamp(step(n, SENSITIVITY_STEP), 0.5, 2)
+    : fallback;
+}
+export function cameraDistance(n: unknown, fallback = CAMERA_DISTANCE.normal) {
+  return typeof n === "number" && Number.isFinite(n)
+    ? clamp(Math.round(n * 100) / 100, CAMERA_DISTANCE.min, CAMERA_DISTANCE.max)
     : fallback;
 }
 export function parseSettings(
@@ -89,6 +99,7 @@ export function parseSettings(
     muted: flag("muted"),
     sensitivity: sensitivity(s.sensitivity, def.sensitivity),
     invertY: flag("invertY"),
+    cameraDistance: cameraDistance(s.cameraDistance, def.cameraDistance),
     reducedMotion: flag("reducedMotion"),
     largeText: flag("largeText"),
     threatArrows: flag("threatArrows"),

@@ -100,6 +100,40 @@ const SHOTS = {
     });
     await shoot(page, "a-compass-marker");
   },
+  // Settings → Camera with the new distance row, two steps nearer.
+  "b-settings-camera": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.action("pause");
+      api.debug.action("settings");
+      for (let i = 0; i < 2; i++)
+        document.querySelector('[data-action="set-distance-down"]').click();
+      document
+        .querySelector('[data-action="set-sensitivity-down"]')
+        .closest("section")
+        .scrollIntoView({ block: "start" });
+    });
+    await shoot(page, "b-settings-camera");
+  },
+  // The same spot at the nearest and farthest camera distances.
+  "b-camera-near": async (page) => {
+    await meadow(page, -8, 66, 0.4);
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.zoomCamera(4.5);
+      game.snapCamera();
+    });
+    await shoot(page, "b-camera-near");
+  },
+  "b-camera-far": async (page) => {
+    await meadow(page, -8, 66, 0.4);
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.zoomCamera(12);
+      game.snapCamera();
+    });
+    await shoot(page, "b-camera-far");
+  },
 };
 
 const names = process.argv.slice(2).length

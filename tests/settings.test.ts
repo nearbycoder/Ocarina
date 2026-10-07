@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  CAMERA_DISTANCE,
   busGain,
+  cameraDistance,
   defaultSettings,
   parseSettings,
   sensitivity,
@@ -54,5 +56,17 @@ describe("player settings", () => {
     expect(busGain(s, "effects")).toBeCloseTo(0.4);
     expect(busGain(s, "ambience")).toBe(0);
     expect(busGain({ ...s, muted: true }, "effects")).toBe(0);
+  });
+  it("keeps today's camera distance for older settings, within its range", () => {
+    expect(parseSettings("{}").cameraDistance).toBe(7.6);
+    expect(CAMERA_DISTANCE.normal).toBe(7.6);
+    expect(parseSettings('{"cameraDistance":5.25}').cameraDistance).toBe(5.25);
+    expect(parseSettings('{"cameraDistance":40}').cameraDistance).toBe(12);
+    expect(parseSettings('{"cameraDistance":-1}').cameraDistance).toBe(4.5);
+    expect(parseSettings('{"cameraDistance":"far"}').cameraDistance).toBe(7.6);
+    // Ten steps up from the nearest setting reach the farthest.
+    let d = CAMERA_DISTANCE.min;
+    for (let i = 0; i < 10; i++) d = cameraDistance(d + CAMERA_DISTANCE.step);
+    expect(d).toBe(CAMERA_DISTANCE.max);
   });
 });

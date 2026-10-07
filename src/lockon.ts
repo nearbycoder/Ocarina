@@ -92,3 +92,8 @@ export function screenAnchor(
   }
   return { x: width / 2 + dx, y: height / 2 + dy, onScreen, angle };
 }
+
+/** The signed turn from one angle to another the short way round, in (-π, π]. */
+export function shortestTurn(from: number, to: number) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}

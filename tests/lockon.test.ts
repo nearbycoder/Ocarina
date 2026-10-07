@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import * as T from "three";
-import { nearestTarget, screenAnchor, sideTarget } from "../src/lockon";
+import {
+  nearestTarget,
+  screenAnchor,
+  shortestTurn,
+  sideTarget,
+} from "../src/lockon";
 
 describe("lock-on choices", () => {
   it("moves to the nearest remaining candidate, or none", () => {
@@ -107,5 +112,17 @@ describe("screen anchors", () => {
     );
     expect(behind.onScreen).toBe(false);
     expect(behind.y).toBeCloseTo(H - M);
+  });
+});
+
+describe("turning the camera", () => {
+  it("takes the short way round, however many turns came before", () => {
+    expect(shortestTurn(0, 1)).toBeCloseTo(1);
+    expect(shortestTurn(0, -1)).toBeCloseTo(-1);
+    // From 3 rad to -3 rad is 0.28 rad onward, not 6 rad back.
+    expect(shortestTurn(3, -3)).toBeCloseTo(2 * Math.PI - 6);
+    // Three full turns of the camera change nothing.
+    expect(shortestTurn(6 * Math.PI + 0.5, 0.2)).toBeCloseTo(-0.3);
+    expect(Math.abs(shortestTurn(0, Math.PI))).toBeCloseTo(Math.PI);
   });
 });

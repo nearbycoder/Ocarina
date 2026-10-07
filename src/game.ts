@@ -89,6 +89,8 @@ import {
 import {
   SETTINGS_KEY,
   SENSITIVITY_STEP,
+  CAMERA_DISTANCE,
+  cameraDistance,
   VOLUME_STEP,
   parseSettings,
   sensitivity,
@@ -116,7 +118,12 @@ import { visualTime, visualEye, grassReach } from "./surfaces";
 import { updateNature } from "./nature";
 import { UI } from "./ui";
 import { Sparks } from "./sparks";
-import { nearestTarget, screenAnchor, sideTarget } from "./lockon";
+import {
+  nearestTarget,
+  screenAnchor,
+  shortestTurn,
+  sideTarget,
+} from "./lockon";
 import { Sound, stepsBetween, surfaceAt } from "./audio";
 import {
   CARVINGS,
@@ -225,6 +232,10 @@ export class Game {
   destination: Destination | null = null;
   compassAngle = NaN;
   pitch = 0.26;
+  /** The camera is swinging back behind Alder. */
+  recentering = false;
+  /** Two fingers are on the scene. */
+  pinching = false;
   distance = 7.6;
   attackTime = 0;
   private collision = new CollisionWorld([]);
@@ -406,6 +417,7 @@ export class Game {
   }
   applySettings(store = false) {
     this.sound.configure(this.settings);
+    this.distance = this.settings.cameraDistance;
     this.ui.setKeys(
       keyLabels(this.settings.keys, this.keyLayout),
       padLabels(this.settings.pad),
@@ -485,6 +497,10 @@ export class Game {
       this.raiseShield(false);
     } else if (key === "sensitivity")
       s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
+    else if (key === "distance")
+      s.cameraDistance = cameraDistance(
+        s.cameraDistance + sign * CAMERA_DISTANCE.step,
+      );
     else if (
       key === "master" ||
       key === "effects" ||
@@ -1030,8 +1046,32 @@ export class Game {
     );
     const canvas = this.renderer.domElement;
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    // Two fingers on the scene pinch to zoom; neither then turns or strikes.
+    const fingers = new Map<number, { x: number; y: number }>();
+    let span = 0;
+    const spread = () => {
+      const [a, b] = [...fingers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const lift = (e: PointerEvent) => {
+      fingers.delete(e.pointerId);
+      if (this.pinching && !fingers.size) {
+        this.pinching = false;
+        this.applySettings(true);
+      }
+    };
     canvas.addEventListener("pointerdown", (e) => {
       if (this.ui.panel) return;
+      if (e.pointerType === "touch") {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (fingers.size === 2) {
+          this.pinching = true;
+          this.dragging = false;
+          this.pointerMoved = true;
+          span = spread();
+        }
+      }
+      if (this.pinching) return;
       this.dragging = true;
       this.pointerMoved = false;
       this.dragSwitch = 0;
@@ -1039,6 +1079,17 @@ export class Game {
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
+      if (fingers.has(e.pointerId))
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pinching) {
+        if (fingers.size === 2 && span > 0) {
+          const now = spread();
+          // Fingers apart bring the camera closer, as on a photo.
+          if (now > 0) this.zoomCamera(this.distance * (span / now));
+          span = now;
+        }
+        return;
+      }
       if (!this.dragging || this.ui.panel) return;
       const dx = e.clientX - this.lastPointer.x,
         dy = e.clientY - this.lastPointer.y;
@@ -1055,17 +1106,21 @@ export class Game {
       this.lastPointer = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener("pointerup", (e) => {
+      const pinched = this.pinching;
+      lift(e);
+      if (pinched) return;
       if (!this.pointerMoved && e.button === 0 && !this.ui.panel) this.attack();
       this.dragging = false;
     });
+    canvas.addEventListener("pointercancel", lift);
+    let wheelStore = 0;
     canvas.addEventListener(
       "wheel",
       (e) => {
-        this.distance = T.MathUtils.clamp(
-          this.distance + e.deltaY * 0.008,
-          4.5,
-          12,
-        );
+        this.zoomCamera(this.distance + e.deltaY * 0.008);
+        // Remember the distance once the wheel comes to rest.
+        clearTimeout(wheelStore);
+        wheelStore = window.setTimeout(() => this.applySettings(true), 400);
       },
       { passive: true },
     );
@@ -2141,7 +2196,8 @@ export class Game {
       this.hero.group.position,
       this.lockCandidates(),
     );
-    if (!this.target) this.ui.toast("No enemy nearby to lock onto.");
+    // With no foe to lock onto, the button recentres the camera instead.
+    if (!this.target) this.recenterCamera();
   }
   /** Moves the lock to the next foe on the right (1) or left (-1) of the view. */
   switchTarget(side: 1 | -1) {
@@ -2203,8 +2259,22 @@ export class Game {
     dot.style.transform = `translate(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px)`;
     dot.style.setProperty("--angle", `${a.angle.toFixed(3)}rad`);
   }
+  /** Sets the follow distance; the settings sheet shows the same value. */
+  zoomCamera(distance: number) {
+    this.settings.cameraDistance = cameraDistance(distance);
+    this.distance = this.settings.cameraDistance;
+  }
+  /** Swings the camera behind Alder; at once under reduced motion. */
+  recenterCamera() {
+    const behind = this.hero.group.rotation.y;
+    if (this.settings.reducedMotion) {
+      this.yaw += shortestTurn(this.yaw, behind);
+      this.recentering = false;
+    } else this.recentering = true;
+  }
   /** Turns the camera: positive x orbits right, positive y raises the view. */
   turnCamera(x: number, y: number) {
+    if (x) this.recentering = false;
     const k = this.settings.sensitivity;
     this.yaw -= x * k;
     this.pitch = T.MathUtils.clamp(
@@ -2356,8 +2426,9 @@ export class Game {
           -(this.target.z - p.z),
         );
         if (this.attackElapsed < 0) this.hero.group.rotation.y = angle;
+        // The short way round, however many turns the camera has made.
         if (!this.dragging)
-          this.yaw = T.MathUtils.lerp(this.yaw, angle, dt * 3);
+          this.yaw += shortestTurn(this.yaw, angle) * Math.min(1, dt * 3);
       }
     } else if (m.lengthSq() > 0.01 && this.attackTime <= 0) {
       const a = Math.atan2(-m.x, -m.z);
@@ -2872,6 +2943,11 @@ export class Game {
     this.camera.lookAt(focus);
   }
   updateCamera(dt: number) {
+    if (this.recentering) {
+      const turn = shortestTurn(this.yaw, this.hero.group.rotation.y);
+      if (this.target || Math.abs(turn) < 0.004) this.recentering = false;
+      this.yaw += Math.abs(turn) < 0.004 ? turn : turn * Math.min(1, dt * 12);
+    }
     // Remove last frame's shake before smoothing so it never accumulates.
     this.camera.position.sub(this.shakeOffset);
     this.shakeOffset.set(0, 0, 0);

@@ -48,6 +48,7 @@ async function open(options) {
     "lockon-checks.js",
     "map-checks.js",
     "wayfinding-checks.js",
+    "camera-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -119,6 +120,10 @@ await run("lock-on: mouse drag", async () => {
   await page.mouse.up();
   return page.evaluate(async () => (await lockQA.afterDrag(2)).length);
 });
+await inPage(
+  "camera: recentre and distance",
+  async () => (await cameraQA.run()).length,
+);
 for (const id of ["root", "ember", "tide"])
   await inPage(
     `campaign: ${id}`,
@@ -202,6 +207,41 @@ await run("gamepad: remapping", async () => {
     return count + 1 + reset;
   } finally {
     await padPage.close();
+  }
+});
+
+// The mouse wheel moves the camera distance setting, and a reload keeps it.
+await run("camera: wheel and reload", async () => {
+  const camPage = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    const distance = () =>
+      camPage.evaluate(() => window.__BELL_OF_AGES__.debug.game().distance);
+    await camPage.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    const before = await distance();
+    await camPage.mouse.move(640, 420);
+    await camPage.mouse.wheel(0, 250);
+    await camPage.waitForTimeout(700);
+    const after = await distance();
+    if (!(Math.abs(after - before - 2) < 0.05))
+      throw new Error(`The wheel moves the camera out (${before} → ${after})`);
+    const stored = await camPage.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("bell-of-ages-settings-v1"))
+          .cameraDistance,
+    );
+    if (stored !== after)
+      throw new Error(`The wheel's distance is stored (${stored})`);
+    await camPage.reload();
+    await camPage.waitForFunction(() => window.__BELL_OF_AGES__?.debug);
+    const kept = await distance();
+    if (kept !== after)
+      throw new Error(`A reload keeps the distance (${kept} vs ${after})`);
+    return 3;
+  } finally {
+    await camPage.close();
   }
 });
 
@@ -447,6 +487,92 @@ await run("touch: phone portrait", async () => {
     "Pause menu offers Return to checkpoint and touch help",
   );
   return touchResults.length;
+});
+
+// Two fingers on the scene pinch the camera in and out; Lock with no foe in
+// range recentres it.
+await run("touch: pinch and recentre", async () => {
+  const results = [];
+  const ok = (pass, message) => {
+    if (!pass) throw new Error(message);
+    results.push(message);
+  };
+  await phone.evaluate(() => {
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    game.ui.setPanel(null);
+    game.loadWorld();
+    api.debug.teleport(-8, 66);
+    api.debug.face(1);
+    game.yaw = 1;
+    game.snapCamera();
+  });
+  const game = (f) =>
+    phone.evaluate(
+      (f) =>
+        new Function("g", `return ${f}`)(window.__BELL_OF_AGES__.debug.game()),
+      f,
+    );
+  const pinch = async (from, to) => {
+    const y = 400;
+    const points = (d) => [
+      { x: 195 - d / 2, y, id: 1 },
+      { x: 195 + d / 2, y, id: 2 },
+    ];
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [points(from)[0]],
+    });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: points(from),
+    });
+    for (let i = 1; i <= 6; i++)
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: points(from + ((to - from) * i) / 6),
+      });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+  };
+  const start = await game("g.distance");
+  const yaw = await game("g.yaw");
+  await pinch(80, 160);
+  const closer = await game("g.distance");
+  ok(
+    closer < start * 0.6,
+    `Spreading two fingers brings the camera in (${start} → ${closer} m)`,
+  );
+  ok(
+    (await game("g.yaw")) === yaw && (await game("g.attackElapsed")) < 0,
+    "A pinch neither turns the camera nor swings the sword",
+  );
+  await pinch(160, 100);
+  const farther = await game("g.distance");
+  ok(farther > closer * 1.4, `Pinching in moves it out (${farther} m)`);
+  ok(
+    (await game(
+      "JSON.parse(localStorage.getItem('bell-of-ages-settings-v1')).cameraDistance",
+    )) === farther,
+    "The pinched distance is remembered",
+  );
+  await phone.evaluate(() => {
+    const game = window.__BELL_OF_AGES__.debug.game();
+    game.yaw = 3;
+    game.snapCamera();
+  });
+  await tap('#touch [data-action="target"]');
+  await phone.evaluate(() => window.__BELL_OF_AGES__.debug.advance(0.5));
+  const off = await game(
+    "Math.atan2(Math.sin(g.yaw - 1), Math.cos(g.yaw - 1))",
+  );
+  ok(
+    Math.abs(off) < 0.02,
+    `Lock with no foe in range recentres the camera (${off.toFixed(3)} rad off)`,
+  );
+  return results.length;
 });
 
 // Phone landscape: HUD pieces and touch controls must not overlap.
