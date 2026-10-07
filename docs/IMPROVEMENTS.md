@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), and [Round 4 results](#round-4-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), and [Round 5 results](#round-5-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -490,3 +490,69 @@ Still deferred, and why:
 - **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
 - **Touch remapping:** touch buttons would need a layout editor, not a binding list.
 - **Performance tuning (rest of 11):** at the start of this round the machine was quiet enough for cleaner numbers: about 3.6 ms a frame in the village and 1.7 ms in a hall fight at 1280×800, and 8 to 9 ms at 1920×1080 on a 2× display. The desktop iGPU has headroom; a phone is still unmeasured.
+
+## Round 5 scope — 6 October 2026
+
+Branch `improvements-5`, from `main` at `ff86947` (in sync with `origin/main`). Baseline: 98 / 98 Vitest tests, and every `tests/run-browser-checks.mjs` group green (load average 14 to 21).
+
+Rounds 1 to 4 covered input, fairness, fight variety, saves, remapping, lock-on, and the map. Playing the build again, I found four things a player meets on every trip and in every fight that can be verified here:
+
+- **After the prologue the compass goes blank.** From the first sanctuary to the last, the compass chip just reads "N". The minimap only reaches about 60 m, and nothing points the way unless you open the map. You can't mark a place to go back to.
+- **The camera can't be reset or zoomed on every device.** Pressing lock-on with no foe in range only shows a toast. Camera distance is mouse-wheel only, so gamepad and touch players are stuck with one distance. Locking on after turning the camera a few full circles spins it round the long way, because the turn toward the target doesn't wrap the angle.
+- **Touch controls fit one hand only.** The thumbstick is always on the left and the buttons have one size. This is the scoped part of "touch remapping" from the ranked list.
+- **The gamepad gives no feedback, and losing it doesn't pause.** Hits, guards, and slams don't rumble, and a controller that disconnects or a window that loses focus mid-fight leaves the game running.
+
+Ground rules:
+- **No difficulty numbers change.** Health, damage, enemy numbers, timings, and crystal income stay as they are. No new combat aids.
+- **No new story writing.** Destinations use existing place names; the rest is interface text.
+- **Puzzle hints untouched.** The owner still decides whether they give answers away.
+- **The tooling keeps working.** Guardian indices, chamber coordinates, and the debug API stay compatible. Older saves, journey files, and settings load.
+
+### A. Wayfinding: a destination at every stage, an arrow, and your own marker
+
+Acceptance criteria
+- The compass names a destination at every stage of the journey outside sanctuaries. The existing story destinations (Mira, the orchard light, Soren, Rowan, the adult reunion) keep priority. After them: the nearest sanctuary you can enter now and haven't restored; the Bell Sanctuary once the three childhood relics are in hand; and the Silent Crown once the three echoes are. After the ending there is none.
+- The compass chip shows an arrow toward the destination relative to the view (up is straight ahead), and it turns as the camera turns.
+- When the destination is beyond the minimap's edge, the minimap pins it to its rim in the direction to walk.
+- **Your own marker.** Click or tap anywhere on the kingdom map to place a marker there. On any device, including a gamepad, choosing a sanctuary or landmark on the map places the marker on it. Choosing it again, or **Clear marker**, removes it. While it's set, the marker takes over the compass and the minimap. It clears itself when you reach it. It's saved with the journey, validated on load, and older saves and journey files have none.
+
+Verification
+- Unit tests: the destination at each stage (nearest first, restored ones skipped, the bell, the echoes, the crown, after the ending), the view-relative bearing, the minimap rim point, and saving and migrating the marker.
+- A browser check: after the prologue the compass names the nearest childhood sanctuary, and its arrow turns by the same angle as the camera. A real mouse click on the map puts the marker within 2 m of the clicked place, and the compass follows it. Walking onto it with W clears it. A synthetic gamepad pins a sanctuary from the map with the D-pad and A.
+- Screenshots of the compass arrow, the minimap rim, and the map marker.
+
+### B. A camera you can reset and zoom on every device
+
+Acceptance criteria
+- Pressing lock-on with no foe in range swings the camera behind Alder, on every device, instead of showing "No enemy nearby". Under reduced motion it moves at once.
+- Turning toward a locked target, and recentring, take the short way round however far the camera has been turned.
+- **Camera distance** joins Settings → Camera, from near to far. The mouse wheel moves the same setting, and a two-finger pinch on touch does too. It's remembered with the settings, and older settings get today's distance.
+
+Verification
+- Unit tests: the shortest turn, and the distance setting's validation and migration.
+- A browser check: after turning the camera, Q with no foes recentres it behind Alder within a few hundredths of a radian, and so do a synthetic pad's LB and the touch Lock button. After three full turns, locking on reaches the target's bearing without spinning. The distance stepper and the wheel change the real camera distance, and the value survives a reload. A two-finger pinch through CDP touch events zooms in and out.
+
+### C. Touch controls for either hand, in three sizes
+
+Acceptance criteria
+- Settings → Touch adds **Left-handed layout** (thumbstick on the right, buttons on the left) and **Button size** (Standard, Large, Largest). Both apply at once and are remembered with the settings.
+- On a phone held upright (390×844) and sideways (844×390), no HUD element overlaps another in any combination.
+- The thumbstick and buttons work in the mirrored layout.
+
+Verification
+- Unit tests for the new settings.
+- A browser check with CDP touch on both phone sizes, mirrored and Largest: the thumbstick walks Alder, Sword swings, and the overlap check passes for every combination.
+- Screenshots of the mirrored and Largest layouts.
+
+### D. Gamepad vibration, and a pause when you lose the pad or the window
+
+Acceptance criteria
+- With a gamepad that can vibrate (`vibrationActuator`), short rumbles mark taking a hit (strong), guarding a blow (light), landing a sword hit (faint), and a warden's heavy impact (medium). **Controller vibration** in Settings → Gamepad turns them off. Nothing rumbles when the last device used isn't the gamepad.
+- The game pauses when the gamepad in use disconnects during play, and when the browser window loses focus during play. Held input is released, as it is today.
+
+Verification
+- Unit tests for the rumble choices.
+- A browser check with a synthetic pad whose `vibrationActuator` records its effects: a real guardian strike, a guarded strike, and a real sword hit each produce their rumble; with the setting off, or after using the keyboard, nothing is recorded. A `gamepaddisconnected` event and a window `blur` each open the pause sheet.
+- I have no physical controller, so how the rumble feels can't be judged here, and I'll say so.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance and difficulty (owner decision), puzzle hints (owner decision), branching dungeons with keys and shortcuts (needs a level-design pass and a larger chamber layout than the fixed 60 × 88 m sanctuary space), new skinned art and traversal (large jobs), and full touch button remapping (a layout editor).
