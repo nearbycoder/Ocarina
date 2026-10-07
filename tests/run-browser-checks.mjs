@@ -8,7 +8,7 @@
 //
 // Needs a Playwright Chromium (`npx playwright install chromium`). The desktop
 // page loads the in-page suites (browser, polish, settings, gamepad, foes,
-// puzzles, lock-on); the touch pages use real touch events through the Chrome DevTools Protocol. Pages use
+// puzzles, lock-on, map); the touch pages use real touch events through the Chrome DevTools Protocol. Pages use
 // /?review=polish, so the player's normal save is never read or written.
 import { chromium } from "playwright";
 import { mkdirSync, readFileSync } from "node:fs";
@@ -46,6 +46,7 @@ async function open(options) {
     "foe-checks.js",
     "puzzle-checks.js",
     "lockon-checks.js",
+    "map-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -80,6 +81,7 @@ await inPage(
 await inPage("alcoves", async () => (await foeQA.alcoves()).length);
 await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
+await inPage("map discoveries", async () => (await mapQA.run()).length);
 // A real mouse drag while locked: sideways switches, and the view stays put.
 await run("lock-on: mouse drag", async () => {
   const { width, height } = await page.evaluate(() => lockQA.dragSetup());

@@ -100,13 +100,13 @@ Sixteen story scenes take you from a lantern-morning errand to an ordinary suppe
 
 ### Off the beaten path
 
-Treasure chests hide off the roads. Mira's three wandering lights have slipped away across the kingdom, and bringing them all home earns a heart charm. Soren will forge a star-forged blade for 60 crystals, and the village campfire always has room for a weary traveler.
+Treasure chests hide off the roads; the journal counts them, and the map remembers the ones you've passed. Mira's three wandering lights have slipped away across the kingdom, and bringing them all home earns a heart charm. Soren will forge a star-forged blade for 60 crystals, and the village campfire always has room for a weary traveler.
 
 ### A map, a journal, and your place in the world
 
 <img src="docs/media/screenshots/09-map.jpg" alt="The map of the kingdom of Aevora with its regions and sanctuaries" width="100%">
 
-The kingdom map marks every region and sanctuary, fades the ones that belong to another age, and pins your current story destination. A minimap, compass distance, and quest line keep you oriented. Progress autosaves to your browser, and **Continue** picks up on the exact line of dialogue you left. To keep a journey safe or move it to another browser, export it as a small file from the pause menu and import it from the title screen.
+The kingdom map marks every region and sanctuary, fades the ones that belong to another age, and pins your current story destination. It also remembers what you've found: chests and wandering lights you've come near appear as hollow marks, filled in once you open or catch them, and a ✎ marks each sanctuary whose hidden carving you've read. A minimap, compass distance, and quest line keep you oriented. Progress autosaves to your browser, and **Continue** picks up on the exact line of dialogue you left. To keep a journey safe or move it to another browser, export it as a small file from the pause menu and import it from the title screen.
 
 ## Content overview
 

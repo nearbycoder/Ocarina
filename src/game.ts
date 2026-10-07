@@ -29,6 +29,7 @@ import {
   chamberStart,
   respawnLandmark,
   regionAt,
+  noticeNearby,
   type SaveData,
   type Dungeon,
 } from "./data";
@@ -2377,6 +2378,9 @@ export class Game {
       Math.sin(this.elapsed * 1.8) * 0.006;
     this.hero.group.visible = true;
     this.updateAttack(dt);
+    // Chests and wandering lights you pass near go on the kingdom map.
+    if (!this.world.dungeon)
+      this.save.noticed.push(...noticeNearby(this.save, p.x, p.z));
     this.currentInteraction = this.nearest();
     this.ui.prompt(this.currentInteraction?.label || "");
   }

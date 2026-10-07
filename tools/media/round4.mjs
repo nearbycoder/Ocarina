@@ -129,6 +129,54 @@ const SHOTS = {
     });
     await shoot(page, "c-settings-gamepad");
   },
+  // Mid-journey: two chests opened, one seen, a light caught and one seen,
+  // and the Rootbound Hollow's carving read.
+  "d-map-finds": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game(),
+        s = game.save;
+      s.chests = ["field-0", "field-2"];
+      s.fireflies = ["orchard"];
+      s.noticed = ["field-0", "field-1", "field-2", "orchard", "woods"];
+      s.carvings = ["root"];
+      s.completed = ["root"];
+      api.debug.teleport(-30, 30);
+      api.debug.action("map");
+    });
+    await shoot(page, "d-map-finds");
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.action("close");
+      api.debug.action("journal");
+    });
+    await shoot(page, "d-journal-chests");
+  },
+  // The two chests that couldn't be opened before round 4, with their prompts.
+  "fix-chest-bell": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      game.yaw = 1.2;
+      game.pitch = 0.3;
+      api.debug.teleport(33.4, 14.2);
+      api.debug.face(1.2);
+      api.debug.advance(0.05);
+    });
+    await shoot(page, "fix-chest-bell");
+  },
+  "fix-chest-coast": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      game.yaw = -1.9;
+      game.pitch = 0.32;
+      api.debug.teleport(89.6, 31.8);
+      api.debug.face(-1.75);
+      api.debug.advance(0.05);
+    });
+    await shoot(page, "fix-chest-coast");
+  },
 };
 
 const names = process.argv.slice(2).length

@@ -139,6 +139,8 @@ export interface SaveData {
   visited: string[];
   /** Sanctuaries whose hidden alcove carving the player has read. */
   carvings: string[];
+  /** Chests and wandering lights the player has come near; the map shows them. */
+  noticed: string[];
   position: { x: number; z: number };
   elapsed: number;
   won: boolean;
@@ -160,6 +162,7 @@ export function newSave(): SaveData {
     chests: [],
     visited: [],
     carvings: [],
+    noticed: [],
     position: { x: -10, z: 71 },
     elapsed: 0,
     won: false,
@@ -290,6 +293,15 @@ export function parseSave(raw: string | null): SaveData | null {
       visited: [...new Set<string>(visited)],
       // Saves from before the alcoves have read no carvings.
       carvings: [...new Set<string>(sanctuaries(s.carvings))],
+      // Saves from before the map remembered finds: what was opened or caught.
+      noticed: [
+        ...new Set<string>(
+          (Array.isArray(s.noticed)
+            ? s.noticed
+            : [...s.chests, ...s.fireflies]
+          ).filter((id: unknown) => FINDS.some((f) => f.id === id)),
+        ),
+      ],
       maxHealth,
       health: Math.min(s.health, maxHealth),
       sword: Math.min(3, Math.max(1, s.sword)),
@@ -442,3 +454,53 @@ export const FIREFLIES = [
   { id: "woods", x: -43, z: 22 },
   { id: "shore", x: 55, z: 44 },
 ];
+/** Treasure chests in the overworld. */
+export const CHESTS = [
+  { id: "field-0", x: -30, z: 49 },
+  { id: "field-1", x: 31, z: 13 },
+  { id: "field-2", x: -34, z: -42 },
+  { id: "field-3", x: 45, z: -70 },
+  { id: "field-4", x: 92, z: 31.2 },
+  { id: "field-5", x: -103, z: -23 },
+];
+/** Everything the kingdom map can remember finding. */
+export const FINDS = [
+  ...CHESTS.map((c) => ({ ...c, kind: "chest" as const })),
+  ...FIREFLIES.map((f) => ({ ...f, kind: "light" as const })),
+];
+/** Coming this close to a chest or a wandering light puts it on the map. */
+export const NOTICE_RADIUS = 16;
+/** Finds near (x, z) that the save hasn't noticed yet. */
+export function noticeNearby(
+  s: SaveData,
+  x: number,
+  z: number,
+  radius = NOTICE_RADIUS,
+) {
+  return FINDS.filter(
+    (f) => !s.noticed.includes(f.id) && Math.hypot(f.x - x, f.z - z) <= radius,
+  ).map((f) => f.id);
+}
+export interface Discovery {
+  kind: "chest" | "light";
+  id: string;
+  x: number;
+  z: number;
+  /** Opened or caught; otherwise only noticed. */
+  found: boolean;
+}
+/** What the map shows: finds you've noticed, and whether you took them. */
+export function discoveries(s: SaveData): Discovery[] {
+  return FINDS.filter(
+    (f) =>
+      s.noticed.includes(f.id) ||
+      s.chests.includes(f.id) ||
+      s.fireflies.includes(f.id),
+  ).map((f) => ({
+    kind: f.kind,
+    id: f.id,
+    x: f.x,
+    z: f.z,
+    found: (f.kind === "chest" ? s.chests : s.fireflies).includes(f.id),
+  }));
+}

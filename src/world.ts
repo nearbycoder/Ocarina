@@ -19,7 +19,9 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { Collider } from "./physics";
 export type { Collider } from "./physics";
 import {
+  CHESTS,
   DUNGEONS,
+  FINDS,
   FIREFLIES,
   type Dungeon,
   type SaveData,
@@ -458,17 +460,8 @@ export function buildOverworld(s: SaveData): World {
   for (let i = 0; i < 9; i++)
     mesh(box(2, 0.18, 3.3), "#9c8a64", 95 + i * 2.1, 0.55, 56, group);
   for (const d of DUNGEONS) portal(w, d, s);
-  const chestLocations = [
-    [-30, 49],
-    [31, 13],
-    [-34, -42],
-    [45, -70],
-    [92, 30],
-    [-103, -23],
-  ];
-  chestLocations.forEach(([x, z], i) => {
-    const id = `field-${i}`;
-    if (s.chests.includes(id)) return;
+  for (const { id, x, z } of CHESTS) {
+    if (s.chests.includes(id)) continue;
     const chest = asset("Chest");
     chest.position.set(x, heightAt(x, z), z);
     group.add(chest);
@@ -481,7 +474,7 @@ export function buildOverworld(s: SaveData): World {
       label: "Chest",
     });
     interact(w, id, "chest", x, z, "Open weathered chest", chest);
-  });
+  }
   for (const f of FIREFLIES) {
     if (s.fireflies.includes(f.id)) continue;
     const g = new T.Group();
@@ -1009,10 +1002,14 @@ function addRockInstances(w: World, r: () => number) {
       Math.hypot(x, z) < 16
     )
       continue;
-    const key = `${Math.floor(x / 48)},${Math.floor(z / 48)}`;
-    if (!cells.has(key)) cells.set(key, []);
     const scale = 0.5 + r() * 1.6,
       angle = r() * 6.28;
+    // Keep chests and wandering lights clear: a rock once swallowed a chest.
+    // Drawn after the random numbers, so every other rock stays where it was.
+    if (FINDS.some((f) => Math.hypot(x - f.x, z - f.z) < 3 + 1.4 * scale))
+      continue;
+    const key = `${Math.floor(x / 48)},${Math.floor(z / 48)}`;
+    if (!cells.has(key)) cells.set(key, []);
     cells.get(key)!.push({ x, z, scale, angle });
     w.colliders.push({
       x,

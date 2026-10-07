@@ -829,11 +829,48 @@ blockquote {
 }
 .map-legend {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 26px;
+  gap: 8px 22px;
   margin-top: 20px;
   color: #c4c9b0;
   font-size: 9px;
+}
+/* Finds the map remembers: chests (squares) and wandering lights (circles),
+   filled once opened or caught, hollow while only seen. */
+.map-find,
+.legend-find {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #ecd59c;
+  background: #1e3731aa;
+}
+.map-find {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+.legend-find {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 4px;
+}
+.map-find.light,
+.legend-find.light {
+  border-color: #f6df8a;
+  border-radius: 50%;
+}
+.map-find.found,
+.legend-find.found {
+  background: #ecd59c;
+}
+.map-find.light.found,
+.legend-find.light.found {
+  background: #f6df8a;
+}
+.map-carving {
+  font-style: normal;
+  color: #ecd59c;
 }
 .legend-you {
   display: inline-block;
