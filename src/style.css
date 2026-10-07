@@ -1048,6 +1048,16 @@ blockquote {
   letter-spacing: 2px;
   color: #caba8b;
 }
+/* Touch control size (Settings → Touch): standard, large, and largest. */
+body {
+  --ts: 1;
+}
+body[data-touch-size="1"] {
+  --ts: 1.15;
+}
+body[data-touch-size="2"] {
+  --ts: 1.3;
+}
 #touch {
   display: none;
   position: absolute;
@@ -1062,10 +1072,22 @@ blockquote {
 .touch-actions {
   pointer-events: auto;
 }
+body:not([data-touch-size="0"]) #touch {
+  left: 14px;
+  right: 14px;
+}
+/* Left-handed: the thumbstick on the right, the buttons (Sword nearest the
+   thumb) on the left. */
+body.touch-left #touch {
+  flex-direction: row-reverse;
+}
+body.touch-left .touch-actions {
+  direction: rtl;
+}
 .touch-stick {
   position: relative;
-  width: 132px;
-  height: 132px;
+  width: calc(132px * var(--ts));
+  height: calc(132px * var(--ts));
   border-radius: 50%;
   border: 1px solid #e7d59e55;
   background: radial-gradient(circle, #203e3350 0 45%, #203e3388 100%);
@@ -1075,22 +1097,22 @@ blockquote {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 54px;
-  height: 54px;
-  margin: -27px 0 0 -27px;
+  width: calc(54px * var(--ts));
+  height: calc(54px * var(--ts));
+  margin: calc(-27px * var(--ts)) 0 0 calc(-27px * var(--ts));
   border-radius: 50%;
   background: #e9d6a5cc;
   box-shadow: 0 3px 12px #0e231b66;
 }
 .touch-actions {
   display: grid;
-  grid-template-columns: repeat(2, 64px);
+  grid-template-columns: repeat(2, calc(64px * var(--ts)));
   gap: 8px;
   touch-action: none;
 }
 #touch .touch-actions button {
-  height: 46px;
-  font-size: 11px;
+  height: calc(46px * var(--ts));
+  font-size: calc(11px * var(--ts));
   background: #203e3388;
   border: 1px solid #e7d59e55;
   border-radius: 10px;
@@ -1122,8 +1144,12 @@ body[data-device="gamepad"] #panel button:focus {
   .controls {
     display: none;
   }
+  /* The minimap clears whichever touch control sits below it. */
   .bottom-left {
-    bottom: 186px;
+    bottom: calc(54px + 132px * var(--ts));
+  }
+  body.touch-left .bottom-left {
+    bottom: calc(58px + 138px * var(--ts));
   }
   .quest {
     max-width: 220px;
@@ -1551,6 +1577,14 @@ body[data-device="gamepad"] #panel button:focus {
   .bind-grid {
     grid-template-columns: 1fr;
   }
+  /* Phones held upright: the region and compass sit below the vitals, and
+     the objective below them, so long names never run into each other. */
+  .location {
+    top: 84px;
+  }
+  .quest {
+    top: 146px;
+  }
 }
 /* Comfort: reduced motion removes interface movement. */
 body.reduced-motion *,
@@ -1586,8 +1620,9 @@ body.large-text .sheet {
 }
 @media (pointer: coarse) and (max-height: 500px) {
   /* Phone landscape: a compact minimap between the vitals and the stick. */
-  .bottom-left {
-    bottom: 172px;
+  .bottom-left,
+  body.touch-left .bottom-left {
+    bottom: calc(56px + 116px * var(--ts));
   }
   #minimap {
     width: 76px;
@@ -1596,15 +1631,19 @@ body.large-text .sheet {
   .map-label {
     display: none;
   }
+  /* Larger controls sit lower, clear of the objective panel. */
+  body:not([data-touch-size="0"]) #touch {
+    bottom: 16px;
+  }
   .touch-stick {
-    width: 116px;
-    height: 116px;
+    width: calc(116px * var(--ts));
+    height: calc(116px * var(--ts));
   }
   .touch-actions {
-    grid-template-columns: repeat(3, 62px);
+    grid-template-columns: repeat(3, calc(62px * var(--ts)));
   }
   #touch .touch-actions button {
-    height: 42px;
+    height: calc(42px * var(--ts));
   }
   .vitals {
     top: 14px;

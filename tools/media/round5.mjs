@@ -14,8 +14,15 @@ const browser = await chromium.launch({
   headless: true,
   args: ["--use-angle=vulkan", "--enable-features=Vulkan", "--enable-gpu"],
 });
+// Phone pages emulate touch, so the touch controls show as on a phone.
+const PHONE = { width: 390, height: 844 };
+const PHONE_WIDE = { width: 844, height: 390 };
 async function open(viewport = { width: 1280, height: 800 }) {
-  const page = await browser.newPage({ viewport });
+  const phone = viewport.width !== 1280;
+  const page = await browser.newPage({
+    viewport,
+    ...(phone ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}),
+  });
   await page.goto(new URL("?review=polish", BASE).href);
   await page.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
     timeout: 60000,
@@ -27,6 +34,10 @@ async function open(viewport = { width: 1280, height: 800 }) {
     await bellQA.start();
     bellQA.close();
   });
+  if (phone)
+    await page.evaluate(() =>
+      window.__BELL_OF_AGES__.debug.game().setDevice("touch"),
+    );
   return page;
 }
 // The renderer draws on animation frames; let a few pass before capturing.
@@ -134,13 +145,60 @@ const SHOTS = {
     });
     await shoot(page, "b-camera-far");
   },
+  // Left-handed, largest buttons, on a phone held upright and sideways.
+  "c-touch-left-portrait": async (page) => {
+    await meadow(page, -20, 40, 0.35);
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.touchLeft = true;
+      game.settings.touchSize = 2;
+      game.applySettings();
+    });
+    await shoot(page, "c-touch-left-portrait");
+  },
+  "c-touch-left-landscape": async (page) => {
+    await meadow(page, -20, 40, 0.35);
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.touchLeft = true;
+      game.settings.touchSize = 2;
+      game.applySettings();
+    });
+    await shoot(page, "c-touch-left-landscape");
+  },
+  // The standard layout upright: region and compass now sit below the vitals.
+  "c-touch-standard-portrait": async (page) => {
+    await meadow(page, -20, 40, 0.35);
+    await shoot(page, "c-touch-standard-portrait");
+  },
+  // Settings → Touch on a phone.
+  "c-settings-touch": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.action("pause");
+      api.debug.action("settings");
+      api.debug.action("toggle-touchLeft");
+      api.debug.action("set-touchSize-up");
+      document
+        .querySelector('[data-action="toggle-touchLeft"]')
+        .closest("section")
+        .scrollIntoView({ block: "center" });
+    });
+    await shoot(page, "c-settings-touch");
+  },
+};
+const VIEWPORTS = {
+  "c-touch-left-portrait": PHONE,
+  "c-touch-standard-portrait": PHONE,
+  "c-settings-touch": PHONE,
+  "c-touch-left-landscape": PHONE_WIDE,
 };
 
 const names = process.argv.slice(2).length
   ? process.argv.slice(2)
   : Object.keys(SHOTS);
 for (const name of names) {
-  const page = await open();
+  const page = await open(VIEWPORTS[name]);
   try {
     await SHOTS[name](page);
   } finally {

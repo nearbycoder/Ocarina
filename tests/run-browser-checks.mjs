@@ -348,6 +348,65 @@ await run("journey files", async () => {
   return results.length;
 });
 
+// HUD pieces and touch controls that must never overlap on a phone.
+const hudOverlaps = (p) =>
+  p.evaluate(() => {
+    const pieces = {
+      vitals: ".vitals",
+      location: ".location",
+      compass: "#compass",
+      menu: ".menu-button",
+      quest: ".quest",
+      minimap: "#minimap",
+      stick: "#touch-stick",
+      actions: ".touch-actions",
+    };
+    // The longest names the HUD can show: the adult eyebrow, the longest
+    // region, and a compass naming a sanctuary far away.
+    const game = window.__BELL_OF_AGES__.debug.game();
+    const age = game.save.age;
+    game.save.age = "adult";
+    game.ui.hud(game.save, "The Sunken Observatory");
+    document.getElementById("compass-text").textContent =
+      "The Rootbound Hollow · 188 paces";
+    document.getElementById("compass-arrow").hidden = false;
+    const rects = Object.entries(pieces).map(([name, sel]) => [
+      name,
+      document.querySelector(sel).getBoundingClientRect(),
+    ]);
+    game.save.age = age;
+    game.refreshHUD();
+    const hit = [];
+    for (const [name, r] of rects)
+      if (r.left < 0 || r.right > innerWidth || r.bottom > innerHeight)
+        hit.push(`${name}/screen edge`);
+    for (let i = 0; i < rects.length; i++)
+      for (let j = i + 1; j < rects.length; j++) {
+        const [a, r] = rects[i],
+          [b, s] = rects[j];
+        if (
+          r.left < s.right &&
+          s.left < r.right &&
+          r.top < s.bottom &&
+          s.top < r.bottom
+        )
+          hit.push(`${a}/${b}`);
+      }
+    return hit;
+  });
+// Every touch layout: right- and left-handed, in all three sizes.
+const LAYOUTS = [false, true].flatMap((left) =>
+  [0, 1, 2].map((size) => ({ left, size })),
+);
+const setLayout = (p, layout) =>
+  p.evaluate(({ left, size }) => {
+    const game = window.__BELL_OF_AGES__.debug.game();
+    game.settings.touchLeft = left;
+    game.settings.touchSize = size;
+    game.applySettings();
+    window.__BELL_OF_AGES__.debug.advance(0.05);
+  }, layout);
+
 // Touch: a phone in portrait, driven only by taps, drags, and holds.
 const touchResults = [];
 const check = (ok, message) => {
@@ -575,6 +634,91 @@ await run("touch: pinch and recentre", async () => {
   return results.length;
 });
 
+// Settings → Touch: a left-handed layout and larger buttons, chosen with taps.
+await run("touch: layouts", async () => {
+  const results = [];
+  const ok = (pass, message) => {
+    if (!pass) throw new Error(message);
+    results.push(message);
+  };
+  await phone.evaluate(() => {
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    game.ui.setPanel(null);
+    game.loadWorld();
+    api.debug.teleport(-8, 66);
+    game.yaw = 0;
+    game.snapCamera();
+    api.debug.advance(0.05);
+  });
+  const stickBefore = await center("#touch-stick");
+  await tap('[data-action="pause"]');
+  await tap('[data-action="settings"]');
+  // The rows are far down the sheet: scroll each into view, then tap it.
+  for (const row of [
+    "toggle-touchLeft",
+    "set-touchSize-up",
+    "set-touchSize-up",
+  ]) {
+    await phone.locator(`[data-action="${row}"]`).scrollIntoViewIfNeeded();
+    await tap(`[data-action="${row}"]`);
+  }
+  ok(
+    (await phone.textContent('[data-action="toggle-touchLeft"] b')) === "ON" &&
+      (await phone.evaluate(
+        () =>
+          document
+            .querySelector('[data-action="set-touchSize-up"]')
+            .parentElement.querySelector("output").textContent,
+      )) === "Largest",
+    "Taps turn on the left-handed layout and the largest buttons",
+  );
+  ok(
+    await phone.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem("bell-of-ages-settings-v1"));
+      return s.touchLeft === true && s.touchSize === 2;
+    }),
+    "Both are remembered with the settings",
+  );
+  await tap('.settings-sheet .close[data-action="pause"]');
+  await tap('.pause-sheet [data-action="close"]');
+  const stick = await center("#touch-stick");
+  const actions = await center(".touch-actions");
+  const sword = await center('#touch [data-action="attack"]');
+  ok(
+    stick.x > actions.x && stick.x > stickBefore.x,
+    `The thumbstick moves to the right, the buttons to the left (${stickBefore.x.toFixed(0)} → ${stick.x.toFixed(0)} px)`,
+  );
+  ok(
+    Math.abs(stick.box.width - stickBefore.box.width * 1.3) < 1,
+    `Largest makes it 30% bigger (${stickBefore.box.width} → ${stick.box.width} px)`,
+  );
+  ok(
+    sword.x < actions.x,
+    "Sword sits on the thumb's side of the mirrored buttons",
+  );
+  await touch("touchStart", stick.x, stick.y);
+  await touch("touchMove", stick.x, stick.box.y + 4);
+  const z = (await state()).position.z;
+  await phone.evaluate(() => window.__BELL_OF_AGES__.debug.advance(0.5));
+  await touch("touchEnd");
+  const walked = z - (await state()).position.z;
+  ok(walked > 2, `The mirrored thumbstick walks (${walked.toFixed(2)} m)`);
+  await tap('#touch [data-action="attack"]');
+  ok((await state()).combat.elapsed >= 0, "The mirrored Sword button swings");
+  await phone.evaluate(() => window.__BELL_OF_AGES__.debug.advance(1));
+  for (const layout of LAYOUTS) {
+    await setLayout(phone, layout);
+    const hit = await hudOverlaps(phone);
+    ok(
+      !hit.length,
+      `Portrait, ${layout.left ? "left" : "right"}-handed, size ${layout.size}: ${hit.join(", ") || "no overlaps"}`,
+    );
+  }
+  await setLayout(phone, { left: false, size: 0 });
+  return results.length;
+});
+
 // Phone landscape: HUD pieces and touch controls must not overlap.
 const wide = await open({
   viewport: { width: 844, height: 390 },
@@ -588,37 +732,16 @@ await run("touch: phone landscape layout", async () => {
     bellQA.close();
     window.__BELL_OF_AGES__.debug.advance(0.2);
   });
-  const overlaps = await wide.evaluate(() => {
-    const pieces = {
-      vitals: ".vitals",
-      location: ".location",
-      menu: ".menu-button",
-      quest: ".quest",
-      minimap: "#minimap",
-      stick: "#touch-stick",
-      actions: ".touch-actions",
-    };
-    const rects = Object.entries(pieces).map(([name, sel]) => [
-      name,
-      document.querySelector(sel).getBoundingClientRect(),
-    ]);
-    const hit = [];
-    for (let i = 0; i < rects.length; i++)
-      for (let j = i + 1; j < rects.length; j++) {
-        const [a, r] = rects[i],
-          [b, s] = rects[j];
-        if (
-          r.left < s.right &&
-          s.left < r.right &&
-          r.top < s.bottom &&
-          s.top < r.bottom
-        )
-          hit.push(`${a}/${b}`);
-      }
-    return hit;
-  });
-  if (overlaps.length) throw new Error(`Overlapping: ${overlaps.join(", ")}`);
-  return 1;
+  // Every touch layout, starting with the standard one.
+  for (const layout of LAYOUTS) {
+    await setLayout(wide, layout);
+    const overlaps = await hudOverlaps(wide);
+    if (overlaps.length)
+      throw new Error(
+        `${layout.left ? "Left" : "Right"}-handed, size ${layout.size}: ${overlaps.join(", ")}`,
+      );
+  }
+  return LAYOUTS.length;
 });
 
 await browser.close();

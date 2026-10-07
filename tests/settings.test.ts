@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   CAMERA_DISTANCE,
+  TOUCH_SIZES,
   busGain,
   cameraDistance,
   defaultSettings,
@@ -68,5 +69,17 @@ describe("player settings", () => {
     let d = CAMERA_DISTANCE.min;
     for (let i = 0; i < 10; i++) d = cameraDistance(d + CAMERA_DISTANCE.step);
     expect(d).toBe(CAMERA_DISTANCE.max);
+  });
+  it("gives older settings the standard right-handed touch layout", () => {
+    const old = parseSettings('{"master":80}');
+    expect(old.touchLeft).toBe(false);
+    expect(old.touchSize).toBe(0);
+    const s = parseSettings('{"touchLeft":true,"touchSize":2}');
+    expect(s.touchLeft).toBe(true);
+    expect(TOUCH_SIZES[s.touchSize]).toBe("Largest");
+    for (const bad of ['"2"', "7", "-1", "1.5", "null"])
+      expect([0, 2]).toContain(parseSettings(`{"touchSize":${bad}}`).touchSize);
+    expect(parseSettings('{"touchSize":7}').touchSize).toBe(2);
+    expect(parseSettings('{"touchSize":1.5}').touchSize).toBe(0);
   });
 });

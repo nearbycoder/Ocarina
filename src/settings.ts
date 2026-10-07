@@ -29,6 +29,10 @@ export interface Settings {
   threatArrows: boolean;
   /** One press raises the shield and the next lowers it, on every device. */
   toggleShield: boolean;
+  /** Touch: thumbstick on the right and buttons on the left. */
+  touchLeft: boolean;
+  /** Touch control size: 0 standard, 1 large, 2 largest. */
+  touchSize: number;
   /** Keyboard bindings. Older stored settings get the default keys. */
   keys: KeyBindings;
   /** Gamepad buttons. Older stored settings get the standard layout. */
@@ -54,6 +58,8 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     largeText: false,
     threatArrows: true,
     toggleShield: false,
+    touchLeft: false,
+    touchSize: 0,
     keys: { ...DEFAULT_KEYS },
     pad: { ...DEFAULT_PAD },
   };
@@ -74,6 +80,12 @@ export function sensitivity(n: unknown, fallback = 1) {
 export function cameraDistance(n: unknown, fallback = CAMERA_DISTANCE.normal) {
   return typeof n === "number" && Number.isFinite(n)
     ? clamp(Math.round(n * 100) / 100, CAMERA_DISTANCE.min, CAMERA_DISTANCE.max)
+    : fallback;
+}
+export const TOUCH_SIZES = ["Standard", "Large", "Largest"];
+export function touchSize(n: unknown, fallback = 0) {
+  return typeof n === "number" && Number.isInteger(n)
+    ? clamp(n, 0, TOUCH_SIZES.length - 1)
     : fallback;
 }
 export function parseSettings(
@@ -104,6 +116,8 @@ export function parseSettings(
     largeText: flag("largeText"),
     threatArrows: flag("threatArrows"),
     toggleShield: flag("toggleShield"),
+    touchLeft: flag("touchLeft"),
+    touchSize: touchSize(s.touchSize),
     keys: parseBindings(s.keys),
     pad: parsePadBindings(s.pad),
   };

@@ -91,6 +91,7 @@ import {
   SENSITIVITY_STEP,
   CAMERA_DISTANCE,
   cameraDistance,
+  touchSize,
   VOLUME_STEP,
   parseSettings,
   sensitivity,
@@ -428,6 +429,8 @@ export class Game {
       this.settings.reducedMotion,
     );
     document.body.classList.toggle("large-text", this.settings.largeText);
+    document.body.classList.toggle("touch-left", this.settings.touchLeft);
+    document.body.dataset.touchSize = String(this.settings.touchSize);
     if (!store) return;
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings));
@@ -491,12 +494,14 @@ export class Game {
         key === "reducedMotion" ||
         key === "largeText" ||
         key === "threatArrows" ||
-        key === "toggleShield"
+        key === "toggleShield" ||
+        key === "touchLeft"
       )
         s[key] = !s[key];
       this.raiseShield(false);
     } else if (key === "sensitivity")
       s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
+    else if (key === "touchSize") s.touchSize = touchSize(s.touchSize + sign);
     else if (key === "distance")
       s.cameraDistance = cameraDistance(
         s.cameraDistance + sign * CAMERA_DISTANCE.step,
