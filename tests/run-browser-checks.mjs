@@ -958,6 +958,125 @@ await run("touch: phone landscape layout", async () => {
   return LAYOUTS.length;
 });
 
+// Saving when a phone puts the game away. A fresh, throwaway browser context
+// on the normal URL (not a review page), so the game really saves; nothing
+// touches a real profile. Headless pages can't be hidden for real, so the
+// hide check sets document.hidden and sends the browser's visibilitychange
+// event. Closing the page without beforeunload is real: Chromium reports the
+// page hidden as it unloads, then sends pagehide (the fallback for browsers
+// that don't, such as older Safari). The old code lost this progress.
+await run("saves: put away", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const SAVE = "bell-of-ages-save-v1";
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
+  try {
+    const first = await ctx.newPage();
+    first.on("pageerror", (e) => errors.push(e.message));
+    await first.goto(BASE);
+    await first.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+    check(
+      (await first.evaluate((k) => localStorage.getItem(k), SAVE)) === null,
+      "The throwaway profile starts with no save",
+    );
+    await first.click('[data-action="new"]');
+    // Progress made since the last save: moved, and a few crystals.
+    const progress = (x, z, crystals) =>
+      first.evaluate(
+        ([x, z, crystals]) => {
+          window.BELL_TEST_MANUAL = true;
+          const api = window.__BELL_OF_AGES__,
+            game = api.debug.game();
+          game.save.story.pending = null;
+          game.save.story.prologue = Math.max(1, game.save.story.prologue);
+          game.ui.setPanel(null);
+          game.save.crystals = crystals;
+          api.debug.teleport(x, z);
+          // Hold the real-time loop, so Alder stays where he was put.
+          api.debug.advance(0);
+        },
+        [x, z, crystals],
+      );
+    const stored = (page) =>
+      page.evaluate((k) => JSON.parse(localStorage.getItem(k)), SAVE);
+    await progress(14, 44, 7);
+    let save = await stored(first);
+    check(
+      save.crystals !== 7,
+      "The new progress isn't saved yet (no autosave has run)",
+    );
+    await first.evaluate(() => {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => true,
+      });
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    save = await stored(first);
+    check(
+      save.crystals === 7 &&
+        Math.hypot(save.position.x - 14, save.position.z - 44) < 0.5,
+      `Hiding the page saves at once (${save.crystals} crystals at ${save.position.x.toFixed(1)}, ${save.position.z.toFixed(1)})`,
+    );
+    check(
+      (await first.evaluate(() => window.__BELL_OF_AGES__.getState().panel)) ===
+        "pause",
+      "Hiding the page still pauses",
+    );
+    await first.evaluate(() => {
+      delete document.hidden;
+      delete document.visibilityState;
+      window.__BELL_OF_AGES__.debug.action("close");
+    });
+    await progress(20, 30, 9);
+    await first.close({ runBeforeUnload: false });
+    const second = await ctx.newPage();
+    await second.goto(BASE);
+    save = await stored(second);
+    check(
+      save.crystals === 9 &&
+        Math.hypot(save.position.x - 20, save.position.z - 30) < 0.5,
+      "Closing the page without beforeunload still saves (pagehide)",
+    );
+    await second.close();
+  } finally {
+    await ctx.close();
+  }
+  // A review page still never writes a save, hidden or closed.
+  const review = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    await review.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    check(
+      (await review.evaluate((k) => localStorage.getItem(k), SAVE)) === null,
+      "A review page still writes no save when hidden",
+    );
+  } finally {
+    await review.close();
+  }
+  return count;
+});
+
 // Full screen from the title and the pause menu, with real taps on a phone
 // held sideways; a browser without full screen shows no button.
 await run("full screen", async () => {

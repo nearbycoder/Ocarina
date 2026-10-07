@@ -403,19 +403,21 @@ export class Game {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(innerWidth, innerHeight);
     });
+    // Phones rarely fire `beforeunload` when you switch apps, and may later
+    // discard the hidden tab, so save the moment the page is put away.
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this.started && !this.ui.panel)
-        this.action("pause");
+      if (!document.hidden || !this.started) return;
+      this.persist(false);
+      if (!this.ui.panel) this.action("pause");
     });
+    window.addEventListener("pagehide", () => this.persist(false));
     // Full screen can also end with the browser's own Escape or gesture.
     document.addEventListener("fullscreenchange", () => {
       if (this.ui.panel === "title") this.ui.title(!!this.readSave());
       else if (this.ui.panel === "pause")
         this.ui.pause(this.save, this.settings.muted, this.quality.label);
     });
-    window.addEventListener("beforeunload", () => {
-      if (this.started) this.persist(false);
-    });
+    window.addEventListener("beforeunload", () => this.persist(false));
     this.expose();
     requestAnimationFrame((t) => this.frame(t));
   }
