@@ -2406,6 +2406,112 @@ await run("title: fits with a journey", async () => {
   return count;
 });
 
+// Every pause-menu choice is in view on laptop screens; on a phone held
+// sideways the sheet scrolls, and moving the focus brings a row into view.
+await run("pause: fits", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const p = await open({ viewport: { width: 1280, height: 800 } });
+  // Choices outside the sheet's visible box, or labels cut short.
+  const hidden = () =>
+    p.evaluate(() => {
+      const sheet = document.querySelector("#panel .sheet");
+      const box = sheet.getBoundingClientRect();
+      return [...sheet.querySelectorAll("button[data-action]")].flatMap((b) => {
+        const r = b.getBoundingClientRect();
+        const name = b.dataset.action;
+        if (r.top < box.top || r.bottom > Math.min(box.bottom, innerHeight))
+          return [`${name} is out of view`];
+        if (b.scrollWidth > b.clientWidth + 1) return [`${name} is cut short`];
+        return [];
+      });
+    });
+  const panel = () =>
+    p.evaluate(() => window.__BELL_OF_AGES__.debug.game().ui.panel);
+  try {
+    await p.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    await p.evaluate(() => (window.BELL_TEST_MANUAL = false));
+    // The order ↓ walks is today's order.
+    await p.keyboard.press("Escape");
+    const order = [];
+    for (let i = 0; i < 12; i++) {
+      await p.keyboard.press("ArrowDown");
+      order.push(
+        await p.evaluate(() => document.activeElement?.dataset.action),
+      );
+    }
+    check(
+      order.join() ===
+        "close,journal,map,save,export,import,quality,sound,fullscreen,settings,checkpoint,home",
+      `↓ walks the choices in the same order (${order.join(", ")})`,
+    );
+    await p.keyboard.press("Escape");
+    for (const [width, height, large] of [
+      [1280, 720],
+      [1366, 768],
+      [1024, 768],
+      [1280, 800],
+      [1440, 900],
+      [1920, 1080],
+      [1366, 768, true],
+      [1024, 768, true],
+      [1280, 800, true],
+      [1440, 900, true],
+      [1920, 1080, true],
+    ]) {
+      await p.setViewportSize({ width, height });
+      await p.evaluate((large) => {
+        const game = window.__BELL_OF_AGES__.debug.game();
+        game.settings.largeText = !!large;
+        game.applySettings();
+      }, large);
+      await p.keyboard.press("Escape");
+      const out = (await panel()) === "pause" ? await hidden() : ["no menu"];
+      check(
+        !out.length,
+        `${width}×${height}${large ? ", larger text" : ""}: ${out.join(", ") || "every choice in view"}`,
+      );
+      await p.keyboard.press("Escape");
+    }
+    await p.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.largeText = false;
+      game.applySettings();
+    });
+    // A phone held sideways: the sheet scrolls to the focused row.
+    await p.setViewportSize({ width: 844, height: 390 });
+    await p.keyboard.press("Escape");
+    await p.keyboard.press("ArrowUp");
+    const last = await p.evaluate(() => {
+      const b = document.activeElement;
+      const r = b.getBoundingClientRect();
+      const box = document
+        .querySelector("#panel .sheet")
+        .getBoundingClientRect();
+      return {
+        action: b.dataset.action,
+        inView:
+          r.top >= box.top && r.bottom <= Math.min(box.bottom, innerHeight),
+      };
+    });
+    check(
+      last.action === "home" && last.inView,
+      "844×390: ↑ focuses Save & return to title and scrolls it into view",
+    );
+    await p.keyboard.press("Escape");
+  } finally {
+    await p.close();
+  }
+  return count;
+});
+
 await browser.close();
 if (errors.length) {
   failures++;
