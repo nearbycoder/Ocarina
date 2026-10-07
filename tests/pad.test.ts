@@ -12,7 +12,11 @@ import {
   padLabels,
   padPressed,
   padShield,
+  noteGlyphs,
+  padStyle,
+  padStyleFor,
   parsePadBindings,
+  parsePadStyle,
   rumbleFor,
 } from "../src/input";
 import { defaultSettings, parseSettings } from "../src/settings";
@@ -113,6 +117,102 @@ describe("gamepad bindings", () => {
     expect(stored.toggleShield).toBe(true);
     expect(stored.pad.attack).toBe(PAD.Y);
     expect(defaultSettings().pad).toEqual(DEFAULT_PAD);
+  });
+});
+
+describe("controller families", () => {
+  it("tells PlayStation, Nintendo, and other pads apart by their names", () => {
+    // As Chrome and Firefox report them.
+    for (const id of [
+      "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)",
+      "054c-09cc-Wireless Controller",
+      "Sony Interactive Entertainment Wireless Controller",
+      "PS4 DualShock 4",
+    ])
+      expect(padStyleFor(id)).toBe("playstation");
+    for (const id of [
+      "Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)",
+      "057e-2009-Pro Controller",
+      "Nintendo Switch Joy-Con (L/R)",
+    ])
+      expect(padStyleFor(id)).toBe("nintendo");
+    for (const id of [
+      "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)",
+      "8BitDo Ultimate",
+      "",
+      undefined,
+    ])
+      expect(padStyleFor(id)).toBe("xbox");
+  });
+  it("names buttons by position in each family", () => {
+    expect([0, 1, 2, 3].map((b) => padLabel(b, "playstation"))).toEqual([
+      "✕",
+      "◯",
+      "□",
+      "△",
+    ]);
+    expect([0, 1, 2, 3].map((b) => padLabel(b, "nintendo"))).toEqual([
+      "B",
+      "A",
+      "Y",
+      "X",
+    ]);
+    expect(padLabel(PAD.RB, "playstation")).toBe("R1");
+    expect(padLabel(PAD.Start, "playstation")).toBe("Options");
+    expect(padLabel(PAD.Back, "nintendo")).toBe("−");
+    expect(padLabel(PAD.LT, "nintendo")).toBe("ZL");
+    expect(padLabel(PAD.Up, "playstation")).toBe("D-pad up");
+    // The Xbox names are today's.
+    expect(padLabel(PAD.A)).toBe("A");
+    expect(padLabel(PAD.Start, "xbox")).toBe("Start");
+  });
+  it("puts the family's names in every hint, the fixed buttons too", () => {
+    const ps = padLabels(DEFAULT_PAD, "playstation");
+    expect(ps).toMatchObject({
+      attack: "□",
+      interact: "✕",
+      dodge: "◯",
+      shield: "R1",
+      target: "L1",
+      flute: "△",
+      map: "Create",
+      confirm: "✕",
+      back: "◯",
+      pause: "Options",
+    });
+    expect(noteGlyphs("gamepad", ps)).toEqual(["✕", "□", "△"]);
+    expect(noteGlyphs("gamepad")).toEqual(["A", "X", "Y"]);
+    expect(controlText("{Sword}.", "gamepad", { pad: ps })).toBe("Press □.");
+    const nin = padLabels(DEFAULT_PAD, "nintendo");
+    expect(controlText("{Use} · {sword}", "gamepad", { pad: nin })).toBe(
+      "B · press Y",
+    );
+    // A remapped sword keeps the family's name for its new button.
+    const moved = padLabels(bindPad(DEFAULT_PAD, "attack", PAD.Y)!.pad, "playstation");
+    expect(moved.attack).toBe("△");
+    // The map follows the device: no keyboard key for pads or touch.
+    expect(controlText("{Map} opens your map.", "gamepad", { pad: ps })).toBe(
+      "Create opens your map.",
+    );
+    expect(controlText("{Map} opens your map.", "keyboard")).toBe(
+      "M opens your map.",
+    );
+    expect(controlText("{Map} opens your map.", "touch")).toBe(
+      "The Kingdom button opens your map.",
+    );
+  });
+  it("stores the Button names setting; Automatic follows the pad", () => {
+    expect(parseSettings(JSON.stringify({ master: 60 })).padStyle).toBe("auto");
+    expect(defaultSettings().padStyle).toBe("auto");
+    expect(
+      parseSettings(JSON.stringify({ padStyle: "nintendo" })).padStyle,
+    ).toBe("nintendo");
+    expect(parsePadStyle("sega")).toBe("auto");
+    expect(parsePadStyle(3)).toBe("auto");
+    const dualsense = "DualSense (Vendor: 054c Product: 0ce6)";
+    expect(padStyle("auto", dualsense)).toBe("playstation");
+    expect(padStyle("xbox", dualsense)).toBe("xbox");
+    expect(padStyle("nintendo", "")).toBe("nintendo");
   });
 });
 

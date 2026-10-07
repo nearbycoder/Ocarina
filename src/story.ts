@@ -109,7 +109,7 @@ export const SCENES: Record<string, StoryScene> = {
       ),
       page(
         "ROWAN",
-        "Start with the Rootbound Hollow, west along the pale road. The other two can wait until you’re ready; you may seek them in any order. M opens your map. Your journal will keep what you learn.",
+        "Start with the Rootbound Hollow, west along the pale road. The other two can wait until you’re ready; you may seek them in any order. {Map} opens your map. Your journal will keep what you learn.",
       ),
     ],
   },

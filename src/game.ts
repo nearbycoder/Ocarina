@@ -81,6 +81,9 @@ import {
   padActions,
   padLabel,
   padLabels,
+  padStyle,
+  PAD_STYLE_CHOICES,
+  type PadStyle,
   padPressed,
   padShield,
   shapeStick,
@@ -239,6 +242,8 @@ export class Game {
   destination: Destination | null = null;
   compassAngle = NaN;
   pitch = 0.26;
+  /** The `Gamepad.id` of the pad used last, which names its buttons. */
+  padId = "";
   /** The gamepad read this frame, for rumble and disconnects. */
   activePad: Gamepad | null = null;
   private rumbling: Rumble | null = null;
@@ -482,8 +487,9 @@ export class Game {
     this.distance = this.settings.cameraDistance;
     this.ui.setKeys(
       keyLabels(this.settings.keys, this.keyLayout),
-      padLabels(this.settings.pad),
+      padLabels(this.settings.pad, this.padStyle()),
       this.settings.toggleShield,
+      this.padStyle(),
     );
     document.body.classList.toggle(
       "reduced-motion",
@@ -498,6 +504,10 @@ export class Game {
     } catch {
       // Settings still apply for this session.
     }
+  }
+  /** How to name gamepad buttons: the setting, or the pad last used. */
+  padStyle(): PadStyle {
+    return padStyle(this.settings.padStyle, this.padId);
   }
   /** Takes the key pressed while a binding row waits, or explains why not. */
   captureKey(code: string) {
@@ -532,14 +542,14 @@ export class Game {
     this.padBinding = null;
     const result =
       button === PAD.Start ? null : bindPad(this.settings.pad, action, button);
-    if (!result)
-      note = `${name} stays on ${padLabel(this.settings.pad[action])}.`;
+    const label = (b: number) => padLabel(b, this.padStyle());
+    if (!result) note = `${name} stays on ${label(this.settings.pad[action])}.`;
     else {
       this.settings.pad = result.pad;
       this.applySettings(true);
-      note = `${name} is now ${padLabel(button)}.`;
+      note = `${name} is now ${label(button)}.`;
       if (result.swapped)
-        note += ` ${PAD_ACTION_NAMES[result.swapped]} moved to ${padLabel(result.pad[result.swapped])}.`;
+        note += ` ${PAD_ACTION_NAMES[result.swapped]} moved to ${label(result.pad[result.swapped])}.`;
       this.sound.ui();
     }
     this.ui.settings(this.settings, null, "", null, note);
@@ -564,6 +574,13 @@ export class Game {
     } else if (key === "sensitivity")
       s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
     else if (key === "touchSize") s.touchSize = touchSize(s.touchSize + sign);
+    else if (key === "padStyle") {
+      const n = PAD_STYLE_CHOICES.length;
+      s.padStyle =
+        PAD_STYLE_CHOICES[
+          (PAD_STYLE_CHOICES.indexOf(s.padStyle) + sign + n) % n
+        ];
+    }
     else if (key === "distance")
       s.cameraDistance = cameraDistance(
         s.cameraDistance + sign * CAMERA_DISTANCE.step,
@@ -1380,6 +1397,12 @@ export class Game {
     for (const p of pads)
       if (p?.connected && (!pad || p.mapping === "standard")) pad = p;
     this.activePad = pad;
+    // A different pad may name its buttons differently.
+    if (pad && pad.id !== this.padId) {
+      const before = this.padStyle();
+      this.padId = pad.id;
+      if (this.padStyle() !== before) this.applySettings();
+    }
     if (!pad) {
       this.padMove = { x: 0, y: 0 };
       this.padShield = false;
@@ -1583,7 +1606,7 @@ export class Game {
         null,
         "",
         action,
-        `Press the new gamepad button for ${PAD_ACTION_NAMES[action].toLowerCase()}. Start or Esc cancels.`,
+        `Press the new gamepad button for ${PAD_ACTION_NAMES[action].toLowerCase()}. ${this.ui.pad.pause} or Esc cancels.`,
       );
       return;
     }

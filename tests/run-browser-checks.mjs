@@ -73,6 +73,7 @@ await inPage("campaign: prologue", async () => (await bellQA.start()).length);
 await inPage("settings", async () => (await settingsQA.run()).length);
 await inPage("audio", async () => (await settingsQA.audio()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
+await inPage("gamepad: button names", async () => (await inputQA.families()).length);
 await inPage("puzzles", async () => (await puzzleQA.run()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);

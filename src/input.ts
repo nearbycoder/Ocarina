@@ -74,27 +74,101 @@ export const PAD_ACTION_NAMES: Record<PadAction, string> = {
   map: "Kingdom map",
   journal: "Journal",
 };
-const PAD_NAMES = [
-  "A",
-  "B",
-  "X",
-  "Y",
-  "LB",
-  "RB",
-  "LT",
-  "RT",
-  "Back",
-  "Start",
-  "LS",
-  "RS",
-  "D-pad up",
-  "D-pad down",
-  "D-pad left",
-  "D-pad right",
-];
+/**
+ * How a controller family names its buttons. The standard mapping lays the
+ * buttons out by position, so the bottom face button is 0 on every pad: A on
+ * an Xbox pad, ✕ on a PlayStation pad, and B on a Nintendo pad.
+ */
+export type PadStyle = "xbox" | "playstation" | "nintendo";
+/** The Button names setting: detect from the pad, or one family always. */
+export const PAD_STYLE_CHOICES = [
+  "auto",
+  "xbox",
+  "playstation",
+  "nintendo",
+] as const;
+export type PadStyleChoice = (typeof PAD_STYLE_CHOICES)[number];
+export const PAD_STYLE_NAMES: Record<PadStyleChoice, string> = {
+  auto: "Automatic",
+  xbox: "Xbox",
+  playstation: "PlayStation",
+  nintendo: "Nintendo",
+};
+const DPAD = ["D-pad up", "D-pad down", "D-pad left", "D-pad right"];
+const PAD_NAMES: Record<PadStyle, string[]> = {
+  xbox: [
+    "A",
+    "B",
+    "X",
+    "Y",
+    "LB",
+    "RB",
+    "LT",
+    "RT",
+    "Back",
+    "Start",
+    "LS",
+    "RS",
+    ...DPAD,
+  ],
+  playstation: [
+    "✕",
+    "◯",
+    "□",
+    "△",
+    "L1",
+    "R1",
+    "L2",
+    "R2",
+    "Create",
+    "Options",
+    "L3",
+    "R3",
+    ...DPAD,
+  ],
+  nintendo: [
+    "B",
+    "A",
+    "Y",
+    "X",
+    "L",
+    "R",
+    "ZL",
+    "ZR",
+    "−",
+    "+",
+    "LS",
+    "RS",
+    ...DPAD,
+  ],
+};
+/**
+ * The family a pad belongs to, from its `Gamepad.id`: Chrome reports the USB
+ * vendor ("Vendor: 054c"), Firefox "054c-0ce6-…", and both often the name.
+ */
+export function padStyleFor(id: string | undefined | null): PadStyle {
+  const name = String(id ?? "");
+  if (/054c|playstation|dualshock|dualsense|sony/i.test(name))
+    return "playstation";
+  if (/057e|nintendo|pro controller|joy-?con|switch/i.test(name))
+    return "nintendo";
+  return "xbox";
+}
+/** The style to name buttons in: the setting, or the pad's own family. */
+export function padStyle(
+  choice: PadStyleChoice,
+  id: string | undefined | null,
+): PadStyle {
+  return choice === "auto" ? padStyleFor(id) : choice;
+}
+export function parsePadStyle(raw: unknown): PadStyleChoice {
+  return PAD_STYLE_CHOICES.includes(raw as PadStyleChoice)
+    ? (raw as PadStyleChoice)
+    : "auto";
+}
 /** What a standard-layout button is called. */
-export function padLabel(button: number) {
-  return PAD_NAMES[button] ?? `Button ${button}`;
+export function padLabel(button: number, style: PadStyle = "xbox") {
+  return PAD_NAMES[style][button] ?? `Button ${button}`;
 }
 /** Every standard button but Start (pause) and the Home/guide button. */
 export function usableButton(button: unknown): button is number {
@@ -355,10 +429,28 @@ export function moveKeys(k: KeyLabels) {
   return four.every((l) => l.length === 1) ? four.join("") : four.join(" / ");
 }
 const DEFAULT_LABELS = keyLabels();
-export type PadLabels = Record<PadAction, string>;
-export function padLabels(pad: PadBindings = DEFAULT_PAD): PadLabels {
-  const labels = {} as PadLabels;
-  for (const action of PAD_ACTIONS) labels[action] = padLabel(pad[action]);
+/**
+ * Button names for the bound actions, plus the fixed buttons: A chooses, B
+ * goes back, Start pauses, and A, X, Y play the flute's notes.
+ */
+export type PadLabels = Record<
+  PadAction | "confirm" | "back" | "pause" | "low" | "middle" | "high",
+  string
+>;
+export function padLabels(
+  pad: PadBindings = DEFAULT_PAD,
+  style: PadStyle = "xbox",
+): PadLabels {
+  const name = (button: number) => padLabel(button, style);
+  const labels = {
+    confirm: name(PAD.A),
+    back: name(PAD.B),
+    pause: name(PAD.Start),
+    low: name(PAD.A),
+    middle: name(PAD.X),
+    high: name(PAD.Y),
+  } as PadLabels;
+  for (const action of PAD_ACTIONS) labels[action] = name(pad[action]);
   return labels;
 }
 const DEFAULT_PAD_LABELS = padLabels();
@@ -423,6 +515,7 @@ function words({
       touch: "tap Flute",
     },
     fluteKey: { keyboard: k.flute, gamepad: p.flute, touch: "Flute" },
+    map: { keyboard: k.map, gamepad: p.map, touch: "the Kingdom button" },
     lock: { keyboard: k.target, gamepad: p.target, touch: "Lock" },
   };
 }
@@ -461,9 +554,12 @@ export function interactGlyph(
   return words(named(names)).use[device];
 }
 /** Note controls shown on the reed flute. */
-export function noteGlyphs(device: Device): [string, string, string] | null {
+export function noteGlyphs(
+  device: Device,
+  pad: PadLabels = DEFAULT_PAD_LABELS,
+): [string, string, string] | null {
   if (device === "keyboard") return ["1", "2", "3"];
-  if (device === "gamepad") return ["A", "X", "Y"];
+  if (device === "gamepad") return [pad.low, pad.middle, pad.high];
   return null;
 }
 

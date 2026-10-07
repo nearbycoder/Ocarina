@@ -5,8 +5,10 @@ import {
   DEFAULT_PAD,
   parseBindings,
   parsePadBindings,
+  parsePadStyle,
   type KeyBindings,
   type PadBindings,
+  type PadStyleChoice,
 } from "./input";
 export interface Settings {
   version: 1;
@@ -39,6 +41,8 @@ export interface Settings {
   keys: KeyBindings;
   /** Gamepad buttons. Older stored settings get the standard layout. */
   pad: PadBindings;
+  /** How gamepad buttons are named. Older stored settings get "auto". */
+  padStyle: PadStyleChoice;
 }
 export const SETTINGS_KEY = "bell-of-ages-settings-v1";
 export const VOLUME_STEP = 10;
@@ -65,6 +69,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     touchSize: 0,
     keys: { ...DEFAULT_KEYS },
     pad: { ...DEFAULT_PAD },
+    padStyle: "auto",
   };
 }
 const clamp = (n: number, min: number, max: number) =>
@@ -124,6 +129,7 @@ export function parseSettings(
     touchSize: touchSize(s.touchSize),
     keys: parseBindings(s.keys),
     pad: parsePadBindings(s.pad),
+    padStyle: parsePadStyle(s.padStyle),
   };
 }
 /** Linear gain for a voice on the given bus; 0 means the voice is silent. */

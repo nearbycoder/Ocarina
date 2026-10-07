@@ -17,25 +17,27 @@ import {
   moveKeys,
   noteGlyphs,
   padLabels,
+  PAD_STYLE_NAMES,
   type ControlNames,
   type Device,
   type KeyAction,
   type KeyLabels,
   type PadAction,
   type PadLabels,
+  type PadStyle,
 } from "./input";
 const CONTROLS: Record<Device, (k: KeyLabels, p: PadLabels) => string> = {
   keyboard: (k) =>
     `<span><kbd>${moveKeys(k).toUpperCase()}</kbd> Move</span><span><kbd>${k.attack}</kbd> Sword</span><span><kbd>${k.dodge.toUpperCase()}</kbd> Dodge</span><span><kbd>${k.target}</kbd> Lock on</span><span><kbd>${k.flute}</kbd> Flute</span><span><kbd>${k.journal.toUpperCase()}</kbd> Journal</span>`,
   gamepad: (_, p) =>
-    `<span><kbd>LS</kbd> Move</span><span><kbd>${p.attack}</kbd> Sword</span><span><kbd>${p.dodge}</kbd> Dodge</span><span><kbd>${p.shield}</kbd> Shield</span><span><kbd>${p.target}</kbd> Lock on</span><span><kbd>${p.flute}</kbd> Flute</span><span><kbd>START</kbd> Pause</span>`,
+    `<span><kbd>LS</kbd> Move</span><span><kbd>${p.attack}</kbd> Sword</span><span><kbd>${p.dodge}</kbd> Dodge</span><span><kbd>${p.shield}</kbd> Shield</span><span><kbd>${p.target}</kbd> Lock on</span><span><kbd>${p.flute}</kbd> Flute</span><span><kbd>${p.pause.toUpperCase()}</kbd> Pause</span>`,
   touch: () => "",
 };
 const HELP: Record<Device, (k: KeyLabels, p: PadLabels) => string> = {
   keyboard: (k) =>
     `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on (<b>← →</b> switch) · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint<br>In menus: <b>↑ ↓</b> or <b>Tab</b> move · <b>Enter</b> choose · <b>Esc</b> back`,
   gamepad: (_, p) =>
-    `<b>Left stick</b> move · <b>Right stick</b> camera · <b>${p.interact}</b> interact<br><b>${p.attack}</b> sword · <b>${p.dodge}</b> dodge · <b>${p.shield}</b> shield · <b>${p.target}</b> lock on (flick the right stick to switch)<br><b>${p.flute}</b> flute · <b>${p.map}</b> map · <b>${p.journal}</b> journal · <b>Start</b> pause`,
+    `<b>Left stick</b> move · <b>Right stick</b> camera · <b>${p.interact}</b> interact<br><b>${p.attack}</b> sword · <b>${p.dodge}</b> dodge · <b>${p.shield}</b> shield · <b>${p.target}</b> lock on (flick the right stick to switch)<br><b>${p.flute}</b> flute · <b>${p.map}</b> map · <b>${p.journal}</b> journal · <b>${p.pause}</b> pause`,
   touch: () =>
     "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on (swipe sideways to switch) · <b>Flute</b> · <b>Ⅱ</b> pause",
 };
@@ -70,6 +72,8 @@ export class UI {
   /** What the player's keyboard keys are called, after any remapping. */
   keys: KeyLabels = keyLabels();
   pad: PadLabels = padLabels();
+  /** The controller family the button names come from. */
+  padStyle: PadStyle = "xbox";
   toggleShield = false;
   /** Whether a journey is under way; before it, sheets lead back to the title. */
   inJourney: () => boolean = () => false;
@@ -128,9 +132,15 @@ export class UI {
     this.prompt(prompt);
   }
   /** Uses new key and button names everywhere controls are shown. */
-  setKeys(keys: KeyLabels, pad: PadLabels = padLabels(), toggleShield = false) {
+  setKeys(
+    keys: KeyLabels,
+    pad: PadLabels = padLabels(),
+    toggleShield = false,
+    padStyle: PadStyle = "xbox",
+  ) {
     this.keys = keys;
     this.pad = pad;
+    this.padStyle = padStyle;
     this.toggleShield = toggleShield;
     const shield = this.el("touch-shield");
     shield.setAttribute(
@@ -141,6 +151,14 @@ export class UI {
   }
   private get names(): ControlNames {
     return { keys: this.keys, pad: this.pad, toggleShield: this.toggleShield };
+  }
+  /** A pause-menu shortcut in the active device's own terms. */
+  private shortcut(action: "journal" | "map", touch: string) {
+    return this.device === "keyboard"
+      ? this.keys[action]
+      : this.device === "gamepad"
+        ? this.pad[action]
+        : touch;
   }
   /** Fills {control} placeholders for the active device. */
   say(text: string) {
@@ -281,7 +299,7 @@ export class UI {
       ?.action;
     this.setPanel(
       "pause",
-      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>${this.keys.journal}</span></button><button data-action="map">Map of the kingdom <span>${this.keys.map}</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button>${canFullscreen() ? `<button data-action="fullscreen" aria-pressed="${inFullscreen()}">Full screen <span>${inFullscreen() ? "ON" : "OFF"}</span></button>` : ""}<button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? this.keys.checkpoint : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device](this.keys, this.pad)}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
+      `<div class="sheet pause-sheet"><div class="eyebrow">A MOMENT BETWEEN ADVENTURES</div><h2>The story waits.</h2><p>${s.age === "child" ? "Alder, the young wanderer" : "Alder, keeper of the echoes"} · ${s.completed.length} sanctuaries restored</p><div class="menu-list"><button class="primary" data-action="close">Return to the world <span>→</span></button><button data-action="journal">Journey & equipment <span>${this.shortcut("journal", "▤")}</span></button><button data-action="map">Map of the kingdom <span>${this.shortcut("map", "◎")}</span></button><button data-action="save">Save your journey <span>◇</span></button><div class="menu-pair"><button data-action="export">Export journey file <span>↓</span></button><button data-action="import">Import a file <span>↑</span></button></div><button data-action="quality">Visual quality <span>${quality}</span></button><button data-action="sound">Sound <span>${muted ? "OFF" : "ON"}</span></button>${canFullscreen() ? `<button data-action="fullscreen" aria-pressed="${inFullscreen()}">Full screen <span>${inFullscreen() ? "ON" : "OFF"}</span></button>` : ""}<button data-action="settings">Settings · sound, camera, comfort <span>⚙</span></button><button data-action="checkpoint">Return to checkpoint <span>${this.device === "keyboard" ? this.keys.checkpoint : "↺"}</span></button><button data-action="home">Save & return to title <span>↗</span></button></div><div class="help">${HELP[this.device](this.keys, this.pad)}</div><p class="save-note">Saves stay in this browser on this device. Export a journey file to keep a copy or move it to another browser.</p></div>`,
     );
     this.refocus(focused);
   }
@@ -306,7 +324,7 @@ export class UI {
       `<button class="setting-row toggle" data-action="toggle-${key}" aria-pressed="${on}"><span>${label}<small>${note}</small></span><b>${on ? "ON" : "OFF"}</b></button>`;
     this.setPanel(
       "settings",
-      `<div class="sheet settings-sheet"><button class="close" data-action="pause" aria-label="Back to the ${this.inJourney() ? "pause menu" : "title"}">×</button><div class="eyebrow">SETTINGS</div><h2>Make the journey yours.</h2><section><h4>SOUND</h4>${stepper("master", "Master volume", `${s.master}%`)}${stepper("effects", "Effects", `${s.effects}%`)}${stepper("ambience", "Ambience", `${s.ambience}%`)}${stepper("music", "Music", `${s.music}%`)}${toggle("muted", "Mute all sound", s.muted, "")}</section><section><h4>CAMERA</h4>${stepper("sensitivity", "Camera speed", `${Math.round(s.sensitivity * 100)}%`)}${toggle("invertY", "Invert vertical camera", s.invertY, "")}${stepper("distance", "Camera distance", `${Math.round((s.cameraDistance / CAMERA_DISTANCE.normal) * 100)}%`)}</section><section><h4>COMFORT</h4>${toggle("reducedMotion", "Reduced motion", s.reducedMotion, "No hit-stop pauses, camera shake, damage flash, or sliding interface")}${toggle("largeText", "Larger interface text", s.largeText, "")}</section><section><h4>COMBAT AIDS</h4>${toggle("threatArrows", "Off-screen attack warnings", s.threatArrows, "An arrow on the screen edge points to a foe winding up an attack out of view")}${toggle("toggleShield", "Toggle shield", s.toggleShield, "One press raises the shield and the next lowers it, instead of holding. A dodge lowers it too")}</section><section><h4>TOUCH</h4>${toggle("touchLeft", "Left-handed layout", s.touchLeft, "Thumbstick on the right, buttons on the left")}${stepper("touchSize", "Button size", TOUCH_SIZES[s.touchSize])}</section><section><h4>KEYBOARD</h4><div class="bind-grid">${KEY_ACTIONS.map((a) => `<button class="setting-row bind${binding === a ? " capturing" : ""}" data-action="bind-${a}" aria-label="${KEY_ACTION_NAMES[a]}: ${binding === a ? "press a key" : this.keys[a]}"><span>${KEY_ACTION_NAMES[a]}</span><kbd>${binding === a ? "Press a key" : this.keys[a]}</kbd></button>`).join("")}</div><p class="bind-note" role="status">${note || "Choose an action, then press its new key. Esc cancels. Escape, the arrow keys, and 1 to 3 stay as they are."}</p><button class="setting-row toggle" data-action="bind-reset"><span>Reset keys to defaults</span><b>↺</b></button></section><section><h4>GAMEPAD</h4><div class="bind-grid">${PAD_ACTIONS.map((a) => `<button class="setting-row bind${padBinding === a ? " capturing" : ""}" data-action="padbind-${a}" aria-label="${PAD_ACTION_NAMES[a]}: ${padBinding === a ? "press a button" : this.pad[a]}"><span>${PAD_ACTION_NAMES[a]}</span><kbd>${padBinding === a ? "Press a button" : this.pad[a]}</kbd></button>`).join("")}</div><p class="bind-note pad-note" role="status">${padNote || "Choose an action, then press its new button on the gamepad. Start cancels. Start, menus (A, B, D-pad), and the flute's notes stay as they are."}</p><button class="setting-row toggle" data-action="padbind-reset"><span>Reset buttons to defaults</span><b>↺</b></button>${toggle("vibration", "Controller vibration", s.vibration, "A short rumble when you're hit, guard a blow, land a sword hit, or feel a heavy impact")}</section><div class="menu-list"><button class="primary" data-action="pause">Back <span>←</span></button></div><p class="save-note">Settings stay in this browser and apply to every journey.</p></div>`,
+      `<div class="sheet settings-sheet"><button class="close" data-action="pause" aria-label="Back to the ${this.inJourney() ? "pause menu" : "title"}">×</button><div class="eyebrow">SETTINGS</div><h2>Make the journey yours.</h2><section><h4>SOUND</h4>${stepper("master", "Master volume", `${s.master}%`)}${stepper("effects", "Effects", `${s.effects}%`)}${stepper("ambience", "Ambience", `${s.ambience}%`)}${stepper("music", "Music", `${s.music}%`)}${toggle("muted", "Mute all sound", s.muted, "")}</section><section><h4>CAMERA</h4>${stepper("sensitivity", "Camera speed", `${Math.round(s.sensitivity * 100)}%`)}${toggle("invertY", "Invert vertical camera", s.invertY, "")}${stepper("distance", "Camera distance", `${Math.round((s.cameraDistance / CAMERA_DISTANCE.normal) * 100)}%`)}</section><section><h4>COMFORT</h4>${toggle("reducedMotion", "Reduced motion", s.reducedMotion, "No hit-stop pauses, camera shake, damage flash, or sliding interface")}${toggle("largeText", "Larger interface text", s.largeText, "")}</section><section><h4>COMBAT AIDS</h4>${toggle("threatArrows", "Off-screen attack warnings", s.threatArrows, "An arrow on the screen edge points to a foe winding up an attack out of view")}${toggle("toggleShield", "Toggle shield", s.toggleShield, "One press raises the shield and the next lowers it, instead of holding. A dodge lowers it too")}</section><section><h4>TOUCH</h4>${toggle("touchLeft", "Left-handed layout", s.touchLeft, "Thumbstick on the right, buttons on the left")}${stepper("touchSize", "Button size", TOUCH_SIZES[s.touchSize])}</section><section><h4>KEYBOARD</h4><div class="bind-grid">${KEY_ACTIONS.map((a) => `<button class="setting-row bind${binding === a ? " capturing" : ""}" data-action="bind-${a}" aria-label="${KEY_ACTION_NAMES[a]}: ${binding === a ? "press a key" : this.keys[a]}"><span>${KEY_ACTION_NAMES[a]}</span><kbd>${binding === a ? "Press a key" : this.keys[a]}</kbd></button>`).join("")}</div><p class="bind-note" role="status">${note || "Choose an action, then press its new key. Esc cancels. Escape, the arrow keys, and 1 to 3 stay as they are."}</p><button class="setting-row toggle" data-action="bind-reset"><span>Reset keys to defaults</span><b>↺</b></button></section><section><h4>GAMEPAD</h4>${stepper("padStyle", "Button names", s.padStyle === "auto" ? `Automatic · ${PAD_STYLE_NAMES[this.padStyle]}` : PAD_STYLE_NAMES[s.padStyle])}<div class="bind-grid">${PAD_ACTIONS.map((a) => `<button class="setting-row bind${padBinding === a ? " capturing" : ""}" data-action="padbind-${a}" aria-label="${PAD_ACTION_NAMES[a]}: ${padBinding === a ? "press a button" : this.pad[a]}"><span>${PAD_ACTION_NAMES[a]}</span><kbd>${padBinding === a ? "Press a button" : this.pad[a]}</kbd></button>`).join("")}</div><p class="bind-note pad-note" role="status">${padNote || `Choose an action, then press its new button on the gamepad. ${this.pad.pause} cancels. ${this.pad.pause}, menus (${this.pad.confirm}, ${this.pad.back}, D-pad), and the flute's notes stay as they are.`}</p><button class="setting-row toggle" data-action="padbind-reset"><span>Reset buttons to defaults</span><b>↺</b></button>${toggle("vibration", "Controller vibration", s.vibration, "A short rumble when you're hit, guard a blow, land a sword hit, or feel a heavy impact")}</section><div class="menu-list"><button class="primary" data-action="pause">Back <span>←</span></button></div><p class="save-note">Settings stay in this browser and apply to every journey.</p></div>`,
     );
     this.refocus(focused);
   }
@@ -342,7 +360,7 @@ export class UI {
       keyboard:
         "Click anywhere on the map, or choose a place, to set your marker. Choose it again to clear it.",
       gamepad:
-        "Choose a place with the D-pad and A to set your marker. Choose it again to clear it.",
+        `Choose a place with the D-pad and ${this.pad.confirm} to set your marker. Choose it again to clear it.`,
       touch:
         "Tap anywhere on the map, or a place, to set your marker. Tap it again to clear it.",
     }[this.device];
@@ -362,10 +380,10 @@ export class UI {
     this.refocus(focused);
   }
   flute(sequence: number[], notes: number[]) {
-    const glyphs = noteGlyphs(this.device);
+    const glyphs = noteGlyphs(this.device, this.pad);
     this.setPanel(
       "flute",
-      `<div class="sheet flute-sheet"><button class="close" data-action="close" aria-label="Put away flute">×</button><div class="eyebrow">THE REED FLUTE</div><h2>Let the world listen.</h2><p>${sequence.length ? "Echo the inscription at this altar." : "A small song for a wide world."}</p><div class="notes">${[1, 2, 3].map((n) => `<button data-action="note-${n}"><span>${["", "●", "◒", "○"][n]}</span><b>${["", "Low", "Middle", "High"][n]}</b>${glyphs ? `<kbd>${glyphs[n - 1]}</kbd>` : ""}</button>`).join("")}</div><div class="played-notes">${notes.length ? notes.map((n) => ["", "●", "◒", "○"][n]).join("　") : "—　—　—"}</div><p class="save-note">${sequence.length ? `Inscription: ${sequence.map((n) => ["", "low", "middle", "high"][n]).join(" · ")}` : { keyboard: "Number keys 1, 2, 3 to play · Esc to put away", gamepad: "A, X, Y to play · B to put away", touch: "Tap a note to play · × to put away" }[this.device]}</p></div>`,
+      `<div class="sheet flute-sheet"><button class="close" data-action="close" aria-label="Put away flute">×</button><div class="eyebrow">THE REED FLUTE</div><h2>Let the world listen.</h2><p>${sequence.length ? "Echo the inscription at this altar." : "A small song for a wide world."}</p><div class="notes">${[1, 2, 3].map((n) => `<button data-action="note-${n}"><span>${["", "●", "◒", "○"][n]}</span><b>${["", "Low", "Middle", "High"][n]}</b>${glyphs ? `<kbd>${glyphs[n - 1]}</kbd>` : ""}</button>`).join("")}</div><div class="played-notes">${notes.length ? notes.map((n) => ["", "●", "◒", "○"][n]).join("　") : "—　—　—"}</div><p class="save-note">${sequence.length ? `Inscription: ${sequence.map((n) => ["", "low", "middle", "high"][n]).join(" · ")}` : { keyboard: "Number keys 1, 2, 3 to play · Esc to put away", gamepad: `${this.pad.low}, ${this.pad.middle}, ${this.pad.high} to play · ${this.pad.back} to put away`, touch: "Tap a note to play · × to put away" }[this.device]}</p></div>`,
     );
   }
   ending(s: SaveData) {

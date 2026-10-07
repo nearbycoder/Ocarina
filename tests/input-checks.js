@@ -300,6 +300,159 @@ window.inputQA = (() => {
     bellQA.close();
     return results.splice(0);
   }
+  // Controller families: a DualSense, a Switch Pro Controller, and an Xbox pad
+  // are named the way each prints its buttons, and Button names overrides it.
+  async function families() {
+    results.splice(0);
+    install();
+    bellQA.close();
+    const text = (sel) => document.querySelector(sel)?.textContent ?? "";
+    const strip = () => text("#controls");
+    const kbds = (sel) =>
+      [...document.querySelectorAll(sel)].map((k) => k.textContent).join(" ");
+    const useStyle = (choice) => {
+      game.settings.padStyle = choice;
+      game.applySettings(true);
+    };
+    pad.connected = true;
+    pad.id =
+      "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)";
+    api.debug.teleport(3.1, 51);
+    press(B.LB);
+    press(B.LB);
+    assert(game.ui.device === "gamepad", "The DualSense is the device in use");
+    assert(
+      /□\s*Sword/.test(strip()) &&
+        /◯\s*Dodge/.test(strip()) &&
+        /R1\s*Shield/.test(strip()) &&
+        /L1\s*Lock on/.test(strip()) &&
+        /OPTIONS\s*Pause/.test(strip()),
+      `A DualSense's control strip names □, ◯, R1, L1, and Options (${strip()})`,
+    );
+    step(1 / 30);
+    assert(
+      text("#prompt kbd") === "✕",
+      `The interaction prompt names ✕ on a DualSense (${text("#prompt kbd")})`,
+    );
+    press(B.Start);
+    assert(api.getState().panel === "pause", "Options opens the pause menu");
+    const help = text(".pause-sheet .help");
+    assert(
+      help.includes("□ sword") &&
+        help.includes("✕ interact") &&
+        help.includes("Options pause") &&
+        help.includes("Create map"),
+      `The pause help names the DualSense's buttons (${help})`,
+    );
+    const shortcuts = kbds(
+      '.pause-sheet [data-action="journal"] span, .pause-sheet [data-action="map"] span',
+    );
+    assert(
+      shortcuts === "D-pad up Create",
+      `The pause menu's shortcuts are pad buttons, not keys (${shortcuts})`,
+    );
+    press(B.B);
+    assert(api.getState().panel === null, "◯ (B) closes the pause menu");
+    press(B.Y);
+    assert(api.getState().panel === "flute", "△ raises the flute");
+    assert(
+      kbds(".notes kbd") === "✕ □ △" &&
+        text(".flute-sheet .save-note").startsWith("✕, □, △ to play · ◯"),
+      `The flute names ✕, □, △ and ◯ (${kbds(".notes kbd")})`,
+    );
+    press(B.B);
+    // The button the strip names for the sword swings it.
+    api.debug.teleport(-8, 66);
+    step(0.4);
+    press(B.X);
+    assert(
+      game.attackElapsed >= 0 || game.attackTime > 0,
+      "Pressing □ (the button named for the sword) swings",
+    );
+    step(0.8);
+    api.debug.action("pause");
+    api.debug.action("settings");
+    const rows = kbds('.settings-sheet [data-action^="padbind-"] kbd');
+    assert(
+      rows.startsWith("✕ □ R1 ◯ L1 △ Create D-pad up"),
+      `Remapping rows use the DualSense's names (${rows})`,
+    );
+    assert(
+      text(".settings-sheet").includes("Automatic · PlayStation") &&
+        text(".pad-note").includes("Options cancels") &&
+        text(".pad-note").includes("menus (✕, ◯, D-pad)"),
+      "Settings say the names follow the PlayStation pad",
+    );
+    // The setting overrides the pad.
+    document.querySelector('[data-action="set-padStyle-up"]').click();
+    assert(
+      game.settings.padStyle === "xbox" && /X\s*Sword/.test(strip()),
+      "Button names: Xbox wins over the DualSense",
+    );
+    document.querySelector('[data-action="set-padStyle-up"]').click();
+    document.querySelector('[data-action="set-padStyle-up"]').click();
+    assert(
+      game.settings.padStyle === "nintendo" && /Y\s*Sword/.test(strip()),
+      "Button names: Nintendo names the same button Y",
+    );
+    const stored = JSON.parse(
+      localStorage.getItem("bell-of-ages-settings-v1"),
+    ).padStyle;
+    assert(stored === "nintendo", "The choice is stored with the settings");
+    useStyle("auto");
+    api.debug.action("close");
+
+    // A Switch Pro Controller, then an Xbox pad, with Automatic.
+    pad.id = "Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)";
+    api.debug.teleport(3.1, 51);
+    step(1 / 30);
+    assert(
+      text("#prompt kbd") === "B" &&
+        /Y\s*Sword/.test(strip()) &&
+        /\+\s*Pause/.test(strip()),
+      `A Switch Pro Controller is named B, Y, and + (${strip()})`,
+    );
+    pad.id = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)";
+    step(1 / 30);
+    assert(
+      text("#prompt kbd") === "A" && /X\s*Sword/.test(strip()),
+      "An Xbox pad keeps today's names",
+    );
+
+    // Keyboard and touch: no pad names, and no keys for touch.
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyQ" }));
+    api.debug.action("pause");
+    assert(
+      game.ui.device === "keyboard" &&
+        kbds(
+          '.pause-sheet [data-action="journal"] span, .pause-sheet [data-action="map"] span',
+        ) === `${game.ui.keys.journal} ${game.ui.keys.map}`,
+      "The keyboard's pause menu still shows its keys",
+    );
+    api.debug.action("close");
+    game.setDevice("touch");
+    api.debug.action("pause");
+    const touchShortcuts = kbds(
+      '.pause-sheet [data-action="journal"] span, .pause-sheet [data-action="map"] span',
+    );
+    assert(
+      !touchShortcuts.includes(game.ui.keys.journal) &&
+        !touchShortcuts.includes(game.ui.keys.map),
+      `Touch players see no keyboard keys in the pause menu (${touchShortcuts})`,
+    );
+    api.debug.action("close");
+    assert(
+      game.ui.say("{Map} opens your map.") ===
+        "The Kingdom button opens your map.",
+      "Rowan's map line names the touch control",
+    );
+    game.setDevice("keyboard");
+    pad.id = "Synthetic standard gamepad";
+    pad.connected = false;
+    step(1 / 30);
+    return results.splice(0);
+  }
   // After a reload: the reset button restores the standard layout.
   function resetPad() {
     api.debug.action("pause");
@@ -314,5 +467,5 @@ window.inputQA = (() => {
     api.debug.action("close");
     return results.splice(0);
   }
-  return { gamepad, remap, resetPad, results, pad };
+  return { gamepad, remap, resetPad, families, results, pad };
 })();
