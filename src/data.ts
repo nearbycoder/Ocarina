@@ -190,6 +190,40 @@ export function parseVisit(v: unknown, s: SaveData): Visit | null {
   };
 }
 export const SAVE_KEY = "bell-of-ages-save-v1";
+/**
+ * Up to three journeys share a device. Journey 1 lives where the single save
+ * always has, so existing journeys and older builds still find it.
+ */
+export const JOURNEYS: readonly number[] = [1, 2, 3];
+export function journeyKey(n: number) {
+  return n === 1 ? SAVE_KEY : `${SAVE_KEY}:${n}`;
+}
+/** Remembers which journey was played last, for Continue. */
+export const LAST_JOURNEY_KEY = "bell-of-ages-last-journey";
+export function parseJourney(raw: unknown): number {
+  const n = Number(raw);
+  return JOURNEYS.includes(n) ? n : 1;
+}
+/** What Continue resumes: the journey played last, or else the first kept. */
+export function continueJourney(
+  last: number,
+  kept: readonly number[],
+): number | null {
+  return kept.includes(last) ? last : (kept[0] ?? null);
+}
+/**
+ * Where a new or imported journey goes: the first empty place, or `current`
+ * (which the player is asked before replacing) when all three are kept.
+ */
+export function placeFor(
+  kept: readonly number[],
+  current: number,
+): { place: number; replaces: boolean } {
+  const empty = JOURNEYS.find((n) => !kept.includes(n));
+  return empty
+    ? { place: empty, replaces: false }
+    : { place: current, replaces: true };
+}
 export function newSave(): SaveData {
   return {
     story: newStory(),

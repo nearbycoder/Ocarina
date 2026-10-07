@@ -74,7 +74,8 @@ window.puzzleQA = (() => {
     for (let x = -1; x <= 1; x += 0.25)
       for (let z = 13; z <= 15; z += 0.25) {
         const v = new V(x, top, z);
-        const inFront = v.clone().applyMatrix4(game.camera.matrixWorldInverse).z < 0;
+        const inFront =
+          v.clone().applyMatrix4(game.camera.matrixWorldInverse).z < 0;
         v.project(game.camera);
         if (inFront && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1) seen++;
       }

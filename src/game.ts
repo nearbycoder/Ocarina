@@ -14,7 +14,12 @@ import { WorldRenderer } from "./rendering";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import {
   DUNGEONS,
-  SAVE_KEY,
+  JOURNEYS,
+  LAST_JOURNEY_KEY,
+  continueJourney,
+  journeyKey,
+  parseJourney,
+  placeFor,
   newSave,
   parseSave,
   exportName,
@@ -303,6 +308,10 @@ export class Game {
   private storageOK = true;
   /** A checked journey file waiting for the player to confirm it. */
   private pendingImport: SaveData | null = null;
+  /** Which of the device's three journeys is being played (1–3). */
+  journey = 1;
+  /** Where a new or imported journey will go once the player confirms. */
+  private pendingPlace = 1;
   private frameTimes: number[] = [];
   settings: Settings = parseSettings(null);
   // Analog sources (length ≤ 1) and held shields from pads and touch.
@@ -582,8 +591,7 @@ export class Game {
         PAD_STYLE_CHOICES[
           (PAD_STYLE_CHOICES.indexOf(s.padStyle) + sign + n) % n
         ];
-    }
-    else if (key === "distance")
+    } else if (key === "distance")
       s.cameraDistance = cameraDistance(
         s.cameraDistance + sign * CAMERA_DISTANCE.step,
       );
@@ -611,13 +619,41 @@ export class Game {
   }
   /** The title, with a line saying which journey Continue resumes. */
   showTitle() {
-    const saved = this.readSave();
-    this.ui.title(!!saved, saved ? journeySummary(saved) : "");
+    const kept = this.keptJourneys();
+    const next = continueJourney(this.lastJourney(), kept);
+    const saved = next ? this.readSave(next) : null;
+    this.ui.title(!!saved, saved ? journeySummary(saved) : "", kept.length > 1);
   }
-  readSave() {
+  /** The journeys this device keeps, by place. */
+  keptJourneys() {
+    return JOURNEYS.filter((n) => this.readSave(n));
+  }
+  /** The journey played last on this device. */
+  lastJourney() {
+    try {
+      return parseJourney(localStorage.getItem(LAST_JOURNEY_KEY));
+    } catch {
+      return 1;
+    }
+  }
+  /** Lists all three places, for continuing one or beginning a new story. */
+  showJourneys() {
+    const last = continueJourney(this.lastJourney(), this.keptJourneys());
+    this.ui.journeys(
+      JOURNEYS.map((n) => {
+        const save = this.readSave(n);
+        return {
+          n,
+          summary: save ? journeySummary(save) : null,
+          last: n === last,
+        };
+      }),
+    );
+  }
+  readSave(journey = this.journey) {
     if (this.review) return null;
     try {
-      return parseSave(localStorage.getItem(SAVE_KEY));
+      return parseSave(localStorage.getItem(journeyKey(journey)));
     } catch {
       this.storageOK = false;
       return null;
@@ -708,7 +744,8 @@ export class Game {
     if (!this.started || this.review) return;
     this.syncPosition();
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.save));
+      localStorage.setItem(journeyKey(this.journey), JSON.stringify(this.save));
+      localStorage.setItem(LAST_JOURNEY_KEY, String(this.journey));
       if (show) this.ui.saved();
     } catch {
       if (this.storageOK)
@@ -1526,22 +1563,49 @@ export class Game {
     }
 
     if (a === "new") {
-      if (this.readSave()) {
+      // With a journey kept, choose where the new one goes.
+      if (this.keptJourneys().length) this.showJourneys();
+      else {
+        this.journey = 1;
+        this.begin(true);
+      }
+      return;
+    }
+    if (a === "journeys") {
+      this.showJourneys();
+      return;
+    }
+    if (a.startsWith("journey-new-")) {
+      const n = parseJourney(a.slice(12));
+      const kept = this.readSave(n);
+      if (kept) {
+        this.pendingPlace = n;
         this.ui.dialogue(
           "A NEW STORY",
-          "Beginning again replaces the journey saved on this device. Your current story will be lost.",
+          `Beginning again replaces Journey ${n} (${journeySummary(kept)}). That story will be lost.`,
           "new-confirm",
           "Begin again",
-          "Keep my journey",
+          "Keep that journey",
         );
-      } else this.begin(true);
+      } else {
+        this.journey = n;
+        this.begin(true);
+      }
       return;
     }
     if (a === "new-confirm") {
+      this.journey = this.pendingPlace;
       this.begin(true);
       return;
     }
+    if (a.startsWith("journey-continue-")) {
+      this.journey = parseJourney(a.slice(17));
+      this.begin(false);
+      return;
+    }
     if (a === "continue") {
+      this.journey =
+        continueJourney(this.lastJourney(), this.keptJourneys()) ?? 1;
       this.begin(false);
       return;
     }
@@ -1554,7 +1618,11 @@ export class Game {
     if (a === "import-confirm") {
       const save = this.pendingImport;
       this.pendingImport = null;
-      if (save) this.begin(false, save);
+      if (!save) return;
+      // The journey in play is kept before another place takes over.
+      if (this.started) this.persist(false);
+      this.journey = this.pendingPlace;
+      this.begin(false, save);
       return;
     }
     if (a === "close") {
@@ -1795,10 +1863,19 @@ export class Game {
       return;
     }
     this.pendingImport = result.save;
-    const replaces = this.started || !!this.readSave();
+    const kept = this.keptJourneys();
+    if (this.started && !this.review && !kept.includes(this.journey))
+      kept.push(this.journey);
+    const current = this.started
+      ? this.journey
+      : (continueJourney(this.lastJourney(), kept) ?? 1);
+    const { place, replaces } = this.review
+      ? { place: this.journey, replaces: this.started }
+      : placeFor(kept, current);
+    this.pendingPlace = place;
     this.ui.dialogue(
       "IMPORT A JOURNEY",
-      `In this file: ${saveSummary(result.save)}.${replaces ? " It will replace the journey saved on this device." : ""}`,
+      `In this file: ${saveSummary(result.save)}.${replaces ? ` It will replace Journey ${place}, the journey ${this.started ? "you are playing" : "saved on this device"}.` : kept.length ? ` It will be kept as Journey ${place}; your other journeys stay as they are.` : ""}`,
       "import-confirm",
       "Continue this journey",
       replaces ? "Keep my journey" : "Not now",

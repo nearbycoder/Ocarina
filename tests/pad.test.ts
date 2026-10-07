@@ -188,7 +188,10 @@ describe("controller families", () => {
       "B · press Y",
     );
     // A remapped sword keeps the family's name for its new button.
-    const moved = padLabels(bindPad(DEFAULT_PAD, "attack", PAD.Y)!.pad, "playstation");
+    const moved = padLabels(
+      bindPad(DEFAULT_PAD, "attack", PAD.Y)!.pad,
+      "playstation",
+    );
     expect(moved.attack).toBe("△");
     // The map follows the device: no keyboard key for pads or touch.
     expect(controlText("{Map} opens your map.", "gamepad", { pad: ps })).toBe(

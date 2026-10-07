@@ -53,6 +53,7 @@ const canFullscreen = () => !!document.fullscreenEnabled;
 const inFullscreen = () => !!document.fullscreenElement;
 export type Panel =
   | "title"
+  | "journeys"
   | "pause"
   | "settings"
   | "journal"
@@ -179,13 +180,33 @@ export class UI {
         .querySelector<HTMLElement>("button[data-action]")
         ?.focus({ preventScroll: true });
   }
-  /** The title; with a saved journey, `summary` says what Continue resumes. */
-  title(hasSave: boolean, summary = "") {
+  /**
+   * The title; with a saved journey, `summary` says what Continue resumes.
+   * With more than one journey kept, `many` offers the others.
+   */
+  title(hasSave: boolean, summary = "", many = false) {
     const focused = (document.activeElement as HTMLElement | null)?.dataset
       ?.action;
     this.setPanel(
       "title",
-      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content${hasSave ? " with-journey" : ""}"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? `<button class="primary" data-action="continue"${summary ? ' aria-describedby="journey-summary"' : ""}>Continue your journey <span>→</span></button>${summary ? `<small class="journey-summary" id="journey-summary">${summary}</small>` : ""}<button class="quiet" data-action="new">Begin a new story</button>` : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}<div class="title-links"><button class="quiet" data-action="import">Import a journey file</button><button class="quiet" data-action="settings">Settings</button>${canFullscreen() ? `<button class="quiet" data-action="fullscreen" aria-pressed="${inFullscreen()}">${inFullscreen() ? "Leave full screen" : "Full screen"}</button>` : ""}</div></div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse, gamepad, or touch</span></div>`,
+      `<div class="title-top"><span class="small-emblem">✧</span> AN ORIGINAL ADVENTURE <span class="chapter-label">A KINGDOM IN TWO AGES</span></div><div class="title-content${hasSave ? " with-journey" : ""}"><div class="eyebrow"><span></span> SOME PROMISES OUTLIVE A LIFETIME</div><h1><span>The Bell</span><em>of Ages</em></h1><p>A boy. A forgotten song.<br>A world waiting for you to grow.</p><div class="title-actions">${hasSave ? `<button class="primary" data-action="continue"${summary ? ' aria-describedby="journey-summary"' : ""}>Continue your journey <span>→</span></button>${summary ? `<small class="journey-summary" id="journey-summary">${summary}</small>` : ""}<div class="title-links"><button class="quiet" data-action="new">Begin a new story</button>${many ? '<button class="quiet" data-action="journeys">Choose a journey</button>' : ""}</div>` : '<button class="primary" data-action="new">Begin your journey <span>→</span></button>'}<div class="title-links"><button class="quiet" data-action="import">Import a journey file</button><button class="quiet" data-action="settings">Settings</button>${canFullscreen() ? `<button class="quiet" data-action="fullscreen" aria-pressed="${inFullscreen()}">${inFullscreen() ? "Leave full screen" : "Full screen"}</button>` : ""}</div></div><div class="title-chapters"><span>01 <i>Wonder</i></span><span>02 <i>The years between</i></span><span>03 <i>Return</i></span></div></div><div class="title-footer"><span>EXPLORE. REMEMBER. BECOME.</span><span>Headphones recommended <span class="tiny-dot">·</span> Keyboard & mouse, gamepad, or touch</span></div>`,
+    );
+    this.refocus(focused);
+  }
+  /** The device's three journeys: continue one, or begin a story in one. */
+  journeys(rows: { n: number; summary: string | null; last: boolean }[]) {
+    const focused = (document.activeElement as HTMLElement | null)?.dataset
+      ?.action;
+    this.setPanel(
+      "journeys",
+      `<div class="sheet journeys-sheet"><button class="close" data-action="close" aria-label="Back to the title">×</button><div class="eyebrow">JOURNEYS</div><h2>Three journeys, one device.</h2><p>Each journey keeps its own story, so several people can play here. Settings are shared.</p><div class="journey-list">${rows
+        .map(
+          (r) =>
+            `<section class="journey-row${r.summary ? "" : " empty"}" aria-label="Journey ${r.n}"><div><h4>Journey ${r.n}${r.last ? " <small>PLAYED LAST</small>" : ""}</h4><p>${r.summary ?? "Empty"}</p></div><div class="journey-buttons">${r.summary ? `<button class="primary" data-action="journey-continue-${r.n}" aria-label="Continue journey ${r.n}">Continue <span>→</span></button><button class="quiet" data-action="journey-new-${r.n}" aria-label="Begin a new story in place of journey ${r.n}">Begin again here</button>` : `<button class="primary" data-action="journey-new-${r.n}" aria-label="Begin a new story as journey ${r.n}">Begin a new story <span>→</span></button>`}</div></section>`,
+        )
+        .join(
+          "",
+        )}</div><p class="save-note">Journeys stay in this browser on this device. Export a journey file from the pause menu to keep a copy.</p></div>`,
     );
     this.refocus(focused);
   }
@@ -359,8 +380,7 @@ export class UI {
     const how = {
       keyboard:
         "Click anywhere on the map, or choose a place, to set your marker. Choose it again to clear it.",
-      gamepad:
-        `Choose a place with the D-pad and ${this.pad.confirm} to set your marker. Choose it again to clear it.`,
+      gamepad: `Choose a place with the D-pad and ${this.pad.confirm} to set your marker. Choose it again to clear it.`,
       touch:
         "Tap anywhere on the map, or a place, to set your marker. Tap it again to clear it.",
     }[this.device];

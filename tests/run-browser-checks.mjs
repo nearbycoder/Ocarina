@@ -73,7 +73,10 @@ await inPage("campaign: prologue", async () => (await bellQA.start()).length);
 await inPage("settings", async () => (await settingsQA.run()).length);
 await inPage("audio", async () => (await settingsQA.audio()).length);
 await inPage("gamepad", async () => (await inputQA.gamepad()).length);
-await inPage("gamepad: button names", async () => (await inputQA.families()).length);
+await inPage(
+  "gamepad: button names",
+  async () => (await inputQA.families()).length,
+);
 await inPage("puzzles", async () => (await puzzleQA.run()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);
@@ -1383,6 +1386,242 @@ await run("saves: sanctuary visit", async () => {
 // The picture is compared with sharp against the one from before the loss.
 // The old code kept simulating behind the frozen picture, came back darker
 // (the lighting environment was gone), and left the sound suspended.
+// Three journeys on one device. A fresh, throwaway browser context on the
+// normal URL with real clicks and key presses; each "reload" closes the page
+// without beforeunload and opens it again. The old code kept one journey, and
+// "Begin a new story" replaced it.
+await run("saves: three journeys", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const SAVE = "bell-of-ages-save-v1";
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
+  const ready = (p) =>
+    p.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+  const page = async () => {
+    const p = await ctx.newPage();
+    p.on("pageerror", (e) => errors.push(e.message));
+    await p.goto(BASE);
+    await ready(p);
+    return p;
+  };
+  const keys = (p) =>
+    p.evaluate(() =>
+      Object.keys(localStorage)
+        .filter(
+          (k) => k.startsWith("bell-of-ages-save") || k.includes("journey"),
+        )
+        .sort(),
+    );
+  const stored = (p, k) =>
+    p.evaluate((k) => JSON.parse(localStorage.getItem(k)), k);
+  // Skip the opening scene and stand somewhere with some crystals.
+  const progress = (p, x, z, crystals) =>
+    p.evaluate(
+      ([x, z, crystals]) => {
+        window.BELL_TEST_MANUAL = true;
+        const api = window.__BELL_OF_AGES__,
+          game = api.debug.game();
+        game.save.story.pending = null;
+        game.save.story.prologue = Math.max(1, game.save.story.prologue);
+        game.ui.setPanel(null);
+        game.save.crystals = crystals;
+        api.debug.teleport(x, z);
+        api.debug.advance(0);
+      },
+      [x, z, crystals],
+    );
+  const home = async (p) => {
+    await p.keyboard.press("Escape");
+    await p.click('[data-action="home"]');
+    await p.waitForSelector('.title-content [data-action="continue"]');
+  };
+  try {
+    let p = await page();
+    check((await keys(p)).length === 0, "The throwaway profile starts empty");
+    await p.click('[data-action="new"]');
+    check(
+      (await p.evaluate(() => window.__BELL_OF_AGES__.debug.game().journey)) ===
+        1,
+      "With nothing kept, Begin your journey starts Journey 1",
+    );
+    await progress(p, 6, 40, 11);
+    await home(p);
+    check(
+      (await stored(p, SAVE))?.crystals === 11,
+      "Journey 1 is kept where the single save always was",
+    );
+    check(
+      (await p.locator('[data-action="journeys"]').count()) === 0,
+      "With one journey there's no Choose a journey link",
+    );
+    // Begin a new story asks where it goes, and an empty place begins at once.
+    await p.click('[data-action="new"]');
+    await p.waitForSelector(".journeys-sheet");
+    const rows = await p.$$eval(".journey-row p", (ps) =>
+      ps.map((x) => x.textContent),
+    );
+    check(
+      rows[0].includes("First age") &&
+        rows[1] === "Empty" &&
+        rows[2] === "Empty",
+      `The sheet lists Journey 1 and two empty places (${rows.join(" | ")})`,
+    );
+    await p.click('[data-action="journey-new-2"]');
+    check(
+      (await p.evaluate(
+        () => window.__BELL_OF_AGES__.getState().story.pending?.id,
+      )) === "opening",
+      "An empty place begins a new story at once, from the opening",
+    );
+    await progress(p, -60, 20, 3);
+    await p.evaluate(() => window.__BELL_OF_AGES__.debug.save());
+    check(
+      (await stored(p, `${SAVE}:2`))?.crystals === 3 &&
+        (await stored(p, SAVE))?.crystals === 11,
+      "Journey 2 is kept apart, and Journey 1 is untouched",
+    );
+    await p.close({ runBeforeUnload: false });
+    // Reopened: Continue resumes the journey played last.
+    p = await page();
+    const summary = await p.textContent("#journey-summary");
+    check(
+      (await p.locator('[data-action="journeys"]').count()) === 1,
+      "With two journeys the title offers Choose a journey",
+    );
+    await p.click('[data-action="journeys"]');
+    await p.waitForSelector(".journeys-sheet");
+    const listed = await p.$$eval(".journey-row", (rs) =>
+      rs.map((r) => r.textContent),
+    );
+    check(
+      listed[1].includes("PLAYED LAST") &&
+        listed[1].includes(summary) &&
+        !listed[0].includes(summary) &&
+        listed[2].includes("Empty"),
+      `The sheet marks Journey 2 as played last, and the summaries differ (${summary})`,
+    );
+    const kept = (await stored(p, SAVE)).position;
+    // Hold the real-time loop, so Alder stays where he was loaded.
+    await p.evaluate(() => (window.BELL_TEST_MANUAL = true));
+    await p.click('[data-action="journey-continue-1"]');
+    let state = await p.evaluate(() => window.__BELL_OF_AGES__.getState());
+    check(
+      state.crystals === 11 &&
+        Math.hypot(state.position.x - kept.x, state.position.z - kept.z) <
+          0.5 &&
+        Math.hypot(kept.x - 6, kept.z - 40) < 0.5,
+      `Continuing Journey 1 from the sheet finds it where it was (${state.crystals} at ${state.position.x.toFixed(1)}, ${state.position.z.toFixed(1)}; kept ${kept.x.toFixed(1)}, ${kept.z.toFixed(1)})`,
+    );
+    await home(p);
+    check(
+      (await p.evaluate(() =>
+        localStorage.getItem("bell-of-ages-last-journey"),
+      )) === "1",
+      "Journey 1 is now the one played last",
+    );
+    await p.click('[data-action="continue"]');
+    state = await p.evaluate(() => window.__BELL_OF_AGES__.getState());
+    check(state.crystals === 11, "The title's Continue now resumes Journey 1");
+    await home(p);
+    // The keyboard alone reaches the sheet and backs out of it.
+    await p.evaluate(() => document.activeElement?.blur());
+    let reached = false;
+    for (let i = 0; i < 8 && !reached; i++) {
+      await p.keyboard.press("ArrowDown");
+      reached = await p.evaluate(
+        () => document.activeElement?.dataset.action === "journeys",
+      );
+    }
+    await p.keyboard.press("Enter");
+    check(
+      reached &&
+        (await p.evaluate(() => window.__BELL_OF_AGES__.getState().panel)) ===
+          "journeys",
+      "The arrows and Enter open the sheet",
+    );
+    await p.keyboard.press("Escape");
+    check(
+      (await p.evaluate(() => window.__BELL_OF_AGES__.getState().panel)) ===
+        "title",
+      "Escape goes back to the title",
+    );
+    // Beginning again in a kept place asks first.
+    await p.click('[data-action="journeys"]');
+    await p.click('[data-action="journey-new-1"]');
+    const ask = await p.textContent(".dialogue-box");
+    check(
+      ask.includes("replaces Journey 1") && ask.includes("First age"),
+      "Beginning again in a kept place names it and asks first",
+    );
+    await p.click('.dialogue-box [data-action="close"]');
+    check(
+      (await stored(p, SAVE))?.crystals === 11,
+      "Keeping it changes nothing",
+    );
+    // An imported journey takes the first empty place.
+    const file = {
+      name: "journey.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({
+          game: "the-bell-of-ages",
+          format: 1,
+          save: { ...(await stored(p, SAVE)), crystals: 27 },
+        }),
+      ),
+    };
+    const [chooser] = await Promise.all([
+      p.waitForEvent("filechooser"),
+      p.click('[data-action="import"]'),
+    ]);
+    await chooser.setFiles(file);
+    await p.waitForSelector(".dialogue-box");
+    const said = await p.textContent(".dialogue-box");
+    check(
+      said.includes("kept as Journey 3") && !said.includes("replace"),
+      "Importing says the file will be kept as Journey 3",
+    );
+    await p.click('[data-action="import-confirm"]');
+    await p.evaluate(() => window.__BELL_OF_AGES__.debug.save());
+    check(
+      (await stored(p, `${SAVE}:3`))?.crystals === 27 &&
+        (await stored(p, SAVE))?.crystals === 11 &&
+        (await stored(p, `${SAVE}:2`))?.crystals === 3,
+      "The import is Journey 3, and the other two are unchanged",
+    );
+    await p.close({ runBeforeUnload: false });
+  } finally {
+    await ctx.close();
+  }
+  // A review page writes no journey of any kind.
+  const review = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    await review.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+      window.__BELL_OF_AGES__.debug.save();
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    check(
+      (await review.evaluate(() => Object.keys(localStorage))).every(
+        (k) => !k.startsWith("bell-of-ages-save") && !k.includes("journey"),
+      ),
+      "A review page writes no journey and no last-played mark",
+    );
+  } finally {
+    await review.close();
+  }
+  return count;
+});
+
 await run("graphics and sound: lost and restored", async () => {
   let count = 0;
   const check = (ok, message) => {
@@ -1706,6 +1945,7 @@ await run("title: fits with a journey", async () => {
           .ui.title(
             true,
             "Second age · 6 / 7 relics · The Sunken Observatory · 12 h 47 min played",
+            true,
           );
         const footer = document
           .querySelector(".title-footer")
