@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), and [Round 6 results](#round-6-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), and [Round 7 results](#round-7-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -740,3 +740,62 @@ Still deferred, and why:
 - **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
 - **Full touch remapping:** needs a layout editor.
 - **Phone performance and real-device checks:** need a phone; the touch, rumble, pinch, hide, and full-screen paths are still verified only with emulated input.
+
+## Round 7 scope — 7 October 2026
+
+Branch `improvements-7`, from `main` at `ec8befc` (in sync with `origin/main`). Baseline: 113 / 113 Vitest tests, and all 42 `tests/run-browser-checks.mjs` groups green (load average 31 to 40).
+
+Rounds 1 to 6 covered every input device, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, the camera, keyboard-only menus, and full screen. This time I played as someone who puts the game down and picks it up again, mostly on a phone. I found these:
+
+- **Closing the game inside a sanctuary loses that sanctuary.** The save keeps only the door, so a reload puts you outside it with the puzzle unsolved, the guardians standing, and the warden waiting again. Round 6 made the game save when a phone puts it away. But if the phone then discards the tab mid-sanctuary, all of that visit is lost, and so is a closed laptop lid or a browser restart.
+- **The picture comes back wrong after the graphics device is reset.** Phones and integrated GPUs can take the WebGL context away, for example after a long time in the background, a driver reset, or memory pressure. With `WEBGL_lose_context`, the game keeps simulating while the screen is frozen. When the context returns, the whole scene renders darker, because the lighting environment was a one-time render-target texture that is gone.
+- **Sound may not come back.** When the page is hidden, the audio context keeps running. An iPhone puts it in an "interrupted" state, and only Begin, Settings changes, and the flute resume it. A player who comes back and closes the pause menu can be left without sound until they open the flute.
+- **On a phone, the HUD covers its own controls.** Held upright, the "Use" prompt and the warden's health bar sit on top of the thumbstick and the Lock, Shield, and Dodge buttons. Held sideways with the largest left-handed layout, the warden bar runs into Lock, and a long objective (the sanctuary trial) touches the thumbstick. Round 5's overlap check didn't include the prompt, the warden bar, the toast, or the longest objective, so it passed.
+- **Continue doesn't say what it continues.** The title offers "Continue your journey" with no hint of which age, how far along, or where, which matters after a few days away or on a shared device.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, enemy numbers, timings, and crystal income stay as they are. No new combat aids. The arena-doorway reset stays as it is (owner's call).
+- **No new story writing.** Only interface text.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load.
+
+### A. Pick up a sanctuary where you left it
+
+Acceptance criteria
+- While you are inside a sanctuary, the save records the visit: which sanctuary, whether the puzzle is solved, which guardians have fallen, whether the guardian seal is broken, whether the alcove wall was broken on this visit, and whether the warden has fallen with the relic still unclaimed.
+- Continuing that journey (after a reload, a discarded tab, or Save & return to title) puts you back inside the same sanctuary, at the start of the furthest chamber you reached, exactly as a defeat would. Solved puzzles look solved, broken seals stay open, fallen guardians stay down, and the warden stands at full health unless it already fell, in which case the relic waits. Health is as saved.
+- Leaving through the exit, claiming the relic, or returning to the overworld any other way ends the visit, and a reload then starts outside the door as today. Partial puzzle progress (two of three stones) isn't kept, as with a defeat today.
+- Older saves and journey files have no visit. A malformed visit, or one for a sanctuary you can't enter, is ignored.
+
+Verification
+- Unit tests: parsing and migrating the visit, and dropping bad ones.
+- A browser check in a fresh, throwaway browser context on the normal URL: enter the Ember Vault through its door, solve the puzzle, defeat two guardians, reload, and Continue. You are inside the vault at the guardian hall with the first seal open and two guardians down. Then clear the hall, reload, and Continue: you are at the warden's chamber with the warden at full health. A flood fill over the game's collision reaches the arena from where you stand. Leave through the exit and reload: you are outside the door. The old code fails at the first reload. A review page still writes no save.
+
+### B. Come back cleanly when the device takes the graphics or sound away
+
+Acceptance criteria
+- When the WebGL context is lost during a journey, the game saves and pauses with a short notice, so nothing happens while the screen is frozen. When the context is restored, the lighting environment and shadows are rebuilt, the scene looks as it did before, and the notice clears. If it doesn't come back within a few seconds, the notice offers a reload, and the progress is already saved.
+- When the page is hidden, the game suspends its audio. The first key press, click, tap, or gamepad button after coming back resumes the audio if it is suspended or interrupted.
+
+Verification
+- A browser check on a fixed view: render, lose the context with `WEBGL_lose_context`, check that the notice shows and the game clock stops, restore it, and compare the canvas with the image from before. The old code's image differs visibly (darker); the new one matches within a small tolerance. Numbers for both are recorded.
+- The same check hides the page with the browser's own `visibilitychange` event, confirms the audio context is suspended, then a real key press and, separately, a real click resume it.
+
+### C. The phone HUD never covers its own controls
+
+Acceptance criteria
+- On a phone held upright (390×844) and sideways (844×390), in all six touch layouts, none of these overlap each other or run off the screen: the interaction prompt (with the longest prompt), the warden's health bar (with the longest warden name), the toast (a long message), the objective panel (with its longest text), the thumbstick, the buttons, the minimap, the vitals, the region, and the menu button.
+- Desktop is unchanged.
+
+Verification
+- The touch overlap checks gain the prompt, the warden bar, the toast, and the longest objective. They fail on the current stylesheet and pass after the change. Screenshots of both orientations during a warden fight with a prompt showing.
+
+### D. The title says which journey Continue resumes
+
+Acceptance criteria
+- Under "Continue your journey", one line names the age, the relics, where you'll be (a region, or a sanctuary when a visit from A is open), and the time played. It uses only interface text and place names that already exist.
+
+Verification
+- Unit tests for the line. The A check reads it after the reload and finds the Ember Vault. A screenshot of the title.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and real-device checks (need a phone).
