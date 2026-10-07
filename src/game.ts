@@ -3377,11 +3377,13 @@ export class Game {
       regionAt(this.hero.group.position.x, this.hero.group.position.z);
     const d = this.world.dungeon;
     let hint: string | undefined;
+    const guardians = this.enemies.filter((e) => !e.boss);
+    const fallen = guardians.filter((e) => e.state === "dead").length;
     if (d)
       hint = !this.puzzleSolved
         ? d.hint
         : !this.arenaClear
-          ? "Defeat the four guardians to break the second seal."
+          ? `Defeat the four guardians to break the second seal · ${fallen} / ${guardians.length}\u00a0fallen`
           : !this.bossDead
             ? `Face ${d.boss}. Watch the warning ring; dodge, then strike.`
             : `Claim ${d.relic} at the far end of the chamber.`;

@@ -513,6 +513,82 @@ await run("hud: health", async () => {
   return count;
 });
 
+// The guardian hall's objective counts the fallen, through a defeat too.
+await run("hud: hall count", async () => {
+  const c = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    return await c.evaluate(async () => {
+      const api = window.__BELL_OF_AGES__.debug;
+      const state = window.__BELL_OF_AGES__.getState;
+      const game = api.game();
+      const results = [];
+      const assert = (ok, message) => {
+        if (!ok) throw new Error(message);
+        results.push(message);
+      };
+      const detail = () =>
+        document.getElementById("quest-detail").textContent.replace(/ /g, " ");
+      // The count's rendered line boxes: one line, never split.
+      const countLines = () => {
+        const node = document.getElementById("quest-detail").firstChild;
+        const at = node.textContent.search(/\d \/ \d/);
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, node.textContent.length);
+        return new Set(
+          [...range.getClientRects()].map((r) => Math.round(r.top)),
+        ).size;
+      };
+      await bellQA.start();
+      bellQA.close();
+      api.enter("root");
+      bellQA.close();
+      game.puzzleSolved = true;
+      game.world.gates[0].visible = false;
+      game.refreshHUD();
+      assert(
+        detail() ===
+          "Defeat the four guardians to break the second seal · 0 / 4 fallen",
+        `The hall starts at 0 / 4 fallen (${detail()})`,
+      );
+      assert(countLines() === 1, "The count sits on one line");
+      api.damageEnemy(0, 100);
+      api.damageEnemy(1, 100);
+      assert(
+        detail().endsWith("2 / 4 fallen"),
+        `Two fallen guardians read 2 / 4 (${detail()})`,
+      );
+      // A real strike at half a heart: the hall's checkpoint, same count.
+      api.placeEnemy(2, -7, -5);
+      api.teleport(-7, -3.4);
+      game.enemies[2].cooldown = 0;
+      game.invulnerable = 0;
+      api.setHealth(1);
+      for (let i = 0; i < 400 && state().health === 1; i++) api.advance(1 / 60);
+      bellQA.close();
+      assert(
+        state().health === state().maxHealth &&
+          Math.abs(state().position.x) < 0.5 &&
+          Math.abs(state().position.z - 8) < 0.5,
+        "A defeat returns Alder to the hall's checkpoint",
+      );
+      assert(
+        detail().endsWith("2 / 4 fallen"),
+        `After the defeat it still reads 2 / 4 (${detail()})`,
+      );
+      api.damageEnemy(2, 100);
+      api.damageEnemy(3, 100);
+      assert(
+        !detail().includes("fallen") && detail().startsWith("Face "),
+        `When the seal breaks the objective moves on to the warden (${detail()})`,
+      );
+      return results.length;
+    });
+  } finally {
+    await c.close();
+  }
+});
+
 // Keyboard remapping on its own page, so rebinds can't leak into other groups.
 await run("keys: remapping", async () => {
   const keyPage = await open({ viewport: { width: 1280, height: 800 } });
