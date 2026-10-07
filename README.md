@@ -44,7 +44,7 @@ Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompt
 | Sword (press again mid-swing to chain the combo) | <kbd>J</kbd> or click without dragging | **X** | **Sword**, or tap the scene |
 | Shield (guards your front) | Hold <kbd>Shift</kbd> | Hold **RB** or **RT** | Hold **Shield** |
 | Dodge roll | <kbd>Space</kbd> | **B** | **Dodge** |
-| Lock on to the nearest enemy | <kbd>Q</kbd> | **LB** | **Lock** |
+| Lock on to the nearest enemy (a marker shows which) | <kbd>Q</kbd>; <kbd>←</kbd> <kbd>→</kbd> or a sideways mouse drag switches target | **LB**; flick the right stick to switch | **Lock**; swipe the scene sideways to switch |
 | Reed flute: play low, middle, high | <kbd>F</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | **Y**, then **A** **X** **Y** | **Flute**, then tap the notes |
 | Kingdom map | <kbd>M</kbd> | **Back** | **The Kingdom** button or pause menu |
 | Journal and equipment | <kbd>Tab</kbd> | D-pad up | Pause menu |
@@ -60,7 +60,7 @@ In menus a gamepad moves with the D-pad or left stick, chooses with **A**, and b
 
 <img src="docs/media/screenshots/04-combat.jpg" alt="Alder slashes a stone guardian in the Whisperwood, leaving a pale sword trail" width="100%">
 
-Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the blade itself: each swing traces the sword's real path against enemy hit volumes, so a miss is really a miss, and a blade that hits a wall glances off in a shower of sparks. Hits land with a brief hit-stop. Guardians telegraph every attack with a pulsing golden ring and commit to their facing, so a well-timed shield or dodge always has an answer. Guard a blow and the attacker staggers, which gives you a longer opening than a normal recovery. Guardians come in three kinds: the classic stone **guardian**; the small, horned **skirmisher**, which closes fast and lunges down a short marked lane; and the tall **warder**, which keeps its distance and lobs a stone at a circle marked where you stand. Face the warder with your shield up, or step out of the circle. The minimap draws guardians as dots, skirmishers as triangles, and warders as diamonds. <kbd>Q</kbd> locks on and keeps a single foe in focus.
+Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the blade itself: each swing traces the sword's real path against enemy hit volumes, so a miss is really a miss, and a blade that hits a wall glances off in a shower of sparks. Hits land with a brief hit-stop. Guardians telegraph every attack with a pulsing golden ring and commit to their facing, so a well-timed shield or dodge always has an answer. Guard a blow and the attacker staggers, which gives you a longer opening than a normal recovery. Guardians come in three kinds: the classic stone **guardian**; the small, horned **skirmisher**, which closes fast and lunges down a short marked lane; and the tall **warder**, which keeps its distance and lobs a stone at a circle marked where you stand. Face the warder with your shield up, or step out of the circle. The minimap draws guardians as dots, skirmishers as triangles, and warders as diamonds. <kbd>Q</kbd> locks on and keeps a single foe in focus: a gold marker rides over its head (or points from the screen edge when it's out of view), a sideways nudge of the camera switches to the next foe on that side, and when it falls the lock moves to the nearest foe still standing.
 
 ### Seven sanctuaries, seven trials
 

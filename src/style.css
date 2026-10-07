@@ -506,12 +506,46 @@ kbd {
   background: #dba185;
   transition: width 0.2s;
 }
+/* The lock marker rides over the locked foe; off screen it becomes an arrow
+   on the edge pointing toward it. game.ts sets the position and --angle. */
 #target-dot {
   position: absolute;
-  top: 48%;
-  left: 50%;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+#target-dot::before {
+  content: "◇";
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%);
   font-size: 30px;
+  line-height: 1;
   color: #f3d292;
+  text-shadow:
+    0 0 8px #1a2d27,
+    0 0 2px #1a2d27;
+  animation: lock-pulse 1.2s ease-in-out infinite;
+}
+#target-dot.edge::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  border-left: 18px solid #f3d292;
+  transform: translate(-50%, -50%) rotate(var(--angle));
+  filter: drop-shadow(0 0 3px #1a2d27);
+  animation: none;
+}
+@keyframes lock-pulse {
+  50% {
+    opacity: 0.6;
+  }
 }
 .sheet {
   position: relative;

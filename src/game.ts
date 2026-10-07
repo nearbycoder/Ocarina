@@ -97,6 +97,7 @@ import { visualTime, visualEye, grassReach } from "./surfaces";
 import { updateNature } from "./nature";
 import { UI } from "./ui";
 import { Sparks } from "./sparks";
+import { nearestTarget, screenAnchor, sideTarget } from "./lockon";
 import { Sound, stepsBetween, surfaceAt } from "./audio";
 import {
   CARVINGS,
@@ -145,6 +146,8 @@ interface Enemy {
   /** A warder's floating lantern and the stone it throws. */
   orb: T.Mesh | null;
   stone: T.Mesh | null;
+  /** Height of the top of the model above its feet, for the lock marker. */
+  top: number;
 }
 // Telegraph shapes are shared; each enemy owns only its fading materials.
 const MARK = {
@@ -227,6 +230,9 @@ export class Game {
   invulnerable = 0;
   hurt = 0;
   target: Enemy | null = null;
+  /** Sideways drag since the last target switch, and a right-stick flick. */
+  private dragSwitch = 0;
+  private padFlick = 0;
   move = new T.Vector3();
   velocity = new T.Vector3();
   puzzleProgress = 0;
@@ -795,6 +801,7 @@ export class Game {
     indicator.position.y = 0.08;
     g.add(indicator);
     batchStatic(g, orb ? [indicator, orb] : [indicator]);
+    const top = new T.Box3().setFromObject(g).max.y;
     g.position.set(x, this.ground(x, z), z);
     this.scene.add(g);
     const marks = new T.Group();
@@ -848,6 +855,7 @@ export class Game {
       waveRadius: 0,
       orb,
       stone,
+      top,
     });
   }
   ground(x: number, z: number) {
@@ -934,6 +942,8 @@ export class Game {
         [bound.checkpoint]: "checkpoint",
       };
       if (actions[code]) this.action(actions[code]);
+      else if (this.target && (code === "ArrowLeft" || code === "ArrowRight"))
+        this.switchTarget(code === "ArrowRight" ? 1 : -1);
     });
     window.addEventListener("keyup", (e) =>
       this.keys.delete(normalizeCode(e.code)),
@@ -956,6 +966,7 @@ export class Game {
       if (this.ui.panel) return;
       this.dragging = true;
       this.pointerMoved = false;
+      this.dragSwitch = 0;
       this.lastPointer = { x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
     });
@@ -964,7 +975,15 @@ export class Game {
       const dx = e.clientX - this.lastPointer.x,
         dy = e.clientY - this.lastPointer.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) this.pointerMoved = true;
-      this.turnCamera(dx * 0.006, dy * 0.004);
+      if (this.target) {
+        // While locked, a sideways drag switches targets; up and down tilt.
+        this.dragSwitch += dx;
+        if (Math.abs(this.dragSwitch) > 70) {
+          this.switchTarget(this.dragSwitch > 0 ? 1 : -1);
+          this.dragSwitch = 0;
+        }
+        this.turnCamera(0, dy * 0.004);
+      } else this.turnCamera(dx * 0.006, dy * 0.004);
       this.lastPointer = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener("pointerup", (e) => {
@@ -1075,8 +1094,20 @@ export class Game {
     this.padMove = context === "play" ? move : { x: 0, y: 0 };
     if (context === "play") {
       // Right stick: right orbits right; pushing up looks up unless inverted.
-      if (look.x || look.y)
-        this.turnCamera(look.x * dt * 2.6, look.y * dt * 1.6);
+      // While locked, a sideways flick switches targets instead.
+      if (this.target) {
+        const side = Math.sign(look.x) as 1 | -1;
+        if (Math.abs(look.x) > 0.6 && side !== this.padFlick) {
+          this.padFlick = side;
+          this.switchTarget(side);
+        } else if (Math.abs(look.x) < 0.3) this.padFlick = 0;
+        if (look.y) this.turnCamera(0, look.y * dt * 1.6);
+      } else {
+        // A stick already pushed when the lock starts isn't a flick.
+        this.padFlick = Math.abs(look.x) > 0.3 ? Math.sign(look.x) : 0;
+        if (look.x || look.y)
+          this.turnCamera(look.x * dt * 2.6, look.y * dt * 1.6);
+      }
       for (const a of actions) this.action(a);
       return;
     }
@@ -1896,7 +1927,12 @@ export class Game {
         this.save.maxHealth,
         this.save.health + (e.boss ? 4 : 1),
       );
-      if (this.target === e) this.target = null;
+      // The lock moves on to the nearest foe still standing, if any.
+      if (this.target === e)
+        this.target = nearestTarget(
+          this.hero.group.position,
+          this.lockCandidates(),
+        );
       if (e.boss) {
         this.bossDead = true;
         this.world.interactables.find((i) => i.kind === "relic")!.mesh.visible =
@@ -1948,25 +1984,60 @@ export class Game {
     this.velocity.copy(m).normalize().multiplyScalar(15);
     this.sound.tone(145, 0.12, "triangle", 0.025);
   }
+  /** Living foes in lock range and in sight of the player. */
+  lockCandidates() {
+    const p = this.hero.group.position;
+    return this.enemies.filter(
+      (e) =>
+        e.state !== "dead" &&
+        Math.hypot(e.x - p.x, e.z - p.z) < 18 &&
+        this.clearSight(p.x, p.z, e.x, e.z),
+    );
+  }
   lockTarget() {
     if (this.target) {
       this.target = null;
       return;
     }
-    const p = this.hero.group.position;
-    this.target =
-      this.enemies
-        .filter(
-          (e) =>
-            e.state !== "dead" &&
-            Math.hypot(e.x - p.x, e.z - p.z) < 18 &&
-            this.clearSight(p.x, p.z, e.x, e.z),
-        )
-        .sort(
-          (a, b) =>
-            Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z),
-        )[0] || null;
+    this.target = nearestTarget(
+      this.hero.group.position,
+      this.lockCandidates(),
+    );
     if (!this.target) this.ui.toast("No enemy nearby to lock onto.");
+  }
+  /** Moves the lock to the next foe on the right (1) or left (-1) of the view. */
+  switchTarget(side: 1 | -1) {
+    if (!this.target) return false;
+    const next = sideTarget(
+      this.camera.position,
+      this.target,
+      this.lockCandidates(),
+      side,
+    );
+    if (next) {
+      this.target = next;
+      this.sound.ui();
+    }
+    return !!next;
+  }
+  /** Keeps the lock marker over the locked foe, or on the edge toward it. */
+  updateLockMarker() {
+    const dot = this.ui.el("target-dot");
+    const e = this.target;
+    if (!e || !this.started || this.ui.panel) {
+      dot.hidden = true;
+      return;
+    }
+    const head = new T.Vector3(
+      e.x,
+      e.mesh.position.y + e.top + 0.35,
+      e.z,
+    ).project(this.camera);
+    const a = screenAnchor(head, innerWidth, innerHeight, 34);
+    dot.hidden = false;
+    dot.classList.toggle("edge", !a.onScreen);
+    dot.style.transform = `translate(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px)`;
+    dot.style.setProperty("--angle", `${a.angle.toFixed(3)}rad`);
   }
   /** Turns the camera: positive x orbits right, positive y raises the view. */
   turnCamera(x: number, y: number) {
@@ -2044,11 +2115,14 @@ export class Game {
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.hurt = Math.max(0, this.hurt - dt);
+    // While locked, ← and → switch targets instead of turning.
     this.turnCamera(
-      (Number(this.keys.has("ArrowRight")) -
-        Number(this.keys.has("ArrowLeft"))) *
-        dt *
-        1.8,
+      this.target
+        ? 0
+        : (Number(this.keys.has("ArrowRight")) -
+            Number(this.keys.has("ArrowLeft"))) *
+            dt *
+            1.8,
       (Number(this.keys.has("ArrowUp")) - Number(this.keys.has("ArrowDown"))) *
         dt,
     );
@@ -2107,11 +2181,10 @@ export class Game {
       (this.dodgeTime > 0
         ? Math.sin((this.dodgeTime / 0.42) * Math.PI) * 0.4
         : 0);
+    if (this.target?.state === "dead")
+      this.target = nearestTarget(p, this.lockCandidates());
     if (this.target) {
-      if (
-        this.target.state === "dead" ||
-        Math.hypot(p.x - this.target.x, p.z - this.target.z) > 23
-      )
+      if (Math.hypot(p.x - this.target.x, p.z - this.target.z) > 23)
         this.target = null;
       else {
         const angle = Math.atan2(
@@ -2187,7 +2260,6 @@ export class Game {
     this.updateAttack(dt);
     this.currentInteraction = this.nearest();
     this.ui.prompt(this.currentInteraction?.label || "");
-    this.ui.el("target-dot").hidden = !this.target;
   }
   updateEnemies(dt: number) {
     const p = this.hero.group.position;
@@ -2851,6 +2923,7 @@ export class Game {
       this.renderer.shadowMap.needsUpdate = true;
       this.shadowClock = 0;
     }
+    this.updateLockMarker();
     this.worldRenderer.render(this.quality.level);
     this.renderTimes.push(performance.now() - renderStart);
     if (this.renderTimes.length > 120) this.renderTimes.shift();

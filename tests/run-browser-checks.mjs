@@ -7,8 +7,8 @@
 // matching groups; the prologue always runs because the others build on it.
 //
 // Needs a Playwright Chromium (`npx playwright install chromium`). The desktop
-// page loads the in-page suites (browser, polish, settings, gamepad, foes); the touch
-// pages use real touch events through the Chrome DevTools Protocol. Pages use
+// page loads the in-page suites (browser, polish, settings, gamepad, foes,
+// puzzles, lock-on); the touch pages use real touch events through the Chrome DevTools Protocol. Pages use
 // /?review=polish, so the player's normal save is never read or written.
 import { chromium } from "playwright";
 import { mkdirSync, readFileSync } from "node:fs";
@@ -45,6 +45,7 @@ async function open(options) {
     "input-checks.js",
     "foe-checks.js",
     "puzzle-checks.js",
+    "lockon-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -77,6 +78,17 @@ await inPage(
   async () => (await foeQA.layouts()).length,
 );
 await inPage("alcoves", async () => (await foeQA.alcoves()).length);
+await inPage("lock-on", async () => (await lockQA.run()).length);
+// A real mouse drag while locked: sideways switches, and the view stays put.
+await run("lock-on: mouse drag", async () => {
+  const { width, height } = await page.evaluate(() => lockQA.dragSetup());
+  await page.mouse.move(width / 2, height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++)
+    await page.mouse.move(width / 2 + i * 12, height / 2);
+  await page.mouse.up();
+  return page.evaluate(async () => (await lockQA.afterDrag(2)).length);
+});
 for (const id of ["root", "ember", "tide"])
   await inPage(
     `campaign: ${id}`,

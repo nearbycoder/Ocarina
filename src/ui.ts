@@ -21,11 +21,11 @@ const CONTROLS: Record<Device, (k: KeyLabels) => string> = {
 };
 const HELP: Record<Device, (k: KeyLabels) => string> = {
   keyboard: (k) =>
-    `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint`,
+    `<b>${moveKeys(k)}</b> move · <b>Mouse drag / arrows</b> camera · <b>${k.interact}</b> interact<br><b>${k.attack} / click</b> sword · <b>${k.dodge}</b> dodge · <b>${k.shield}</b> shield<br><b>${k.target}</b> lock on (<b>← →</b> switch) · <b>${k.flute}</b> flute · <b>${k.checkpoint}</b> return to checkpoint`,
   gamepad: () =>
-    "<b>Left stick</b> move · <b>Right stick</b> camera · <b>A</b> interact<br><b>X</b> sword · <b>B</b> dodge · <b>RB / RT</b> shield · <b>LB</b> lock on<br><b>Y</b> flute · <b>Back</b> map · <b>D-pad up</b> journal · <b>Start</b> pause",
+    "<b>Left stick</b> move · <b>Right stick</b> camera · <b>A</b> interact<br><b>X</b> sword · <b>B</b> dodge · <b>RB / RT</b> shield · <b>LB</b> lock on (flick the right stick to switch)<br><b>Y</b> flute · <b>Back</b> map · <b>D-pad up</b> journal · <b>Start</b> pause",
   touch: () =>
-    "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on · <b>Flute</b> · <b>Ⅱ</b> pause",
+    "<b>Thumbstick</b> move · <b>Drag the scene</b> camera · <b>Use</b> interact<br><b>Sword</b> or tap the scene to strike · <b>Dodge</b> · hold <b>Shield</b><br><b>Lock</b> on (swipe sideways to switch) · <b>Flute</b> · <b>Ⅱ</b> pause",
 };
 import {
   CARVINGS,
@@ -62,7 +62,7 @@ export class UI {
  <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd id="map-key">M</kbd></button></div>
  <div id="prompt" hidden></div><div id="boss" hidden><small id="boss-name"></small><div><i id="boss-fill"></i></div></div>
  <div class="controls" id="controls"></div>
- <div id="target-dot" hidden>◇</div><div id="save-indicator">Progress saved</div></div>
+ <div id="target-dot" aria-hidden="true" hidden></div><div id="save-indicator">Progress saved</div></div>
  <input type="file" id="import-file" accept=".json,application/json" hidden><div id="toast" role="status"></div><div id="damage-flash"></div><div id="panel"></div>
  <div id="touch" hidden><div class="touch-stick" id="touch-stick" role="application" aria-label="Movement thumbstick"><i id="touch-knob"></i></div><div class="touch-actions"><button data-action="target">Lock</button><button data-action="flute">Flute</button><button id="touch-shield" aria-label="Shield (hold)">Shield</button><button data-action="dodge">Dodge</button><button data-action="interact">Use</button><button class="touch-sword" data-action="attack">Sword</button></div></div>`;
     this.setDevice(this.device);
