@@ -1671,6 +1671,70 @@ await run("full screen", async () => {
   return count;
 });
 
+// The title with a journey to continue, and the line saying which one, at
+// common desktop and laptop sizes: no choice or line runs into the footer or
+// off the screen. With a journey saved, main already ran the chapter row
+// into the footer at 1280×720 and 1366×768.
+await run("title: fits with a journey", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const t = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  try {
+    await t.goto(URL);
+    await t.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+    for (const [width, height] of [
+      [1280, 720],
+      [1366, 768],
+      [1280, 800],
+      [1024, 768],
+      [1440, 900],
+      [1920, 1080],
+      [800, 600],
+    ]) {
+      await t.setViewportSize({ width, height });
+      const hit = await t.evaluate(() => {
+        // The longest line the title can show.
+        window.__BELL_OF_AGES__.debug
+          .game()
+          .ui.title(
+            true,
+            "Second age · 6 / 7 relics · The Sunken Observatory · 12 h 47 min played",
+          );
+        const footer = document
+          .querySelector(".title-footer")
+          .getBoundingClientRect();
+        const pieces = [
+          ...document.querySelectorAll(
+            ".title-content h1, .title-content > p, .title-actions > *, .title-links > *, .title-chapters",
+          ),
+        ].filter((el) => getComputedStyle(el).display !== "none");
+        return pieces.flatMap((el) => {
+          const r = el.getBoundingClientRect();
+          const name = el.dataset.action || el.className || el.tagName;
+          if (r.bottom > innerHeight || r.right > innerWidth)
+            return [`${name} runs off the screen`];
+          if (r.bottom > footer.top && r.left < footer.right)
+            return [`${name} runs into the footer`];
+          return [];
+        });
+      });
+      check(
+        !hit.length,
+        `${width}×${height}: ${hit.join(", ") || "everything fits above the footer"}`,
+      );
+    }
+  } finally {
+    await t.close();
+  }
+  return count;
+});
+
 await browser.close();
 if (errors.length) {
   failures++;

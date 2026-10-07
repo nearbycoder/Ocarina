@@ -202,6 +202,13 @@ h1 em {
   letter-spacing: 0.3px;
   color: #e7ddbccc;
 }
+/* With a journey to continue the title has two more lines; on shorter
+   screens the decorative chapter row gives them room above the footer. */
+@media (max-height: 860px) {
+  .title-content.with-journey .title-chapters {
+    display: none;
+  }
+}
 .title-links {
   display: flex;
   flex-wrap: wrap;
