@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), and [Round 7 results](#round-7-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), and [Round 8 scope](#round-8-scope--7-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -836,3 +836,73 @@ Still deferred, and why:
 - **Skinned characters and new enemy art, traversal tools:** large jobs.
 - **Full touch remapping:** needs a layout editor.
 - **Real-device checks:** a phone is still needed for touch, rumble, pinch, hiding, full screen, a real lost context, and Safari's audio.
+
+## Round 8 scope — 7 October 2026
+
+Branch `improvements-8`, from `main` at `c5f8a4d` (in sync with `origin/main`). Baseline: 121 / 121 Vitest tests; the 45 `tests/run-browser-checks.mjs` groups are rerun on an unchanged checkout of `main` and reported with the results.
+
+Rounds 1 to 7 covered every input device, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, the camera, keyboard-only menus, full screen, resuming a sanctuary, and lost graphics and sound. This time I played as three players the earlier rounds didn't: someone holding a PlayStation or Nintendo controller, a family sharing one computer, and a desktop player used to mouse look. I found these:
+
+- **A PlayStation or Nintendo player is told to press the wrong buttons.** Every gamepad prompt uses Xbox names. On a DualSense, "press X to strike" sends the player to ✕, which is Interact; the Sword is □. On a Switch Pro Controller, "A" is the right-hand button, not the bottom one. The pause menu also shows keyboard keys (J, M) to gamepad and touch players, and Elder Rowan's line says "M opens your map" whatever you hold.
+- **One computer keeps one journey.** Two children sharing a family computer can't both play: "Begin a new story" replaces the only journey (it asks first), and the only way to keep another is a journey file.
+- **The Ember Vault's guardian hall starts with a view of the stone's top.** After a defeat in the hall, or Continue into it (round 7), the camera sits just above the pushed stone and its top fills the bottom of the view until you step forward.
+- **Mouse swings land late or not at all.** The mouse turns the camera by dragging, so a click swings on release, not press, and any drag of more than 2 px while clicking turns the camera instead. A player used to mouse look in other 3D games has no way to turn it on.
+- **A small one:** the objective count "0 / 3" can break across two lines on the desktop panel.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, enemy numbers, timings, and crystal income stay as they are. No new combat aids. The arena-doorway reset stays as it is (owner's call).
+- **No new story writing.** Only interface text. Rowan's line keeps its words; only the key name becomes the player's own control.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load, and a save written by this version still loads in older builds.
+
+### A. Prompts name your controller's buttons
+
+Acceptance criteria
+- The game tells PlayStation (vendor 054c, or "DualShock", "DualSense", "PlayStation" in the pad's name), Nintendo (vendor 057e, "Nintendo", "Pro Controller", "Joy-Con"), and other pads apart, and names the buttons that way: ✕ ○ □ △, L1 R1 L2 R2, Create and Options; B A Y X, L R ZL ZR, − and +; or today's A B X Y, LB RB LT RT, Back and Start. Buttons are named by position, as the standard mapping lays them out.
+- **Button names** in Settings → Gamepad: Automatic (the default), Xbox, PlayStation, Nintendo. It's remembered with the settings; older settings get Automatic.
+- Every place that names a gamepad button follows it: the HUD's control strip, the interact prompt, the tutorial and quest lines, the pause help, the flute, the map, the remapping rows and notes, and the minimap badge.
+- No keyboard key is shown to gamepad or touch players in play or the pause menu: the pause menu's journal, map, and checkpoint shortcuts and Rowan's "M opens your map" use the player's own control.
+
+Verification
+- Unit tests: detecting the family from real pad names, every label set, the setting's validation and migration.
+- A browser check with synthetic pads named like a DualSense, a Switch Pro Controller, and an Xbox pad: the strip, prompt, pause help, flute, and remap rows use that family's names; the override wins over detection; with a DualSense, pressing the button the prompt names for the sword (□, button 2) swings. Keyboard and touch text unchanged, and no keyboard key appears in the pause menu for a pad or touch player.
+- Screenshots of the HUD and the flute with a DualSense.
+
+### B. Three journeys on one device
+
+Acceptance criteria
+- The game keeps up to three journeys. The first lives where today's single save lives, so existing journeys appear as Journey 1 untouched and older builds still read it.
+- The title's **Continue** resumes the journey played last, with round 7's summary line. When there's more than one, **Choose a journey** opens a sheet listing all three with their summaries (or "Empty"), each one continuable.
+- **Begin a new story**, when a journey exists, opens the same sheet to choose a place: an empty place begins at once; a filled one asks first, as today.
+- Importing a journey file keeps it in the first empty place and says which; with none empty it asks before replacing the current journey, as today. Export uses the current journey.
+- Review and test pages still never write a save.
+
+Verification
+- Unit tests: choosing the place for a new or imported journey, and the last-played record.
+- A browser check in a fresh, throwaway browser context on the normal URL with real clicks: start journey 1 and walk, return to the title, begin a second journey in place 2, reload, and confirm Continue resumes journey 2 and the sheet lists both with different summaries; continue journey 1 and find it where it was. Then the keyboard reaches the sheet too. A review page writes nothing.
+- Screenshots of the title and the sheet.
+
+### C. The Ember Vault's stone settles into its seal
+
+Acceptance criteria
+- When the stone reaches the gold seal it sinks partway into the floor (with a short slide, at once under reduced motion), so it reads as solved and stays solid.
+- Starting the guardian hall (after a defeat, or Continue) frames Alder with the hall ahead and nothing in the lower part of the view, as in the other sanctuaries. The checkpoint itself doesn't move.
+
+Verification
+- The push-block check still pushes the stone with movement input only, and now checks the settled height. A check that the hall-start camera is at the same distance as in the Rootbound Hollow and that the stone is out of view. Before and after screenshots.
+
+### D. Captured mouse look (opt-in)
+
+Acceptance criteria
+- **Captured mouse look** in Settings → Camera, off by default. When on, clicking the scene captures the pointer; mouse movement then turns the camera (with the camera speed and invert settings), the left button swings when pressed, and the right button holds the shield. While locked on, moving sideways switches targets as a drag does.
+- Opening any menu, the map, or the flute releases the pointer; returning to the world with a click captures it again. If the browser releases it (Esc), a short notice says how to capture it again; nothing else changes.
+- With the setting off, the mouse works exactly as today.
+
+Verification
+- A browser check with real Playwright clicks: the pointer is captured, a real button press starts a swing before the button is released, a held right button guards, and opening the pause menu releases the pointer. Camera turning is checked with synthetic `mousemove` events carrying `movementX`, because headless Chromium's own deltas under pointer lock aren't real movement; I'll say so. With the setting off, the existing drag and click checks still pass.
+
+### E. Objective counts stay on one line
+
+Acceptance criteria and verification: counts like "0 / 3" use non-breaking spaces; a browser check reads the objective's rendered line boxes.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and real-device checks (need a phone and real controllers).
