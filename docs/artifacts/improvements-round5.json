@@ -1,0 +1,56 @@
+{
+ "date": "2026-10-06",
+ "branch": "improvements-5",
+ "base": "ff86947 (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish)",
+ "unitTests": {
+  "files": 20,
+  "tests": 112,
+  "passed": 112
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "browserGroups": "All 39 groups pass (32 before this round), including every earlier group unchanged (92 campaign assertions); load average 21 to 26 during the final full run",
+ "newBrowserGroups": {
+  "wayfindingCompass": 12,
+  "wayfindingMarker": 15,
+  "cameraRecentreAndDistance": 15,
+  "cameraWheelAndReload": 3,
+  "gamepadRumbleAndPause": 17,
+  "touchPinchAndRecentre": 5,
+  "touchLayouts": 13,
+  "touchLandscapeLayouts": 6
+ },
+ "items": {
+  "A. Wayfinding: a destination at every stage, an arrow, and your own marker": {
+   "commit": "4f9d784",
+   "unitTests": 9,
+   "browserAssertions": 27,
+   "notes": "A real mouse click places the marker within 2 m of the clicked place; a synthetic pad marks a sanctuary with the D-pad and A; walking onto the marker with W clears it."
+  },
+  "B. A camera you can reset and zoom on every device": {
+   "commit": "80798e2",
+   "unitTests": 2,
+   "browserAssertions": 23,
+   "bugFixed": "Locking on after the camera had turned several full circles spun it back through every one: with yaw at 6π + 0.4 the old code travelled 14.88 rad to face the target. The check fails on the old code and passes on the new one (under 1 rad)."
+  },
+  "C. Touch controls for either hand, in three sizes": {
+   "commit": "45552be",
+   "unitTests": 1,
+   "browserAssertions": 19,
+   "bugFixed": "On a 390 px-wide phone held upright the region name ran into the vitals (and the longer compass names from item A into both). The new overlap check fails on the old layout."
+  },
+  "D. Gamepad vibration, and a pause when you lose the pad or the window": {
+   "commit": "c691317",
+   "unitTests": 2,
+   "browserAssertions": 17,
+   "limits": "Synthetic vibrationActuator only; how the rumble feels on a physical controller is untested."
+  },
+  "productionBuild": "Loads from /Ocarina/ with no failed or third-party requests and no console errors; new game starts; the compass and arrow show; Settings has the distance, touch, and vibration rows; a map click stores a marker; the debug API is absent."
+ }
+}

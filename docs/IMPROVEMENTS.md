@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 4 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), and [Round 5 results](#round-5-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), and [Round 5 results](#round-5-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -556,3 +556,39 @@ Verification
 - I have no physical controller, so how the rumble feels can't be judged here, and I'll say so.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance and difficulty (owner decision), puzzle hints (owner decision), branching dungeons with keys and shortcuts (needs a level-design pass and a larger chamber layout than the fixed 60 × 88 m sanctuary space), new skinned art and traversal (large jobs), and full touch button remapping (a layout editor).
+
+## Round 5 results
+
+All four scoped items shipped on `improvements-5`, plus two existing bugs found while verifying them. Verification is recorded in [VALIDATION.md](VALIDATION.md), [improvements-round5.json](artifacts/improvements-round5.json), and [perf-round5.json](artifacts/perf-round5.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round5/`) |
+| --- | --- | --- | --- |
+| A. Wayfinding: a destination at every stage, an arrow, and your own marker | `4f9d784` | 9 unit tests; 27 assertions, including a real mouse click on the map and a synthetic pad | `a-compass-arrow`, `a-compass-marker`, `a-map-marker` |
+| B. A camera you can reset and zoom on every device | `80798e2` | 2 unit tests; 23 assertions with keys, a synthetic pad, a real mouse wheel across a reload, and a two-finger CDP pinch | `b-settings-camera`, `b-camera-near`, `b-camera-far` |
+| C. Touch controls for either hand, in three sizes | `45552be` | 1 unit test; 19 assertions with CDP touch, including an overlap check of all six layouts upright and sideways | `c-touch-standard-portrait`, `c-touch-left-portrait`, `c-touch-left-landscape`, `c-settings-touch` |
+| D. Gamepad vibration, and a pause when you lose the pad or the window | `c691317` | 2 unit tests; 17 assertions with a synthetic pad that records its rumbles | `d-settings-vibration` |
+| Fix: lock-on spun the camera after full turns | in `80798e2` | The check fails on the old code (14.88 rad of travel) | — |
+| Fix: phone HUD overlap when held upright | in `45552be` | The new overlap check fails on the old layout | `c-touch-standard-portrait` |
+
+What changed for a player:
+- **The compass always knows where to go.** After the prologue it names the nearest sanctuary you can enter, then the Bell Sanctuary once you have three relics, then the Silent Crown once you have three echoes. An arrow under the region name points the way relative to the view, and a destination off the minimap sits on its rim.
+- **Your own marker.** Click or tap the kingdom map, or choose a place on it with any device, to set a marker. The compass and minimap follow it until you get there, and it's saved with the journey.
+- **The lock button recentres the camera** when no foe is in range, on every device. **Camera distance** is a setting (Settings → Camera); the mouse wheel and a two-finger pinch move it too, and it's remembered.
+- **Touch for either hand.** Settings → Touch has a left-handed layout and three button sizes.
+- **The gamepad rumbles** when you're hit, guard a blow, land a sword hit, or a warden's blow lands (Settings → Gamepad → Controller vibration). **The game pauses** if the pad disconnects or the window loses focus mid-play.
+
+Honest notes:
+- **Two existing bugs.** Locking on after turning the camera a few full circles spun it back through every turn, because the turn toward the target didn't wrap the angle. On a phone held upright, the region name ran into the vitals; the new compass names would have made it worse, so the region and compass now sit below the vitals on narrow screens, and the objective panel moves down to make room.
+- **The compass picks the nearest sanctuary.** The campaign lets you take the childhood and adult sanctuaries in any order, so the compass suggests the nearest one you can enter. It doesn't prefer the order the story was written in. That's a design call the owner may want to make differently.
+- **A small default change.** Lock-on with nothing in range used to say "No enemy nearby to lock onto." It now recentres the camera without a message.
+- **Synthetic input only.** The rumble was checked by recording the effects a synthetic pad was asked to play. How it feels on a real controller, and whether a real controller's disconnect fires the same way, is untested. The pinch and left-handed layout were checked with emulated touch, not on a phone.
+- **Difficulty untouched.** No health, damage, timing, enemy, or crystal values changed, and no combat aid was added. The rumble and the pause don't change fights.
+- **Performance unchanged.** Alternating samples of `main` and this branch (load average 16 to 25) give the same draw calls and live geometries, and frame times that differ only by noise. The compass adds one small style update a frame, only when its angle changes.
+
+Still deferred, and why:
+- **Balance and difficulty (8):** the owner's call.
+- **Puzzle hints:** the owner's call.
+- **Branching dungeons (rest of 13):** every sanctuary is built in one fixed 60 × 88 m space with three chambers in a line; keys, shortcuts, and rooms you choose between need a larger chamber layout and a level-design pass.
+- **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
+- **Full touch remapping:** moving individual buttons needs a layout editor; this round covers handedness and size.
+- **Performance tuning (rest of 11):** the desktop iGPU still has headroom; a phone is still unmeasured.
