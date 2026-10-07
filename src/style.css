@@ -484,6 +484,32 @@ kbd {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+/* While the device has taken the graphics away; above every sheet. */
+#graphics-notice {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  width: max-content;
+  max-width: min(460px, 90%);
+  background: #213a30f2;
+  border: 1px solid #dac38b70;
+  padding: 14px 24px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: auto;
+}
+#graphics-notice[hidden] {
+  display: none;
+}
+#graphics-notice p {
+  margin: 0;
+}
+#graphics-notice button {
+  margin-top: 10px;
+}
 #save-indicator {
   position: absolute;
   right: 32px;

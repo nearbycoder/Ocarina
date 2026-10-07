@@ -1326,6 +1326,180 @@ await run("saves: sanctuary visit", async () => {
   return count;
 });
 
+// The device takes the graphics away (WEBGL_lose_context, as a phone or a GPU
+// reset would) and gives them back; then the sound, as a phone suspends it.
+// The picture is compared with sharp against the one from before the loss.
+// The old code kept simulating behind the frozen picture, came back darker
+// (the lighting environment was gone), and left the sound suspended.
+await run("graphics and sound: lost and restored", async () => {
+  let count = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    if (process.env.BELL_VERBOSE) console.log(`  ok ${message}`);
+    count++;
+  };
+  const { default: sharp } = await import("sharp");
+  const p = await open({ viewport: { width: 960, height: 600 } });
+  try {
+    await p.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    const lose = () =>
+      p.evaluate(() => {
+        const gl = document.querySelector("#world").getContext("webgl2");
+        window.__lose = gl.getExtension("WEBGL_lose_context");
+        window.__lose.loseContext();
+      });
+    const restore = () => p.evaluate(() => window.__lose.restoreContext());
+    const game = (fn) => p.evaluate(fn);
+    // The picture: a fixed view with the clock held, before the first loss
+    // and after it.
+    const view = () =>
+      game(() => {
+        const api = window.__BELL_OF_AGES__;
+        api.debug.game().ui.setPanel(null);
+        api.debug.scene("village");
+        // Only the 3D picture: no HUD, and no passing toast.
+        document.getElementById("hud").hidden = true;
+        document.getElementById("toast").style.display = "none";
+      });
+    const shot = async () => {
+      await p.waitForTimeout(600);
+      const png = await p.screenshot();
+      const { data, info } = await sharp(png)
+        .removeAlpha()
+        .resize(240, 150)
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      return { data, info };
+    };
+    const compare = (a, b) => {
+      let diff = 0,
+        la = 0,
+        lb = 0;
+      for (let i = 0; i < a.data.length; i++) {
+        diff += Math.abs(a.data[i] - b.data[i]);
+        la += a.data[i];
+        lb += b.data[i];
+      }
+      const n = a.data.length;
+      return { diff: diff / n, light: la / n, lightAfter: lb / n };
+    };
+    await view();
+    // The first frame after switching the view is still settling.
+    await shot();
+    const before = await shot();
+    const again = await shot();
+    const noise = compare(before, again).diff;
+    await lose();
+    await p.waitForTimeout(300);
+    await restore();
+    await p.waitForTimeout(300);
+    await view();
+    const after = await shot();
+    const result = compare(before, after);
+    if (process.env.BELL_VERBOSE)
+      console.log(
+        `  picture: noise ${noise.toFixed(2)}, after restore ${result.diff.toFixed(2)} (mean level ${result.light.toFixed(1)} → ${result.lightAfter.toFixed(1)})`,
+      );
+    check(
+      result.diff < Math.max(2, noise * 3) &&
+        Math.abs(result.light - result.lightAfter) < 1.5,
+      `The restored picture matches the one from before (mean difference ${result.diff.toFixed(2)}, between two frames before ${noise.toFixed(2)}; level ${result.light.toFixed(1)} → ${result.lightAfter.toFixed(1)})`,
+    );
+    await game(() => {
+      const api = window.__BELL_OF_AGES__;
+      document.getElementById("hud").hidden = false;
+      document.getElementById("toast").style.display = "";
+      api.debug.resume();
+    });
+    // While the picture is lost, the journey pauses, and nothing advances
+    // even if the pause menu is closed blind.
+    await game(() => window.__BELL_OF_AGES__.debug.resume());
+    await lose();
+    await p.waitForTimeout(300);
+    const lost = await game(() => {
+      const g = window.__BELL_OF_AGES__.debug.game();
+      return {
+        panel: g.ui.panel,
+        notice: !document.getElementById("graphics-notice").hidden,
+        elapsed: g.save.elapsed,
+      };
+    });
+    check(lost.panel === "pause", `Losing the graphics pauses (${lost.panel})`);
+    check(lost.notice, "A notice says the picture was lost");
+    await game(() => window.__BELL_OF_AGES__.debug.action("close"));
+    await p.keyboard.down("w");
+    await p.waitForTimeout(800);
+    await p.keyboard.up("w");
+    const still = await game(
+      () => window.__BELL_OF_AGES__.debug.game().save.elapsed,
+    );
+    check(
+      still === lost.elapsed,
+      `Nothing runs behind the frozen picture (${(still - lost.elapsed).toFixed(2)} s passed)`,
+    );
+    await p.waitForTimeout(5000);
+    check(
+      (await p.locator('#graphics-notice [data-action="reload"]').count()) ===
+        1,
+      "After a few seconds the notice offers a reload",
+    );
+    await restore();
+    await p.waitForTimeout(500);
+    check(
+      await game(() => document.getElementById("graphics-notice").hidden),
+      "When the picture returns, the notice clears",
+    );
+    // Sound: hiding the page suspends it; the next key or click wakes it.
+    const audio = () =>
+      game(() => window.__BELL_OF_AGES__.debug.game().sound.ctx?.state);
+    await game(() => window.__BELL_OF_AGES__.debug.game().sound.start());
+    await p.waitForTimeout(200);
+    check((await audio()) === "running", "Sound is running in play");
+    const hide = () =>
+      game(() => {
+        Object.defineProperty(document, "hidden", {
+          configurable: true,
+          get: () => true,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    const show = () =>
+      game(() => {
+        delete document.hidden;
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    await hide();
+    await p.waitForTimeout(300);
+    check(
+      (await audio()) === "suspended",
+      "Hiding the page suspends the sound",
+    );
+    await show();
+    await p.keyboard.press("Shift");
+    await p.waitForTimeout(300);
+    check((await audio()) === "running", "A key press wakes it again");
+    // A system interruption (an iPhone's), then a click.
+    await game(() => window.__BELL_OF_AGES__.debug.game().sound.ctx.suspend());
+    await p.waitForTimeout(200);
+    await p.mouse.click(480, 300);
+    await p.waitForTimeout(300);
+    check((await audio()) === "running", "So does a click");
+    await game(() => {
+      const api = window.__BELL_OF_AGES__;
+      api.debug.game().ui.setPanel(null);
+      document.getElementById("hud").hidden = false;
+      document.getElementById("toast").style.display = "";
+      api.debug.resume();
+    });
+  } finally {
+    await p.close();
+  }
+  return count;
+});
+
 // Full screen from the title and the pause menu, with real taps on a phone
 // held sideways; a browser without full screen shows no button.
 await run("full screen", async () => {

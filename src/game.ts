@@ -312,6 +312,11 @@ export class Game {
   shieldUp = false;
   /** The browser's keyboard layout map, when it offers one. */
   private keyLayout?: ReadonlyMap<string, string>;
+  /** The lighting environment; a render target, so it is lost with the context. */
+  private environment?: T.WebGLRenderTarget;
+  /** The WebGL context is lost and the picture frozen. */
+  lostGraphics = false;
+  private lostTimer = 0;
   constructor() {
     this.ui.inJourney = () => this.started;
     const canvas = document.querySelector<HTMLCanvasElement>("#world")!;
@@ -333,12 +338,8 @@ export class Game {
     this.renderer.outputColorSpace = T.SRGBColorSpace;
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.92;
-    const pmrem = new T.PMREMGenerator(this.renderer);
-    const room = new RoomEnvironment();
-    this.scene.environment = pmrem.fromScene(room, 0.04).texture;
+    this.buildEnvironment();
     this.scene.environmentIntensity = 0.32;
-    room.dispose();
-    pmrem.dispose();
     this.scene.background = new T.Color("#cbd2b3");
     this.scene.fog = new T.Fog("#cbd2b3", 65, 195);
     this.fill.position.set(25, 35, 70);
@@ -399,6 +400,10 @@ export class Game {
       this.setMarker({ x, z });
     };
     this.bindInput();
+    canvas.addEventListener("webglcontextlost", () => this.graphicsLost());
+    canvas.addEventListener("webglcontextrestored", () =>
+      this.graphicsRestored(),
+    );
     window.addEventListener("resize", () => {
       this.camera.aspect = innerWidth / innerHeight;
       this.camera.updateProjectionMatrix();
@@ -407,7 +412,10 @@ export class Game {
     // Phones rarely fire `beforeunload` when you switch apps, and may later
     // discard the hidden tab, so save the moment the page is put away.
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden || !this.started) return;
+      if (!document.hidden) return;
+      // Sound sleeps while the game is away; the next input wakes it.
+      this.sound.suspend();
+      if (!this.started) return;
       this.persist(false);
       if (!this.ui.panel) this.action("pause");
     });
@@ -421,6 +429,40 @@ export class Game {
     window.addEventListener("beforeunload", () => this.persist(false));
     this.expose();
     requestAnimationFrame((t) => this.frame(t));
+  }
+  /** Renders the soft room light the materials reflect (once per context). */
+  buildEnvironment() {
+    const pmrem = new T.PMREMGenerator(this.renderer);
+    const room = new RoomEnvironment();
+    this.environment?.dispose();
+    this.environment = pmrem.fromScene(room, 0.04);
+    this.scene.environment = this.environment.texture;
+    room.dispose();
+    pmrem.dispose();
+  }
+  /**
+   * The device took the WebGL context away (a phone in the background, a
+   * driver reset). Save, pause, and say so; nothing runs while the picture
+   * is frozen.
+   */
+  graphicsLost() {
+    this.lostGraphics = true;
+    this.persist(false);
+    if (this.started && !this.ui.panel) this.action("pause");
+    this.ui.graphicsNotice(true);
+    clearTimeout(this.lostTimer);
+    this.lostTimer = window.setTimeout(() => {
+      if (this.lostGraphics) this.ui.graphicsNotice(true, true);
+    }, 5000);
+  }
+  /** The context is back: three.js re-uploads what it can; rebuild the rest. */
+  graphicsRestored() {
+    this.lostGraphics = false;
+    clearTimeout(this.lostTimer);
+    this.buildEnvironment();
+    this.renderer.shadowMap.needsUpdate = true;
+    this.ui.graphicsNotice(false);
+    this.last = 0;
   }
   loadSettings() {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1051,7 +1093,11 @@ export class Game {
         this.applySettings();
       })
       .catch(() => {});
+    // A phone may stop the sound while the game is away; the first key,
+    // click, tap, or gamepad button afterwards starts it again.
+    window.addEventListener("pointerdown", () => this.sound.wake(), true);
     window.addEventListener("keydown", (e) => {
+      this.sound.wake();
       const code = normalizeCode(e.code),
         bound = this.settings.keys;
       if (this.binding && this.ui.panel === "settings") {
@@ -1335,6 +1381,7 @@ export class Game {
       return;
     }
     const held = pad.buttons.map((b) => b.pressed || b.value > 0.5);
+    if (held.some((b, i) => b && !this.padHeld[i])) this.sound.wake();
     const move = shapeStick(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
     const look = shapeStick(pad.axes[2] ?? 0, pad.axes[3] ?? 0, 0.15);
     if (held.some(Boolean) || move.x || move.y || look.x || look.y)
@@ -1487,6 +1534,11 @@ export class Game {
     }
     if (a === "fullscreen") {
       this.toggleFullscreen();
+      return;
+    }
+    if (a === "reload") {
+      this.persist(false);
+      location.reload();
       return;
     }
     // Settings open from the title too, before any journey begins.
@@ -3323,7 +3375,7 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
     const raw = this.last ? (ms - this.last) / 1000 : 1 / 60;
     const dt = Math.min(raw, 0.05);
-    if (document.hidden) {
+    if (document.hidden || this.lostGraphics) {
       this.last = ms;
       return;
     }

@@ -115,6 +115,18 @@ export class Sound {
     if (!this.ctx) this.ctx = new AudioContext();
     void this.ctx.resume();
   }
+  /** Quiets the context while the game is away (the page is hidden). */
+  suspend() {
+    if (this.ctx?.state === "running") void this.ctx.suspend().catch(() => {});
+  }
+  /**
+   * Resumes a context that was suspended, or interrupted by the system (as
+   * an iPhone does), when the player acts again. Needs a user gesture.
+   */
+  wake() {
+    if (this.ctx && this.ctx.state !== "running" && this.ctx.state !== "closed")
+      void this.ctx.resume().catch(() => {});
+  }
   private count(tag: string) {
     this.stats[tag] = (this.stats[tag] ?? 0) + 1;
   }

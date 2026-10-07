@@ -84,7 +84,7 @@ export class UI {
  <div id="prompt" hidden></div><div id="boss" hidden><small id="boss-name"></small><div><i id="boss-fill"></i></div></div>
  <div class="controls" id="controls"></div>
  <div id="target-dot" aria-hidden="true" hidden></div><div id="threats" aria-hidden="true"></div><div id="save-indicator">Progress saved</div></div>
- <input type="file" id="import-file" accept=".json,application/json" hidden><div id="toast" role="status"></div><div id="damage-flash"></div><div id="panel"></div>
+ <input type="file" id="import-file" accept=".json,application/json" hidden><div id="toast" role="status"></div><div id="graphics-notice" role="alert" hidden></div><div id="damage-flash"></div><div id="panel"></div>
  <div id="touch" hidden><div class="touch-stick" id="touch-stick" role="application" aria-label="Movement thumbstick"><i id="touch-knob"></i></div><div class="touch-actions"><button data-action="target">Lock</button><button data-action="flute">Flute</button><button id="touch-shield" aria-label="Shield (hold)">Shield</button><button data-action="dodge">Dodge</button><button data-action="interact">Use</button><button class="touch-sword" data-action="attack">Sword</button></div></div>`;
     this.setDevice(this.device);
     this.root.addEventListener("click", (e) => {
@@ -223,6 +223,14 @@ export class UI {
       () => this.el("toast").classList.remove("visible"),
       4200,
     );
+  }
+  /** Says the picture is lost while the device has the graphics; offers a reload once it's been a while. */
+  graphicsNotice(show: boolean, offerReload = false) {
+    const notice = this.el("graphics-notice");
+    notice.hidden = !show;
+    notice.innerHTML = show
+      ? `<p>The picture was lost. Waiting for your device to bring it back. Your journey is saved.</p>${offerReload ? '<button class="quiet" data-action="reload">Reload the game</button>' : ""}`
+      : "";
   }
   saved() {
     this.el("save-indicator").classList.add("visible");
