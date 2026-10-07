@@ -30,9 +30,19 @@ import {
   respawnLandmark,
   regionAt,
   noticeNearby,
+  FINDS,
   type SaveData,
   type Dungeon,
 } from "./data";
+import {
+  LANDMARKS,
+  MARKER_REACH,
+  bearing,
+  compassTarget,
+  journeyTarget,
+  minimapPoint,
+  type Destination,
+} from "./wayfinding";
 import {
   FIELD_KINDS,
   GUARDIAN_DAMAGE,
@@ -113,7 +123,6 @@ import {
   SCENES,
   finishScene,
   storyGate,
-  storyTarget,
   npcReflection,
 } from "./story";
 
@@ -212,6 +221,9 @@ export class Game {
   saveTime = 0;
   region = "Alder Village";
   yaw = 0;
+  /** Where the compass points, refreshed with the HUD. */
+  destination: Destination | null = null;
+  compassAngle = NaN;
   pitch = 0.26;
   distance = 7.6;
   attackTime = 0;
@@ -358,6 +370,11 @@ export class Game {
     this.ui.onAction = (a) => {
       if (this.started) this.sound.ui();
       this.action(a);
+    };
+    this.ui.onMark = (x, z) => {
+      if (this.ui.panel !== "map") return;
+      this.sound.ui();
+      this.setMarker({ x, z });
     };
     this.bindInput();
     window.addEventListener("resize", () => {
@@ -1302,11 +1319,14 @@ export class Game {
       return;
     }
     if (a === "map") {
-      this.ui.map(
-        this.save,
-        this.world.dungeon ? this.save.position.x : this.hero.group.position.x,
-        this.world.dungeon ? this.save.position.z : this.hero.group.position.z,
-      );
+      this.showMap();
+      return;
+    }
+    if (a.startsWith("mark-")) {
+      const id = a.slice(5);
+      const place = LANDMARKS[id] ?? FINDS.find((f) => f.id === id);
+      if (id === "clear") this.setMarker(null);
+      else if (place) this.setMarker({ x: place.x, z: place.z });
       return;
     }
     if (a === "journal") {
@@ -1439,6 +1459,27 @@ export class Game {
       else this.checkpoint();
     }
   }
+  /** Where the hero is on the kingdom map; inside a sanctuary, its door. */
+  mapPosition() {
+    return this.world.dungeon
+      ? this.save.position
+      : { x: this.hero.group.position.x, z: this.hero.group.position.z };
+  }
+  showMap() {
+    const at = this.mapPosition();
+    this.ui.map(this.save, at.x, at.z, journeyTarget(this.save, at.x, at.z));
+  }
+  /** Places the player's marker; choosing the marked place again clears it. */
+  setMarker(place: { x: number; z: number } | null) {
+    const m = this.save.marker;
+    this.save.marker =
+      place && !(m && Math.hypot(m.x - place.x, m.z - place.z) < 1)
+        ? { x: place.x, z: place.z }
+        : null;
+    this.persist(false);
+    this.refreshHUD();
+    if (this.ui.panel === "map") this.showMap();
+  }
   /** Downloads the journey in memory, so it works without browser storage. */
   exportJourney() {
     this.syncPosition();
@@ -1535,6 +1576,9 @@ export class Game {
       }
       s.position = { x: d.x, z: d.z + 7 };
       if (!s.visited.includes(d.id)) s.visited.push(d.id);
+      // A marker on this sanctuary's door has done its job.
+      if (s.marker && Math.hypot(s.marker.x - d.x, s.marker.z - d.z) < 12)
+        s.marker = null;
       this.persist(false);
       this.loadWorld(d);
       if (d.id === "crown") this.startStory("crownArrival");
@@ -2872,10 +2916,42 @@ export class Game {
             ? `Face ${d.boss}. Watch the warning ring; dodge, then strike.`
             : `Claim ${d.relic} at the far end of the chamber.`;
     this.ui.hud(this.save, this.region, hint);
-    const destination = !d ? storyTarget(this.save) : null;
-    this.ui.el("compass").textContent = destination
-      ? `◇ ${destination.name} · ${Math.round(Math.hypot(this.hero.group.position.x - destination.x, this.hero.group.position.z - destination.z))} paces`
+    const p = this.hero.group.position;
+    const m = this.save.marker;
+    if (
+      m &&
+      !d &&
+      this.started &&
+      Math.hypot(p.x - m.x, p.z - m.z) < MARKER_REACH
+    ) {
+      this.save.marker = null;
+      this.sound.ui();
+      this.ui.toast("You reached your marker.");
+      this.persist(false);
+    }
+    const destination = (this.destination =
+      !d && this.started ? compassTarget(this.save, p.x, p.z) : null);
+    this.ui.el("compass-text").textContent = destination
+      ? `${destination.name} · ${Math.round(Math.hypot(p.x - destination.x, p.z - destination.z))} paces`
       : "N";
+    const arrow = this.ui.el("compass-arrow");
+    arrow.hidden = !destination;
+    arrow.classList.toggle("marker", !!destination?.marker);
+    this.updateCompass();
+  }
+  /** Turns the compass arrow toward the destination as the view turns. */
+  updateCompass() {
+    const t = this.destination;
+    if (!t) return;
+    const p = this.hero.group.position,
+      c = this.camera.position;
+    // The view's own heading, so the arrow agrees with what's on screen.
+    const yaw = Math.atan2(c.x - p.x, c.z - p.z);
+    const angle = bearing(yaw, p.x, p.z, t.x, t.z);
+    if (Math.abs(angle - this.compassAngle) < 0.005) return;
+    this.compassAngle = angle;
+    this.ui.el("compass-arrow").style.transform =
+      `rotate(${angle.toFixed(3)}rad)`;
   }
   minimap() {
     const c = this.ui.el("minimap") as HTMLCanvasElement,
@@ -2932,13 +3008,35 @@ export class Game {
       ctx.fillStyle = "#dab987";
       ctx.fillRect(mx(0) - 2, mz(-45) - 2, 4, 4);
     }
-    const destination = !this.world.dungeon ? storyTarget(this.save) : null;
-    if (destination) {
-      ctx.strokeStyle = "#ffe2a2";
+    // Far destinations sit on the rim, as a wedge pointing the way.
+    const pin = (x: number, z: number, color: string, marker: boolean) => {
+      const at = minimapPoint(x - p.x, z - p.z, scale, 72);
+      ctx.save();
+      ctx.translate(80 + at.x, 80 + at.y);
+      ctx.strokeStyle = ctx.fillStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(mx(destination.x), mz(destination.z), 5, 0, Math.PI * 2);
-      ctx.stroke();
+      if (at.onRim) {
+        ctx.rotate(at.angle);
+        ctx.moveTo(0, -6);
+        ctx.lineTo(5, 3);
+        ctx.lineTo(-5, 3);
+        ctx.closePath();
+        ctx.fill();
+      } else if (marker) {
+        ctx.rotate(Math.PI / 4);
+        ctx.strokeRect(-4, -4, 8, 8);
+      } else {
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    };
+    if (!this.world.dungeon) {
+      const goal = journeyTarget(this.save, p.x, p.z);
+      if (goal) pin(goal.x, goal.z, "#ffe2a2", false);
+      const m = this.save.marker;
+      if (m) pin(m.x, m.z, "#bfe6f2", true);
     }
     for (const e of this.enemies) {
       if (e.state === "dead") continue;
@@ -3048,6 +3146,7 @@ export class Game {
     }
     this.updateLockMarker();
     this.updateThreats();
+    if (this.started) this.updateCompass();
     this.worldRenderer.render(this.quality.level);
     this.renderTimes.push(performance.now() - renderStart);
     if (this.renderTimes.length > 120) this.renderTimes.shift();

@@ -299,6 +299,24 @@ h1 em {
   white-space: nowrap;
   text-shadow: 0 2px 8px #18362b;
 }
+/* Points the way to the destination, relative to the view: up is ahead. */
+#compass-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 7px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 9px solid #ffe2a2;
+  vertical-align: -1px;
+  transform-origin: 50% 60%;
+}
+#compass-arrow.marker {
+  border-bottom-color: #bfe6f2;
+}
+#compass-arrow[hidden] {
+  display: none;
+}
 .location-line {
   width: 32px;
   height: 1px;
@@ -755,14 +773,54 @@ blockquote {
     linear-gradient(90deg, #d3cb9e08 1px, transparent 1px);
   background-size: 32px 32px;
 }
+/* The symbol sits on the place itself; the names hang below it. */
 .map-point {
   position: absolute;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -14px);
   text-align: center;
   white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+}
+.map-find {
+  padding: 0;
+}
+.kingdom-map {
+  cursor: crosshair;
+}
+/* The player's own marker: a pale blue pin, apart from the gold story ring. */
+.marker-pin,
+.legend-marker {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #bfe6f2;
+  background: #2b5a6666;
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: 0 0 10px #bfe6f2aa;
+}
+.marker-pin {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+.legend-marker {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  margin-right: 5px;
+  vertical-align: 0;
+}
+.map-point.marked span {
+  color: #bfe6f2;
+}
+.map-actions {
+  margin-top: 10px;
 }
 .map-point span {
   display: block;
+  line-height: 24px;
   font-size: 22px;
   color: #e5cc91;
 }

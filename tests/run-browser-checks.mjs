@@ -47,6 +47,7 @@ async function open(options) {
     "puzzle-checks.js",
     "lockon-checks.js",
     "map-checks.js",
+    "wayfinding-checks.js",
   ])
     await page.addScriptTag({ content: suite(name) });
   return page;
@@ -82,6 +83,32 @@ await inPage("alcoves", async () => (await foeQA.alcoves()).length);
 await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
 await inPage("map discoveries", async () => (await mapQA.run()).length);
+await inPage("wayfinding: compass", async () => (await wayQA.compass()).length);
+// A real mouse click on open ground of the kingdom map places the marker.
+await run("wayfinding: marker", async () => {
+  const at = { x: 25, z: 28 };
+  await page.evaluate(() => {
+    const game = window.__BELL_OF_AGES__.debug.game();
+    bellQA.close();
+    game.save.marker = null;
+    game.action("map");
+  });
+  const box = await page.locator(".kingdom-map").boundingBox();
+  await page.mouse.click(
+    box.x + ((at.x + 145) / 290) * box.width,
+    box.y + ((at.z + 145) / 290) * box.height,
+  );
+  const m = await page.evaluate(
+    () => window.__BELL_OF_AGES__.debug.game().save.marker,
+  );
+  const off = m ? Math.hypot(m.x - at.x, m.z - at.z) : Infinity;
+  if (!(off < 2))
+    throw new Error(`A click on the map marks that place (${off} m off)`);
+  const pin = await page.locator(".marker-pin").count();
+  if (pin !== 1)
+    throw new Error("The map draws the marker where it was clicked");
+  return 2 + (await page.evaluate((p) => wayQA.marker(p.x, p.z), at)).length;
+});
 // A real mouse drag while locked: sideways switches, and the view stays put.
 await run("lock-on: mouse drag", async () => {
   const { width, height } = await page.evaluate(() => lockQA.dragSetup());

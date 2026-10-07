@@ -141,6 +141,8 @@ export interface SaveData {
   carvings: string[];
   /** Chests and wandering lights the player has come near; the map shows them. */
   noticed: string[];
+  /** The player's own map marker, if one is placed. */
+  marker: { x: number; z: number } | null;
   position: { x: number; z: number };
   elapsed: number;
   won: boolean;
@@ -163,6 +165,7 @@ export function newSave(): SaveData {
     visited: [],
     carvings: [],
     noticed: [],
+    marker: null,
     position: { x: -10, z: 71 },
     elapsed: 0,
     won: false,
@@ -302,6 +305,8 @@ export function parseSave(raw: string | null): SaveData | null {
           ).filter((id: unknown) => FINDS.some((f) => f.id === id)),
         ),
       ],
+      // Saves from before map markers have none.
+      marker: parseMarker(s.marker),
       maxHealth,
       health: Math.min(s.health, maxHealth),
       sword: Math.min(3, Math.max(1, s.sword)),
@@ -313,6 +318,15 @@ export function parseSave(raw: string | null): SaveData | null {
   } catch {
     return null;
   }
+}
+/** A stored map marker, or null when it is missing or malformed. */
+export function parseMarker(v: unknown): { x: number; z: number } | null {
+  if (!v || typeof v !== "object") return null;
+  const { x, z } = v as Record<string, unknown>;
+  if (typeof x !== "number" || typeof z !== "number") return null;
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
+  const clamp = (n: number) => Math.max(-140, Math.min(140, n));
+  return { x: clamp(x), z: clamp(z) };
 }
 // A journey file the player can keep outside the browser. The save inside it
 // passes through parseSave on the way back in, like a stored save.

@@ -44,8 +44,8 @@ import {
   journalEntries,
   storyPageText,
   type StoryScene,
-  storyTarget,
 } from "./story";
+import { LANDMARKS, mapToWorld, type Destination } from "./wayfinding";
 export type Panel =
   | "title"
   | "pause"
@@ -60,6 +60,8 @@ export class UI {
   root = document.querySelector<HTMLDivElement>("#ui")!;
   panel: Panel = "title";
   onAction: (action: string) => void = () => {};
+  /** A click or tap on open ground of the kingdom map, in world metres. */
+  onMark: (x: number, z: number) => void = () => {};
   private toastTimer = 0;
   device: Device = "keyboard";
   /** What the player's keyboard keys are called, after any remapping. */
@@ -70,7 +72,7 @@ export class UI {
     this.root.innerHTML = `
  <div id="vignette"></div><div id="hud" hidden>
  <div class="vitals"><div class="eyebrow" id="age">THE FIRST AGE</div><div id="hearts" aria-label="Health"></div><div class="pocket"><span class="crystal">◆</span><span id="money">0</span><span class="pocket-rule"></span><span id="relics">0 / 7 relics</span></div></div>
- <div class="location"><span class="location-line"></span><span id="region">Alder Village</span><span class="location-line"></span><small id="compass">N</small></div>
+ <div class="location"><span class="location-line"></span><span id="region">Alder Village</span><span class="location-line"></span><small id="compass"><i id="compass-arrow" aria-hidden="true" hidden></i><span id="compass-text">N</span></small></div>
  <button class="menu-button" data-action="pause" aria-label="Pause game">Ⅱ <span>ESC</span></button>
  <div class="quest"><span class="quest-mark">◇</span><div><small>THE JOURNEY</small><h3 id="quest-title"></h3><p id="quest-detail"></p></div></div>
  <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd id="map-key">M</kbd></button></div>
@@ -84,6 +86,18 @@ export class UI {
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
       // On-screen touch buttons act on press (below), not on the later click.
       if (b && !b.closest("#touch")) this.onAction(b.dataset.action!);
+      // Open ground on the kingdom map places the player's marker there.
+      const map = (e.target as HTMLElement).closest<HTMLElement>(
+        ".kingdom-map",
+      );
+      if (map && !b) {
+        const r = map.getBoundingClientRect();
+        const at = mapToWorld(
+          (e.clientX - r.left) / r.width,
+          (e.clientY - r.top) / r.height,
+        );
+        this.onMark(at.x, at.z);
+      }
     });
     // Acting on press keeps the touch buttons immediate and multi-touch safe:
     // browsers may never synthesize a click for a tap made while another
@@ -287,22 +301,39 @@ export class UI {
       }</section></div>`,
     );
   }
-  map(s: SaveData, x: number, z: number) {
-    const target = storyTarget(s);
+  map(s: SaveData, x: number, z: number, target: Destination | null) {
+    const focused = (document.activeElement as HTMLElement | null)?.dataset
+      ?.action;
     const pt = (n: number) => ((n + 145) / 290) * 100;
+    const at = (p: { x: number; z: number }) =>
+      `left:${pt(p.x)}%;top:${pt(p.z)}%`;
+    const marked = (p: { x: number; z: number }) =>
+      !!s.marker && Math.hypot(s.marker.x - p.x, s.marker.z - p.z) < 1;
+    // Every named place is a button, so a gamepad can mark it too.
+    const place = (id: string, cls: string, body: string) =>
+      `<button class="map-point ${cls}${marked(LANDMARKS[id]) ? " marked" : ""}" data-action="mark-${id}" style="${at(LANDMARKS[id])}" aria-label="${LANDMARKS[id].name}: ${marked(LANDMARKS[id]) ? "clear your marker" : "set your marker here"}">${body}</button>`;
+    const how = {
+      keyboard:
+        "Click anywhere on the map, or choose a place, to set your marker. Choose it again to clear it.",
+      gamepad:
+        "Choose a place with the D-pad and A to set your marker. Choose it again to clear it.",
+      touch:
+        "Tap anywhere on the map, or a place, to set your marker. Tap it again to clear it.",
+    }[this.device];
     this.setPanel(
       "map",
-      `<div class="sheet map-sheet"><button class="close" data-action="close" aria-label="Close map">×</button><div class="eyebrow">A MAP OF WHAT REMAINS</div><h2>The kingdom of Aevora</h2><div class="kingdom-map"><div class="map-compass">N<br>↑</div><div class="map-road vertical"></div>${DUNGEONS.map((d) => `<div class="map-point ${s.completed.includes(d.id) ? "restored" : ""} ${d.age !== s.age ? "other-age" : ""}" style="left:${pt(d.x)}%;top:${pt(d.z)}%"><span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><b>${d.region}</b><small>${d.name}${s.carvings.includes(d.id) ? ' <em class="map-carving" title="Hidden carving found">✎</em>' : ""}</small></div>`).join("")}${discoveries(
+      `<div class="sheet map-sheet"><button class="close" data-action="close" aria-label="Close map">×</button><div class="eyebrow">A MAP OF WHAT REMAINS</div><h2>The kingdom of Aevora</h2><div class="kingdom-map"><div class="map-compass">N<br>↑</div><div class="map-road vertical"></div>${DUNGEONS.map((d) => place(d.id, `${s.completed.includes(d.id) ? "restored" : ""} ${d.age !== s.age ? "other-age" : ""}`, `<span>${s.completed.includes(d.id) ? "✦" : "◇"}</span><b>${d.region}</b><small>${d.name}${s.carvings.includes(d.id) ? ' <em class="map-carving" title="Hidden carving found">✎</em>' : ""}</small>`)).join("")}${discoveries(
         s,
       )
         .map(
           (f) =>
-            `<i class="map-find ${f.kind}${f.found ? " found" : ""}" data-find="${f.id}" style="left:${pt(f.x)}%;top:${pt(f.z)}%" title="${f.kind === "chest" ? (f.found ? "Treasure chest · opened" : "Treasure chest · not yet opened") : f.found ? "Wandering light · caught" : "Wandering light · still loose"}"></i>`,
+            `<button class="map-find ${f.kind}${f.found ? " found" : ""}${marked(f) ? " marked" : ""}" data-find="${f.id}" data-action="mark-${f.id}" style="${at(f)}" title="${f.kind === "chest" ? (f.found ? "Treasure chest · opened" : "Treasure chest · not yet opened") : f.found ? "Wandering light · caught" : "Wandering light · still loose"}" aria-label="${f.kind === "chest" ? "Treasure chest" : "Wandering light"}: ${marked(f) ? "clear your marker" : "set your marker here"}"></button>`,
         )
         .join(
           "",
-        )}<div class="map-point village" style="left:50%;top:${pt(49)}%"><span>⌂</span><b>Alder Village</b></div><div class="map-point sanctuary" style="left:50%;top:50%"><span>♧</span><b>Bell Sanctuary</b></div>${target ? `<div class="story-map-pin" style="left:${pt(target.x)}%;top:${pt(target.z)}%" title="${target.name}">◇</div>` : ""}<div class="player-pin" style="left:${pt(x)}%;top:${pt(z)}%" title="You are here"></div><span class="map-sea">THE LARK SEA</span></div><div class="map-legend"><span><i class="legend-you"></i> You are here</span><span>◇ Sanctuary</span><span>✦ Restored</span><span>Faded · Another age</span><span><i class="legend-find chest found"></i> Chest opened</span><span><i class="legend-find chest"></i> Chest seen</span><span><i class="legend-find light found"></i> Light caught</span><span><i class="legend-find light"></i> Light seen</span><span>✎ Carving found</span></div><p class="save-note">${target ? `Current destination: ${target.name} · gold ring on your nearby map.` : "Follow the pale paths from the village and the central bell."}</p></div>`,
+        )}${place("village", "village", "<span>⌂</span><b>Alder Village</b>")}${place("bell", "sanctuary", "<span>♧</span><b>Bell Sanctuary</b>")}${target ? `<div class="story-map-pin" style="${at(target)}" title="${target.name}">◇</div>` : ""}${s.marker ? `<div class="marker-pin" style="${at(s.marker)}" title="Your marker"></div>` : ""}<div class="player-pin" style="left:${pt(x)}%;top:${pt(z)}%" title="You are here"></div><span class="map-sea">THE LARK SEA</span></div><div class="map-legend"><span><i class="legend-you"></i> You are here</span><span>◇ Sanctuary</span><span>✦ Restored</span><span>Faded · Another age</span><span><i class="legend-find chest found"></i> Chest opened</span><span><i class="legend-find chest"></i> Chest seen</span><span><i class="legend-find light found"></i> Light caught</span><span><i class="legend-find light"></i> Light seen</span><span>✎ Carving found</span><span><i class="legend-marker"></i> Your marker</span></div><p class="save-note">${target ? `Destination: ${target.name} · the gold ring on your nearby map, and the arrow under the region name. ` : ""}${how}</p>${s.marker ? '<div class="menu-list map-actions"><button data-action="mark-clear">Clear your marker <span>✕</span></button></div>' : ""}</div>`,
     );
+    this.refocus(focused);
   }
   flute(sequence: number[], notes: number[]) {
     const glyphs = noteGlyphs(this.device);
