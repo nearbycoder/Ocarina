@@ -246,7 +246,10 @@ export class UI {
     this.el("quest-title").textContent = dungeonHint
       ? "The sanctuary trial"
       : q.title;
-    this.el("quest-detail").textContent = this.say(dungeonHint || q.detail);
+    // Counts such as "0 / 3" never break across lines.
+    this.el("quest-detail").textContent = this.say(
+      dungeonHint || q.detail,
+    ).replace(/(\d) \/ (\d)/g, "$1\u00a0/\u00a0$2");
   }
   private lastPrompt = "";
   prompt(text: string) {

@@ -90,6 +90,29 @@ await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
 await inPage("map discoveries", async () => (await mapQA.run()).length);
 await inPage("wayfinding: compass", async () => (await wayQA.compass()).length);
+// The objective's count ("0 / 3") stays on one line of the panel.
+await inPage("objective: counts on one line", async () => {
+  await bellQA.start();
+  bellQA.close();
+  const api = window.__BELL_OF_AGES__;
+  api.debug.teleport(0, 57);
+  api.debug.game().refreshHUD();
+  const el = document.getElementById("quest-detail");
+  const node = el.firstChild;
+  const match = /0\s\/\s3/.exec(node.textContent);
+  if (!match) throw new Error(`No count in the objective: ${el.textContent}`);
+  const range = document.createRange();
+  range.setStart(node, match.index);
+  range.setEnd(node, match.index + match[0].length);
+  const lines = new Set(
+    [...range.getClientRects()].map((r) => Math.round(r.top)),
+  );
+  if (lines.size !== 1)
+    throw new Error(
+      `"${el.textContent}" splits its count over ${lines.size} lines`,
+    );
+  return 1;
+});
 // A real mouse click on open ground of the kingdom map places the marker.
 await run("wayfinding: marker", async () => {
   const at = { x: 25, z: 28 };
