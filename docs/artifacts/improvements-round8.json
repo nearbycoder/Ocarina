@@ -1,0 +1,70 @@
+{
+ "date": "2026-10-07",
+ "branch": "improvements-8",
+ "base": "c5f8a4d (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save and journey checks use fresh throwaway browser contexts on the normal URL). Baseline and controls ran against an unchanged worktree of main on its own dev server.",
+ "unitTests": {
+  "files": 22,
+  "tests": 130,
+  "passed": 130
+ },
+ "build": "pass",
+ "assetCheck": {
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "baseline": "All 45 groups pass on main (c5f8a4d) at a load average of 25 to 35",
+ "browserGroups": "All 49 groups pass (45 before this round); every earlier group unchanged except puzzles (+3). The campaign counter reads 104 (92 before) because the new objective group replays the 12 prologue assertions into it. Load average 20 to 24 during the final full run",
+ "newBrowserGroups": {
+  "gamepadButtonNames": 20,
+  "savesThreeJourneys": 19,
+  "mouseCapturedLook": 18,
+  "objectiveCountsOnOneLine": 1
+ },
+ "changedBrowserGroups": {
+  "puzzles": "14 -> 17 (the stone settles, stays solid, and is out of the hall-start view)"
+ },
+ "items": {
+  "A. Prompts name your controller's buttons": {
+   "commit": "9f92ce1",
+   "unitTests": 4,
+   "browserAssertions": 20,
+   "control": "On main, a pad named like a DualSense gets the Xbox strip: X Sword, B Dodge, RB Shield, LB Lock on, START Pause.",
+   "notes": "Synthetic standard-mapping pads named 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)', 'Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)', and 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)'. Settings -> Gamepad -> Button names: Automatic, Xbox, PlayStation, Nintendo. The pause menu's journal and map shortcuts and Rowan's map line follow the device."
+  },
+  "B. Three journeys on one device": {
+   "commit": "66e6fc0",
+   "unitTests": 4,
+   "browserAssertions": 19,
+   "control": "On main there is no journey choice: the check fails at its first journey step.",
+   "notes": "Journey 1 keeps bell-of-ages-save-v1; journeys 2 and 3 are bell-of-ages-save-v1:2 and :3; bell-of-ages-last-journey records the last played. One real page close without beforeunload and reopen; a real file picker import lands in Journey 3."
+  },
+  "C. The Ember Vault's stone settles into its seal": {
+   "commit": "8a8d8b4",
+   "browserAssertions": 3,
+   "control": "On main the stone stays standing, and 36 of 81 sample points on its top are inside the hall-start view.",
+   "notes": "The stone sinks 1.2 m (at once under reduced motion) and keeps its collision. Hall-start camera distance equals the Rootbound Hollow's; 0 of 81 points in view."
+  },
+  "D. Captured mouse look (opt-in)": {
+   "commit": "036ac28",
+   "unitTests": 1,
+   "browserAssertions": 18,
+   "control": "On main the setting doesn't exist (the check times out clicking it).",
+   "notes": "Real clicks and mouse buttons; headless Chromium's movementX under pointer lock isn't real travel, so turning was checked with synthetic pointermove events (100 x 25 px -> -0.600 / +0.100 rad)."
+  },
+  "E. Objective counts stay on one line": {
+   "commit": "99f58d8",
+   "browserAssertions": 1,
+   "control": "On main, 'Restore the childhood sanctuaries · 0 / 3' splits its count over two lines at 1280x800."
+  }
+ },
+ "subpathSmoke": "dist served from /Ocarina/ in a throwaway context: no failed, third-party, or console errors; debug API absent; two journeys stored under the expected keys with last-played 2; Choose a journey offered; Captured mouse look and Button names present in Settings.",
+ "notMeasured": [
+  "Physical PlayStation, Nintendo, and Xbox controllers",
+  "Captured mouse look with a real mouse, and a real browser's Esc under pointer lock",
+  "Phones and tablets",
+  "Frame times (nothing in this round adds meaningful work per frame)"
+ ]
+}

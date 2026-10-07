@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), and [Round 8 scope](#round-8-scope--7-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), and [Round 8 results](#round-8-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -839,7 +839,7 @@ Still deferred, and why:
 
 ## Round 8 scope — 7 October 2026
 
-Branch `improvements-8`, from `main` at `c5f8a4d` (in sync with `origin/main`). Baseline: 121 / 121 Vitest tests; the 45 `tests/run-browser-checks.mjs` groups are rerun on an unchanged checkout of `main` and reported with the results.
+Branch `improvements-8`, from `main` at `c5f8a4d` (in sync with `origin/main`). Baseline: 121 / 121 Vitest tests, and all 45 `tests/run-browser-checks.mjs` groups green on an unchanged worktree of `main` (load average 25 to 35).
 
 Rounds 1 to 7 covered every input device, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, the camera, keyboard-only menus, full screen, resuming a sanctuary, and lost graphics and sound. This time I played as three players the earlier rounds didn't: someone holding a PlayStation or Nintendo controller, a family sharing one computer, and a desktop player used to mouse look. I found these:
 
@@ -906,3 +906,43 @@ Verification
 Acceptance criteria and verification: counts like "0 / 3" use non-breaking spaces; a browser check reads the objective's rendered line boxes.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and real-device checks (need a phone and real controllers).
+
+## Round 8 results
+
+All five scoped items shipped on `improvements-8`. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round8.json](artifacts/improvements-round8.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round8/`) |
+| --- | --- | --- | --- |
+| A. Prompts name your controller's buttons | `9f92ce1` | 4 unit tests; 20 assertions with synthetic pads named like a DualSense, a Switch Pro Controller, and an Xbox pad | `a-dualsense-hud`, `a-dualsense-flute` |
+| B. Three journeys on one device | `66e6fc0` | 4 unit tests; 19 assertions in a fresh, throwaway browser context on the normal URL, with real clicks, key presses, a page close and reopen, and a real file picker | `b-title-journeys`, `b-journeys-desktop`, `b-journeys-phone` |
+| C. The Ember Vault's stone settles into its seal | `8a8d8b4` | 3 more assertions in the puzzle group, including a projection of the stone's top into the hall-start view | `c-ember-hall-before`, `c-ember-hall-after`, `c-stone-settled` |
+| D. Captured mouse look (opt-in) | `036ac28` | 1 unit test; 18 assertions with real clicks and mouse buttons (movement synthetic) | `d-settings-mouse-look` |
+| E. Objective counts stay on one line | `99f58d8` | 1 assertion on the count's rendered line boxes | `a-dualsense-hud` (the objective panel) |
+
+Unit tests: 130 / 130 (121 before). All 49 browser-check groups pass (45 before) at a load average of 20 to 24, the build and asset check pass, and the production build works from `/Ocarina/`. Every new check fails on `main`: the DualSense strip shows Xbox names, there is no second journey, the stone stays standing (36 of 81 points on its top are in the hall-start view), there is no mouse-look setting, and "0 / 3" splits over two lines.
+
+What changed for a player:
+- **A PlayStation or Nintendo controller is named its own way.** A DualSense shows ✕ ◯ □ △, L1, R1, Create, and Options in the control strip, the prompts, the tutorial and quest lines, the pause help, the flute, the map, and the remapping rows; a Switch Pro Controller shows B A Y X, L, R, −, and +. **Settings → Gamepad → Button names** can choose a family (Automatic shows which one it detected). Pad and touch players no longer see keyboard keys in the pause menu, and Elder Rowan's "M opens your map" names the player's own control.
+- **Three journeys share a browser.** Continue resumes the one played last, with round 7's line. **Choose a journey** lists all three; **Begin a new story** picks a place, and a kept one asks before it's replaced. An imported journey file takes the first empty place and says so.
+- **The Ember Vault's stone settles into its seal** once it's pushed there, so it reads as solved and the guardian hall starts with a clear view after a defeat or Continue.
+- **Captured mouse look**, off by default, in Settings → Camera: a click captures the pointer, the mouse turns the camera, the left button swings on press, and the right button holds the shield. Menus release the pointer, Return to the world captures it again, and if the browser releases it (Esc) a notice says how to get it back.
+- **Objective counts** such as "0 / 3" no longer break across two lines.
+
+Honest notes:
+- **Synthetic controllers.** The families were checked with synthetic pads carrying real-world names (Chrome's "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)" form and Firefox's "054c-0ce6-…" form), not physical controllers. A pad that reports an unexpected name gets the Xbox names; the setting covers that. The names follow the standard mapping's positions, which is how Chrome maps these pads; a browser that maps a Nintendo pad by label instead of position would show the wrong names, and I couldn't test one. A PlayStation 4 pad's Share button shows as Create.
+- **Glyphs.** The PlayStation shapes come from the system's fallback font, because the game's fonts don't include them. They render clearly in Chromium on Linux; other systems weren't checked. I used ◯ rather than ○ because the smaller circle was hard to see in the control strip.
+- **Mouse movement is synthetic.** Headless Chromium captures the pointer for real, and the clicks and button presses were real, but its movement values under pointer lock aren't real mouse travel, so the camera turning was checked with synthetic `pointermove` events. How it feels with a real mouse, and how a real browser's Esc interacts with the pause menu (both may happen on one press), are untested. With the setting off, the old drag-to-look and click-on-release swing are unchanged and the old checks still pass.
+- **The stone sinks 1.2 m** and keeps its full collision footprint, so you still can't walk through it. The checkpoint didn't move.
+- **Save format.** Journeys 2 and 3 live under new keys (`bell-of-ages-save-v1:2`, `:3`), and a small `bell-of-ages-last-journey` key remembers the last one played. Journey 1 keeps the old key, so existing journeys appear as Journey 1 and older builds still load it (they don't see 2 and 3). There's no way to delete a journey except replacing it; I left that out on purpose rather than add a destructive button.
+- **A test spot I got wrong.** The first version of the journeys check stood Alder at (14, 44) and (20, 30), which turned out to be inside colliders (one is a tree trunk); the game moves him out on load, exactly as `main` does. The check now uses open ground.
+- **No difficulty change.** No health, damage, timing, enemy, or crystal values changed. Mouse look and the right-button shield are another way to give the same inputs. The arena-doorway reset is unchanged.
+- **No new story writing.** Only interface text; Rowan's line keeps its words.
+- **Performance.** Nothing here adds work per frame, apart from one comparison a frame while the stone sinks. I didn't take new frame samples.
+
+Still deferred, and why:
+- **Balance and difficulty:** the owner's call, with round 6's measurements.
+- **Puzzle hints:** the owner's call.
+- **Branching dungeons:** need a level-design pass and a larger chamber layout.
+- **Skinned characters and new enemy art, traversal tools:** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Real-device checks:** a phone and real PlayStation, Nintendo, and Xbox controllers are still needed for touch, rumble, pinch, hiding, full screen, a real lost context, Safari's audio, the button names, and captured mouse look with a real mouse.
