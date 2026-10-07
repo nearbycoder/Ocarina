@@ -259,7 +259,6 @@ export class Sound {
         "step",
       );
   }
-  /** A soft tick for menu choices. */
   /** Down to one heart: a few soft beats, lub-dub, on the effects bus. */
   heartbeat(beats = 3) {
     for (let i = 0; i < beats; i++) {
@@ -268,6 +267,7 @@ export class Sound {
       this.tone(56, 0.2, "sine", 0.065, t + 0.19, "effects", 42, "heartbeat");
     }
   }
+  /** A soft tick for menu choices. */
   ui() {
     this.tone(1320, 0.05, "sine", 0.025, 0, "effects", 0, "ui");
   }

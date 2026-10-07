@@ -1683,9 +1683,6 @@ body.reduced-motion *::after {
 body.reduced-motion #damage-flash {
   display: none;
 }
-body.reduced-motion #hearts.low .heart {
-  animation: none;
-}
 
 /* Comfort: larger interface text scales the reading surfaces, not the world. */
 body.large-text .quest,
