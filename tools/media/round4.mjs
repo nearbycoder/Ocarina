@@ -111,6 +111,24 @@ const SHOTS = {
     });
     await shoot(page, "b-threat-arrow");
   },
+  // Settings: combat aids and the gamepad section, Sword moved to Y and the
+  // shield row waiting for a button.
+  "c-settings-gamepad": async (page) => {
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      game.setDevice("gamepad");
+      api.debug.action("pause");
+      api.debug.action("settings");
+      game.padBinding = "attack";
+      game.capturePad(3);
+      api.debug.action("padbind-shield");
+      document
+        .querySelector('[data-action="toggle-threatArrows"]')
+        .scrollIntoView({ block: "start" });
+    });
+    await shoot(page, "c-settings-gamepad");
+  },
 };
 
 const names = process.argv.slice(2).length

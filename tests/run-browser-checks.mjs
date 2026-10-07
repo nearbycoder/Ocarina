@@ -147,6 +147,35 @@ await run("keys: remapping", async () => {
   }
 });
 
+// Gamepad remapping on its own page too; a reload reads the buttons back.
+await run("gamepad: remapping", async () => {
+  const padPage = await open({ viewport: { width: 1280, height: 800 } });
+  try {
+    const count = await padPage.evaluate(async () => {
+      await bellQA.start();
+      return (await inputQA.remap()).length;
+    });
+    await padPage.reload();
+    await padPage.waitForFunction(() => window.__BELL_OF_AGES__?.debug);
+    const kept = await padPage.evaluate(
+      () => window.__BELL_OF_AGES__.debug.game().settings,
+    );
+    if (kept.pad.attack !== 3 || kept.pad.flute !== 2 || !kept.toggleShield)
+      throw new Error("Gamepad buttons did not survive a reload");
+    for (const name of ["browser-checks.js", "input-checks.js"])
+      await padPage.addScriptTag({ content: suite(name) });
+    const reset = await padPage.evaluate(async () => {
+      window.BELL_TEST_MANUAL = true;
+      await bellQA.start();
+      bellQA.close();
+      return inputQA.resetPad().length;
+    });
+    return count + 1 + reset;
+  } finally {
+    await padPage.close();
+  }
+});
+
 // Journey files: export through the pause menu, import on a fresh page.
 await run("journey files", async () => {
   const results = [];

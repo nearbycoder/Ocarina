@@ -39,23 +39,128 @@ export function shapeStick(
 
 export type PadContext = "play" | "flute" | "menu";
 
+// Gamepad bindings: each play action keeps one button. Start always pauses,
+// and menus (A, B, D-pad) and the flute's notes (A, X, Y) stay fixed, so a
+// player can always find their way back.
+export const PAD_ACTIONS = [
+  "interact",
+  "attack",
+  "shield",
+  "dodge",
+  "target",
+  "flute",
+  "map",
+  "journal",
+] as const;
+export type PadAction = (typeof PAD_ACTIONS)[number];
+export type PadBindings = Record<PadAction, number>;
+export const DEFAULT_PAD: PadBindings = {
+  interact: PAD.A,
+  attack: PAD.X,
+  shield: PAD.RB,
+  dodge: PAD.B,
+  target: PAD.LB,
+  flute: PAD.Y,
+  map: PAD.Back,
+  journal: PAD.Up,
+};
+export const PAD_ACTION_NAMES: Record<PadAction, string> = {
+  interact: "Interact",
+  attack: "Sword",
+  shield: "Shield",
+  dodge: "Dodge roll",
+  target: "Lock on",
+  flute: "Reed flute",
+  map: "Kingdom map",
+  journal: "Journal",
+};
+const PAD_NAMES = [
+  "A",
+  "B",
+  "X",
+  "Y",
+  "LB",
+  "RB",
+  "LT",
+  "RT",
+  "Back",
+  "Start",
+  "LS",
+  "RS",
+  "D-pad up",
+  "D-pad down",
+  "D-pad left",
+  "D-pad right",
+];
+/** What a standard-layout button is called. */
+export function padLabel(button: number) {
+  return PAD_NAMES[button] ?? `Button ${button}`;
+}
+/** Every standard button but Start (pause) and the Home/guide button. */
+export function usableButton(button: unknown): button is number {
+  return (
+    typeof button === "number" &&
+    Number.isInteger(button) &&
+    button >= 0 &&
+    button <= 15 &&
+    button !== PAD.Start
+  );
+}
+/** Repairs stored pad bindings; any clash or bad button falls back to defaults. */
+export function parsePadBindings(raw: unknown): PadBindings {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    return { ...DEFAULT_PAD };
+  const stored = raw as Record<string, unknown>;
+  const pad = { ...DEFAULT_PAD };
+  for (const action of PAD_ACTIONS)
+    if (usableButton(stored[action])) pad[action] = stored[action];
+  return new Set(Object.values(pad)).size === PAD_ACTIONS.length
+    ? pad
+    : { ...DEFAULT_PAD };
+}
+/**
+ * Binds `button` to `action`. If another action already uses it, the two
+ * trade buttons. Returns null for Start and buttons outside the standard set.
+ */
+export function bindPad(
+  pad: PadBindings,
+  action: PadAction,
+  button: number,
+): { pad: PadBindings; swapped: PadAction | null } | null {
+  if (!usableButton(button)) return null;
+  const next = { ...pad };
+  const other =
+    PAD_ACTIONS.find((a) => a !== action && pad[a] === button) ?? null;
+  if (other) next[other] = pad[action];
+  next[action] = button;
+  return { pad: next, swapped: other };
+}
+/**
+ * RT is a spare shield in the standard layout: it guards too while the shield
+ * stays on RB and no other action has taken RT.
+ */
+function spareShield(pad: PadBindings) {
+  return pad.shield === PAD.RB && !PAD_ACTIONS.some((a) => pad[a] === PAD.RT);
+}
+
 /** Actions for buttons that went down this frame (not held from before). */
 export function padActions(
   previous: readonly boolean[],
   current: readonly boolean[],
   context: PadContext,
+  pad: PadBindings = DEFAULT_PAD,
 ): string[] {
   const pressed = (b: number) => !!current[b] && !previous[b];
   const out: string[] = [];
   if (context === "play") {
-    if (pressed(PAD.A)) out.push("interact");
-    if (pressed(PAD.X)) out.push("attack");
-    if (pressed(PAD.B)) out.push("dodge");
-    if (pressed(PAD.Y)) out.push("flute");
-    if (pressed(PAD.LB)) out.push("target");
+    for (const a of ["interact", "attack", "dodge", "flute", "target"] as const)
+      if (pressed(pad[a])) out.push(a);
     if (pressed(PAD.Start)) out.push("pause");
-    if (pressed(PAD.Back)) out.push("map");
-    if (pressed(PAD.Up)) out.push("journal");
+    if (pressed(pad.map)) out.push("map");
+    if (pressed(pad.journal)) out.push("journal");
+    // Only a toggled shield listens for presses; a held one is polled.
+    if (pressed(pad.shield) || (spareShield(pad) && pressed(PAD.RT)))
+      out.push("shield");
   } else if (context === "flute") {
     if (pressed(PAD.A)) out.push("note-1");
     if (pressed(PAD.X)) out.push("note-2");
@@ -65,16 +170,27 @@ export function padActions(
     if (pressed(PAD.A)) out.push("confirm");
     if (pressed(PAD.B)) out.push("back");
     if (pressed(PAD.Start)) out.push("start");
-    if (pressed(PAD.Back)) out.push("map");
+    if (pressed(pad.map)) out.push("map");
     if (pressed(PAD.Up) || pressed(PAD.Left)) out.push("focus-prev");
     if (pressed(PAD.Down) || pressed(PAD.Right)) out.push("focus-next");
   }
   return out;
 }
 
-/** The shield is held on either right shoulder button. */
-export function padShield(current: readonly boolean[]) {
-  return !!current[PAD.RB] || !!current[PAD.RT];
+/** Whether the bound shield button (or the spare RT) is held. */
+export function padShield(
+  current: readonly boolean[],
+  pad: PadBindings = DEFAULT_PAD,
+) {
+  return !!current[pad.shield] || (spareShield(pad) && !!current[PAD.RT]);
+}
+/** The first standard button that went down this frame, if any. */
+export function padPressed(
+  previous: readonly boolean[],
+  current: readonly boolean[],
+) {
+  for (let b = 0; b <= 15; b++) if (current[b] && !previous[b]) return b;
+  return -1;
 }
 
 // Keyboard bindings: each action keeps one physical key (KeyboardEvent.code),
@@ -118,7 +234,7 @@ export const KEY_ACTION_NAMES: Record<KeyAction, string> = {
   right: "Move right",
   interact: "Interact",
   attack: "Sword",
-  shield: "Shield (hold)",
+  shield: "Shield",
   dodge: "Dodge roll",
   target: "Lock on",
   flute: "Reed flute",
@@ -226,7 +342,31 @@ export function moveKeys(k: KeyLabels) {
   return four.every((l) => l.length === 1) ? four.join("") : four.join(" / ");
 }
 const DEFAULT_LABELS = keyLabels();
-function words(k: KeyLabels): Record<string, Record<Device, string>> {
+export type PadLabels = Record<PadAction, string>;
+export function padLabels(pad: PadBindings = DEFAULT_PAD): PadLabels {
+  const labels = {} as PadLabels;
+  for (const action of PAD_ACTIONS) labels[action] = padLabel(pad[action]);
+  return labels;
+}
+const DEFAULT_PAD_LABELS = padLabels();
+/** How the controls are named and held: key and button names, shield mode. */
+export interface ControlNames {
+  keys: KeyLabels;
+  pad: PadLabels;
+  /** One press raises the shield and the next lowers it. */
+  toggleShield: boolean;
+}
+const DEFAULT_NAMES: ControlNames = {
+  keys: DEFAULT_LABELS,
+  pad: DEFAULT_PAD_LABELS,
+  toggleShield: false,
+};
+function words({
+  keys: k,
+  pad: p,
+  toggleShield,
+}: ControlNames): Record<string, Record<Device, string>> {
+  const guard = toggleShield ? "press" : "hold";
   return {
     move: {
       keyboard: moveKeys(k),
@@ -245,44 +385,52 @@ function words(k: KeyLabels): Record<string, Record<Device, string>> {
     },
     talk: {
       keyboard: `press ${k.interact}`,
-      gamepad: "press A",
+      gamepad: `press ${p.interact}`,
       touch: "tap Use",
     },
-    use: { keyboard: k.interact, gamepad: "A", touch: "Use" },
+    use: { keyboard: k.interact, gamepad: p.interact, touch: "Use" },
     sword: {
       keyboard: `press ${k.attack}`,
-      gamepad: "press X",
+      gamepad: `press ${p.attack}`,
       touch: "tap Sword",
     },
     shield: {
-      keyboard: `hold ${k.shield}`,
-      gamepad: "hold RB",
-      touch: "hold Shield",
+      keyboard: `${guard} ${k.shield}`,
+      gamepad: `${guard} ${p.shield}`,
+      touch: toggleShield ? "tap Shield" : "hold Shield",
     },
     dodge: {
       keyboard: `press ${k.dodge}`,
-      gamepad: "press B",
+      gamepad: `press ${p.dodge}`,
       touch: "tap Dodge",
     },
     flute: {
       keyboard: `press ${k.flute}`,
-      gamepad: "press Y",
+      gamepad: `press ${p.flute}`,
       touch: "tap Flute",
     },
-    fluteKey: { keyboard: k.flute, gamepad: "Y", touch: "Flute" },
-    lock: { keyboard: k.target, gamepad: "LB", touch: "Lock" },
+    fluteKey: { keyboard: k.flute, gamepad: p.flute, touch: "Flute" },
+    lock: { keyboard: k.target, gamepad: p.target, touch: "Lock" },
   };
 }
+/** Fills in the parts of `names` that are given; the rest are the defaults. */
+const named = (labels?: KeyLabels | Partial<ControlNames>): ControlNames =>
+  !labels
+    ? DEFAULT_NAMES
+    : "keys" in labels || "pad" in labels || "toggleShield" in labels
+      ? { ...DEFAULT_NAMES, ...(labels as Partial<ControlNames>) }
+      : { ...DEFAULT_NAMES, keys: labels as KeyLabels };
 /**
  * Replaces {word} placeholders with the active device's controls.
- * A capitalized placeholder ({Sword}) capitalizes the result.
+ * A capitalized placeholder ({Sword}) capitalizes the result. `names` is
+ * either the key labels alone or the full control names.
  */
 export function controlText(
   text: string,
   device: Device,
-  labels: KeyLabels = DEFAULT_LABELS,
+  names?: KeyLabels | Partial<ControlNames>,
 ) {
-  const table = words(labels);
+  const table = words(named(names));
   return text.replace(/\{(\w+)\}/g, (match, name: string) => {
     const entry = table[name[0].toLowerCase() + name.slice(1)];
     if (!entry) return match;
@@ -295,9 +443,9 @@ export function controlText(
 /** The short label for the interact prompt badge. */
 export function interactGlyph(
   device: Device,
-  labels: KeyLabels = DEFAULT_LABELS,
+  names?: KeyLabels | Partial<ControlNames>,
 ) {
-  return words(labels).use[device];
+  return words(named(names)).use[device];
 }
 /** Note controls shown on the reed flute. */
 export function noteGlyphs(device: Device): [string, string, string] | null {

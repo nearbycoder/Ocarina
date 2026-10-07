@@ -55,16 +55,24 @@ import {
 import { ALCOVE, LAYOUTS } from "./layouts";
 import {
   DEFAULT_KEYS,
+  DEFAULT_PAD,
   KEY_ACTION_NAMES,
+  PAD,
+  PAD_ACTION_NAMES,
   bindKey,
+  bindPad,
   keyLabel,
   keyLabels,
   normalizeCode,
   padActions,
+  padLabel,
+  padLabels,
+  padPressed,
   padShield,
   shapeStick,
   type Device,
   type KeyAction,
+  type PadAction,
   type PadContext,
 } from "./input";
 import {
@@ -264,6 +272,10 @@ export class Game {
   private touchShield = false;
   /** The action waiting for a new key in the settings sheet. */
   private binding: KeyAction | null = null;
+  /** The action waiting for a new gamepad button in the settings sheet. */
+  private padBinding: PadAction | null = null;
+  /** A toggled shield that is up (Toggle shield setting). */
+  shieldUp = false;
   /** The browser's keyboard layout map, when it offers one. */
   private keyLayout?: ReadonlyMap<string, string>;
   constructor() {
@@ -376,7 +388,11 @@ export class Game {
   }
   applySettings(store = false) {
     this.sound.configure(this.settings);
-    this.ui.setKeys(keyLabels(this.settings.keys, this.keyLayout));
+    this.ui.setKeys(
+      keyLabels(this.settings.keys, this.keyLayout),
+      padLabels(this.settings.pad),
+      this.settings.toggleShield,
+    );
     document.body.classList.toggle(
       "reduced-motion",
       this.settings.reducedMotion,
@@ -414,6 +430,26 @@ export class Game {
     }
     this.ui.settings(this.settings, this.binding, note);
   }
+  /** Takes the button pressed while a gamepad row waits; Start cancels. */
+  capturePad(button: number) {
+    const action = this.padBinding!;
+    const name = PAD_ACTION_NAMES[action];
+    let note: string;
+    this.padBinding = null;
+    const result =
+      button === PAD.Start ? null : bindPad(this.settings.pad, action, button);
+    if (!result)
+      note = `${name} stays on ${padLabel(this.settings.pad[action])}.`;
+    else {
+      this.settings.pad = result.pad;
+      this.applySettings(true);
+      note = `${name} is now ${padLabel(button)}.`;
+      if (result.swapped)
+        note += ` ${PAD_ACTION_NAMES[result.swapped]} moved to ${padLabel(result.pad[result.swapped])}.`;
+      this.sound.ui();
+    }
+    this.ui.settings(this.settings, null, "", null, note);
+  }
   changeSetting(a: string) {
     const s = this.settings;
     const [, key, dir] = a.split("-");
@@ -424,9 +460,11 @@ export class Game {
         key === "invertY" ||
         key === "reducedMotion" ||
         key === "largeText" ||
-        key === "threatArrows"
+        key === "threatArrows" ||
+        key === "toggleShield"
       )
         s[key] = !s[key];
+      this.raiseShield(false);
     } else if (key === "sensitivity")
       s.sensitivity = sensitivity(s.sensitivity + sign * SENSITIVITY_STEP);
     else if (
@@ -643,6 +681,7 @@ export class Game {
     this.trailHistory = [];
     this.trail.visible = false;
     this.target = null;
+    this.raiseShield(false);
     this.puzzleProgress = 0;
     this.puzzleSolved = false;
     this.arenaClear = false;
@@ -892,6 +931,15 @@ export class Game {
         return;
       }
       if (
+        this.padBinding &&
+        this.ui.panel === "settings" &&
+        code === "Escape"
+      ) {
+        e.preventDefault();
+        this.capturePad(PAD.Start);
+        return;
+      }
+      if (
         [
           "Space",
           "Tab",
@@ -941,6 +989,7 @@ export class Game {
         [bound.journal]: "journal",
         [bound.map]: "map",
         [bound.checkpoint]: "checkpoint",
+        [bound.shield]: "shield",
       };
       if (actions[code]) this.action(actions[code]);
       else if (this.target && (code === "ArrowLeft" || code === "ArrowRight"))
@@ -1039,7 +1088,8 @@ export class Game {
     shield.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       shield.setPointerCapture(e.pointerId);
-      this.touchShield = true;
+      if (this.settings.toggleShield) this.action("shield");
+      else this.touchShield = true;
     });
     for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
       shield.addEventListener(event, () => (this.touchShield = false));
@@ -1058,7 +1108,13 @@ export class Game {
     else if (this.ui.panel === "flute")
       this.ui.flute(this.songSequence(), this.notes);
   }
+  /** Raises or lowers a toggled shield; the touch button shows it. */
+  raiseShield(up: boolean) {
+    this.shieldUp = up;
+    this.ui.el("touch-shield").classList.toggle("on", up);
+  }
   shieldHeld() {
+    if (this.settings.toggleShield) return this.shieldUp;
     return (
       this.keys.has(this.settings.keys.shield) ||
       this.padShield ||
@@ -1089,9 +1145,16 @@ export class Game {
         : panel || !this.started || this.save.story.pending
           ? "menu"
           : "play";
-    const actions = padActions(this.padHeld, held, context);
+    // A settings row waiting for a button takes the next press, whatever it is.
+    if (this.padBinding && panel === "settings") {
+      const button = padPressed(this.padHeld, held);
+      this.padHeld = held;
+      if (button >= 0) this.capturePad(button);
+      return;
+    }
+    const actions = padActions(this.padHeld, held, context, this.settings.pad);
     this.padHeld = held;
-    this.padShield = context === "play" && padShield(held);
+    this.padShield = context === "play" && padShield(held, this.settings.pad);
     this.padMove = context === "play" ? move : { x: 0, y: 0 };
     if (context === "play") {
       // Right stick: right orbits right; pushing up looks up unless inverted.
@@ -1159,6 +1222,7 @@ export class Game {
   }
   action(a: string) {
     if (this.binding && !a.startsWith("bind-")) this.binding = null;
+    if (this.padBinding && !a.startsWith("padbind-")) this.padBinding = null;
     if (
       a === "story-next" ||
       a === "promise-home" ||
@@ -1276,6 +1340,31 @@ export class Game {
       this.ui.settings(this.settings, null, "Keys reset to the defaults.");
       return;
     }
+    if (a === "padbind-reset") {
+      this.settings.pad = { ...DEFAULT_PAD };
+      this.applySettings(true);
+      this.ui.settings(
+        this.settings,
+        null,
+        "",
+        null,
+        "Buttons reset to the defaults.",
+      );
+      return;
+    }
+    if (a.startsWith("padbind-")) {
+      const action = a.slice(8) as PadAction;
+      if (!(action in PAD_ACTION_NAMES)) return;
+      this.padBinding = action;
+      this.ui.settings(
+        this.settings,
+        null,
+        "",
+        action,
+        `Press the new gamepad button for ${PAD_ACTION_NAMES[action].toLowerCase()}. Start or Esc cancels.`,
+      );
+      return;
+    }
     if (a.startsWith("bind-")) {
       const action = a.slice(5) as KeyAction;
       if (!(action in KEY_ACTION_NAMES)) return;
@@ -1330,6 +1419,8 @@ export class Game {
     if (a === "attack") this.attack();
     if (a === "dodge") this.dodge();
     if (a === "target") this.lockTarget();
+    if (a === "shield" && this.settings.toggleShield)
+      this.raiseShield(!this.shieldUp);
     if (a === "flute") {
       this.notes = [];
       this.sound.start();
@@ -1974,6 +2065,7 @@ export class Game {
     this.trail.visible = false;
     this.dodgeTime = 0.42;
     this.dodgeCooldown = 0.85;
+    this.raiseShield(false);
     this.invulnerable = 0.46;
     const m = this.movementVector();
     if (m.lengthSq() < 0.01)

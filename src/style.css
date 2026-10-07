@@ -1011,6 +1011,11 @@ blockquote {
 #touch-shield:active {
   background: #e9d6a555;
 }
+/* Toggle shield: the button stays lit while the shield is up. */
+#touch .touch-actions #touch-shield.on {
+  background: #e9d6a5c4;
+  color: #233a30;
+}
 body[data-device="gamepad"] #panel button:focus {
   outline: 2px solid #efcc85;
   outline-offset: 4px;

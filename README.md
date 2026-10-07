@@ -33,7 +33,7 @@ The Bell of Ages is an **original adventure inspired by classic 3D action-advent
 
 ## How to play
 
-Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompts, and tutorial lines follow whichever you used last, and the keyboard keys can be changed in **Settings → Keyboard**. Saves are automatic and stay in this browser; **Export journey file** in the pause menu keeps a copy you can import in another browser.
+Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompts, and tutorial lines follow whichever you used last, and keyboard keys and gamepad buttons can be changed in **Settings → Keyboard** and **Settings → Gamepad**. Saves are automatic and stay in this browser; **Export journey file** in the pause menu keeps a copy you can import in another browser.
 
 | Action | Keyboard & mouse | Gamepad (standard layout) | Touch |
 | --- | --- | --- | --- |
@@ -42,7 +42,7 @@ Play with a keyboard and mouse, a gamepad, or touch. The on-screen hints, prompt
 | Camera distance | Mouse wheel | — | — |
 | Interact · talk · read · open | <kbd>E</kbd> | **A** | **Use** |
 | Sword (press again mid-swing to chain the combo) | <kbd>J</kbd> or click without dragging | **X** | **Sword**, or tap the scene |
-| Shield (guards your front) | Hold <kbd>Shift</kbd> | Hold **RB** or **RT** | Hold **Shield** |
+| Shield (guards your front; **Toggle shield** in Settings makes one press raise it and the next lower it) | Hold <kbd>Shift</kbd> | Hold **RB** or **RT** | Hold **Shield** |
 | Dodge roll | <kbd>Space</kbd> | **B** | **Dodge** |
 | Lock on to the nearest enemy (a marker shows which) | <kbd>Q</kbd>; <kbd>←</kbd> <kbd>→</kbd> or a sideways mouse drag switches target | **LB**; flick the right stick to switch | **Lock**; swipe the scene sideways to switch |
 | Reed flute: play low, middle, high | <kbd>F</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | **Y**, then **A** **X** **Y** | **Flute**, then tap the notes |
@@ -124,7 +124,7 @@ Spoiler-light.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
 - **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), 7 hidden carvings, a sword upgrade, and campfire healing.
 - **Visual quality modes:** Adaptive, High detail, and Performance (<kbd>Esc</kbd> → Visual quality).
-- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, ambience, and music volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); larger interface text; off-screen attack warnings (an arrow on the screen edge points to a foe winding up out of view; on by default); and keyboard bindings for every action except Escape, the camera arrows, and the flute's 1 to 3. Where the browser can tell (Chrome and Edge), keys are named as printed on your keyboard, so an AZERTY layout shows ZQSD. Settings are stored apart from your save.
+- **Settings** (<kbd>Esc</kbd> → Settings): master, effects, ambience, and music volume; camera speed and inverted vertical camera; reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); larger interface text; off-screen attack warnings (an arrow on the screen edge points to a foe winding up out of view; on by default); toggle shield (press to raise and lower instead of holding; a dodge lowers it); keyboard bindings for every action except Escape, the camera arrows, and the flute's 1 to 3; and gamepad buttons for every play action except Start, which always pauses (menus keep A, B, and the D-pad, and the flute keeps A, X, Y). Where the browser can tell (Chrome and Edge), keys are named as printed on your keyboard, so an AZERTY layout shows ZQSD. Settings are stored apart from your save.
 
 ## Screenshots
 
@@ -258,7 +258,7 @@ The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from
 - **One enemy model.** All three guardian kinds and all seven wardens use a single Blender model, reshaped with scale, accessories, and tint. Behavior differs (melee, lunge, thrown stone, and the wardens' signature attacks), but none has unique sculpted art or animation, and health and damage stay on one scale.
 - **Rigid characters.** Characters are articulated rigid meshes with procedural animation, with no skinned deformation, facial animation, or voice acting. Story scenes are text.
 - **No swimming, climbing, or ranged tools.** Traversal is walking and dodge-rolling.
-- **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Keyboard keys can be remapped; gamepad buttons and touch controls can't. Importing a journey file may need a mouse, keyboard, or touch: browsers usually open a file picker only after a click, key press, or tap, and the import button hasn't been tested with a gamepad.
+- **Input coverage.** Keyboard and mouse, standard-layout gamepads, and touch can each play the whole campaign. Gamepad and touch support were verified with synthetic gamepad input and emulated touch in headless Chromium, not on physical controllers, phones, or tablets. Keyboard keys and gamepad buttons can be remapped; touch controls can't. Importing a journey file may need a mouse, keyboard, or touch: browsers usually open a file picker only after a click, key press, or tap, and the import button hasn't been tested with a gamepad.
 - **Hardware.** Requires WebGL 2. On an AMD Radeon 8060S iGPU in headless Chromium (vsync off, on a heavily shared machine), a 1280×800 window averaged about 2 to 4 ms a frame. A 1920×1080 window on a 2× display averaged about 10 ms in Adaptive mode and 12 to 14 ms in High detail, with occasional slow frames that couldn't be told apart from load on the machine. Phones, other GPUs, and other browsers haven't been measured.
 - **Saves are per browser.** They live in `localStorage`, and clearing site data removes them, unless you've exported a journey file to import again.
 - **Validation.** Automated tests and scripted browser checks cover progression, checkpoints, collision, combat, warden and guardian attacks, sanctuary reachability, hidden alcoves, puzzles, audio scheduling, settings, key remapping, journey files, gamepad input, and touch input. A full manual playthrough of every encounter, and pacing tuning, are still outstanding. See [docs/VALIDATION.md](docs/VALIDATION.md).
