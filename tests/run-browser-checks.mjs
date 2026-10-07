@@ -1246,6 +1246,17 @@ await run("saves: sanctuary visit", async () => {
       `The save records the visit at once (${JSON.stringify(save.visit)})`,
     );
     page = await reopen(page);
+    const line = await page.locator(".journey-summary").textContent();
+    check(
+      /^First age · 0 \/ 7 relics · The Ember Vault · .+ played$/.test(line),
+      `The title says what Continue resumes (${line})`,
+    );
+    check(
+      (await page
+        .locator('[data-action="continue"]')
+        .getAttribute("aria-describedby")) === "journey-summary",
+      "Continue is described by that line",
+    );
     await resume(page);
     s = await state(page);
     check(

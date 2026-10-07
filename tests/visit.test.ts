@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { importSave, newSave, parseSave, exportSave } from "../src/data";
+import {
+  exportSave,
+  importSave,
+  journeySummary,
+  newSave,
+  parseSave,
+  playedTime,
+} from "../src/data";
 
 // A child past the prologue, free to enter the childhood sanctuaries.
 function child() {
@@ -68,5 +75,35 @@ describe("sanctuary visits", () => {
     expect(
       parseSave(JSON.stringify({ ...newSave(), visit }))!.visit,
     ).toBeNull();
+  });
+});
+
+describe("the journey line under Continue", () => {
+  it("names the age, the relics, where, and the time played", () => {
+    const s = child();
+    s.position = { x: -60, z: 10 };
+    s.elapsed = 754;
+    expect(journeySummary(s)).toBe(
+      "First age · 0 / 7 relics · Whisperwood · 12 min played",
+    );
+    s.age = "adult";
+    s.completed = ["root", "ember", "tide"];
+    s.position = { x: 0, z: 50 };
+    s.elapsed = 3 * 3600 + 5 * 60;
+    expect(journeySummary(s)).toBe(
+      "Second age · 3 / 7 relics · Alder Village · 3 h 05 min played",
+    );
+  });
+  it("names the sanctuary a visit will resume", () => {
+    const s = child();
+    s.visit = { ...visit, fallen: [0, 2] };
+    expect(journeySummary(s)).toContain("· The Ember Vault ·");
+  });
+  it("rounds time played down to whole minutes", () => {
+    expect(playedTime(0)).toBe("Under a minute played");
+    expect(playedTime(59.9)).toBe("Under a minute played");
+    expect(playedTime(60)).toBe("1 min played");
+    expect(playedTime(3599)).toBe("59 min played");
+    expect(playedTime(3600)).toBe("1 h 00 min played");
   });
 });

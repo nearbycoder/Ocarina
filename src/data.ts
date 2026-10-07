@@ -425,6 +425,23 @@ export function saveSummary(s: SaveData) {
     `${s.fireflies.length} / 3 wandering lights`,
   ].join(" · ");
 }
+/** Time played, as the title shows it under Continue. */
+export function playedTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 1) return "Under a minute played";
+  if (minutes < 60) return `${minutes} min played`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min played`;
+}
+/** The line under Continue: the age, the relics, where, and the time played. */
+export function journeySummary(s: SaveData) {
+  const inside = s.visit && DUNGEONS.find((d) => d.id === s.visit!.id);
+  return [
+    s.age === "child" ? "First age" : "Second age",
+    `${s.completed.length} / 7 relics`,
+    inside ? inside.name : regionAt(s.position.x, s.position.z),
+    playedTime(s.elapsed),
+  ].join(" · ");
+}
 // Defeat inside a sanctuary returns the player to the start of the furthest
 // chamber reached, so broken seals stay broken for the rest of the visit.
 export function chamberStart(puzzleSolved: boolean, arenaClear: boolean) {

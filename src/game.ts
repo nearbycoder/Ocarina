@@ -21,6 +21,7 @@ import {
   exportSave,
   importSave,
   saveSummary,
+  journeySummary,
   canEnter,
   canGrow,
   grow,
@@ -389,7 +390,7 @@ export class Game {
     this.camera.lookAt(-4, 2.8, 44);
     this.loadSettings();
     if (matchMedia("(pointer: coarse)").matches) this.setDevice("touch");
-    this.ui.title(!!this.readSave());
+    this.showTitle();
     this.ui.onAction = (a) => {
       if (this.started) this.sound.ui();
       this.action(a);
@@ -422,7 +423,7 @@ export class Game {
     window.addEventListener("pagehide", () => this.persist(false));
     // Full screen can also end with the browser's own Escape or gesture.
     document.addEventListener("fullscreenchange", () => {
-      if (this.ui.panel === "title") this.ui.title(!!this.readSave());
+      if (this.ui.panel === "title") this.showTitle();
       else if (this.ui.panel === "pause")
         this.ui.pause(this.save, this.settings.muted, this.quality.label);
     });
@@ -588,6 +589,11 @@ export class Game {
     )
       this.sound.note(2);
     this.ui.settings(s);
+  }
+  /** The title, with a line saying which journey Continue resumes. */
+  showTitle() {
+    const saved = this.readSave();
+    this.ui.title(!!saved, saved ? journeySummary(saved) : "");
   }
   readSave() {
     if (this.review) return null;
@@ -1525,7 +1531,7 @@ export class Game {
     }
     if (a === "close") {
       if (!this.started) {
-        this.ui.title(!!this.readSave());
+        this.showTitle();
         return;
       }
       this.ui.setPanel(null);
@@ -1594,8 +1600,7 @@ export class Game {
     }
     if (!this.started) {
       // Settings' Back, ×, Escape, and B lead back to the title.
-      if (a === "pause" && this.ui.panel === "settings")
-        this.ui.title(!!this.readSave());
+      if (a === "pause" && this.ui.panel === "settings") this.showTitle();
       return;
     }
     if (a === "pause") {
@@ -1647,7 +1652,7 @@ export class Game {
       this.started = false;
       this.save.position = { x: 0, z: 57 };
       this.loadWorld();
-      this.ui.title(!!this.readSave());
+      this.showTitle();
       return;
     }
     if (a === "grow") {
