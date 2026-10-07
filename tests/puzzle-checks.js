@@ -44,6 +44,44 @@ window.puzzleQA = (() => {
     assert(api.getState().puzzleSolved, "The stone on the seal opens the gate");
     hold("KeyW", 1);
     assert(blockZ() === 14, "The stone stops on the seal");
+    assert(
+      game.world.block.position.y === -1.2,
+      `It settles into the seal (${game.world.block.position.y})`,
+    );
+    assert(
+      api.debug.blocked(0, 14) && api.debug.blocked(0, 13.2),
+      "The settled stone is still solid",
+    );
+    // Starting the guardian hall (a defeat there, or Continue) frames Alder
+    // as in any other sanctuary, with the stone out of view.
+    const hallView = (id) => {
+      game.resumeVisit({
+        id,
+        puzzle: true,
+        fallen: [],
+        seal: false,
+        wall: false,
+        warden: false,
+      });
+      game.camera.updateMatrixWorld();
+      return game.camera.position.distanceTo(game.cameraFocus());
+    };
+    const rootDistance = hallView("root");
+    const emberDistance = hallView("ember");
+    const V = game.camera.position.constructor;
+    const top = game.world.block.position.y + 2;
+    let seen = 0;
+    for (let x = -1; x <= 1; x += 0.25)
+      for (let z = 13; z <= 15; z += 0.25) {
+        const v = new V(x, top, z);
+        const inFront = v.clone().applyMatrix4(game.camera.matrixWorldInverse).z < 0;
+        v.project(game.camera);
+        if (inFront && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1) seen++;
+      }
+    assert(
+      Math.abs(emberDistance - rootDistance) < 0.01 && seen === 0,
+      `The Ember Vault's hall starts with the camera at full distance (${emberDistance.toFixed(2)} m, Rootbound ${rootDistance.toFixed(2)} m) and the stone out of view (${seen} points seen)`,
+    );
     // E still pushes, and finishes a slide in progress before the next tile.
     api.debug.enter("ember");
     bellQA.close();

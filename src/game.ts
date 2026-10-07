@@ -209,6 +209,8 @@ function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
   parent.add(m);
   return m;
 }
+/** How far the Ember Vault's stone sinks into its seal once it opens it. */
+const BLOCK_SETTLED = -1.2;
 export class Game {
   scene = new T.Scene();
   camera = new T.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 650);
@@ -686,7 +688,10 @@ export class Game {
     const d = this.world.dungeon!;
     this.puzzleSolved = true;
     this.world.gates[0].visible = false;
-    if (d.puzzle === "block") this.setBlockZ(14);
+    if (d.puzzle === "block") {
+      this.setBlockZ(14);
+      this.world.block!.position.y = BLOCK_SETTLED;
+    }
     if (d.puzzle === "mirrors") {
       this.mirrorTurns = [0, 0, 0];
       this.world.puzzle.forEach((g) => (g.rotation.y = 0));
@@ -2047,6 +2052,18 @@ export class Game {
   updateBlock(dt: number, move: T.Vector3) {
     const i = this.blockInteractable();
     if (!i || this.world.dungeon?.puzzle !== "block") return;
+    // On the seal, the stone settles into the floor, out of the camera's way.
+    if (
+      this.puzzleSolved &&
+      !this.blockSlide &&
+      i.mesh.position.y > BLOCK_SETTLED
+    ) {
+      i.mesh.position.y = this.settings.reducedMotion
+        ? BLOCK_SETTLED
+        : Math.max(BLOCK_SETTLED, i.mesh.position.y - dt * 2.4);
+      this.renderer.shadowMap.needsUpdate = true;
+      return;
+    }
     if (this.blockSlide) {
       const slide = this.blockSlide;
       slide.t = Math.min(1, slide.t + dt / 0.3);
