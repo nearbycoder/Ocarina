@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), and [Round 8 results](#round-8-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), and [Round 9 scope](#round-9-scope--7-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -946,3 +946,61 @@ Still deferred, and why:
 - **Skinned characters and new enemy art, traversal tools:** large jobs.
 - **Full touch remapping:** needs a layout editor.
 - **Real-device checks:** a phone and real PlayStation, Nintendo, and Xbox controllers are still needed for touch, rumble, pinch, hiding, full screen, a real lost context, Safari's audio, the button names, and captured mouse look with a real mouse.
+
+## Round 9 scope — 7 October 2026
+
+Branch `improvements-9`, from `main` at `af0f978` (in sync with `origin/main`). Baseline: 130 / 130 Vitest tests. On an unchanged tree, 48 of the 49 `tests/run-browser-checks.mjs` groups passed at a load average of 6 to 12. **mouse: captured look** failed, then failed again on one of two reruns of that group alone: it is flaky on `main`.
+
+Rounds 1 to 8 covered every input device, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, the camera, keyboard-only menus, full screen, resuming a sanctuary, lost graphics and sound, button names, three journeys, and mouse look. This time I looked at the moment-to-moment HUD, which is what a player checks in the middle of a fight, and at the pause menu on a laptop. I found these:
+
+- **Half a heart looks like a whole one.** Health counts in half hearts, but a half heart is drawn as a full heart at 65% opacity (`src/style.css`), so at 1½ hearts the row reads as two full hearts and an empty one. Nothing changes when you're down to your last heart. The vitals have no backing, so the small hearts, crystal count, and relic count sit straight on bright sky and foliage. Round 1 gave the objective and compass a backing but not these. To a screen reader the hearts are just "Health".
+- **A guardian hall doesn't say how many guardians are left.** The objective reads "Defeat the four guardians to break the second seal" from the first guardian to the last. When a warder hangs back behind cover, a player who has felled three can't tell whether the seal is waiting on one more or something else.
+- **The pause menu runs off laptop screens.** At 1366×768, 1280×720, and 1024×768, "Save & return to title" sits below the visible sheet, and at 1280×720 so does "Return to checkpoint". There is no scroll bar or other sign that more is below. With larger text, three or four rows are hidden even at 1280×800.
+- **A flaky check.** In the captured-mouse-look group, headless Chromium sends its own `pointermove` events under pointer lock around each emulated click. One of them carries a movement of (−640, −400), minus the cursor's position. When it lands between two measurements, the camera turns and "Invert vertical camera applies to it" fails. The "notice says how to capture it again" assertion also reads the toast before the browser's `pointerlockchange` event has always arrived. The rule for a green tree is all groups green, so a flaky group weakens every other check.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, healing, enemy numbers, timings, and crystal income stay as they are. No new combat aids: the low-health warning only shows and sounds what the hearts already say. The arena-doorway reset stays as it is (owner's call).
+- **No new story writing.** Only interface text.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load, and the save format doesn't change.
+
+### A. Health you can read at a glance
+
+Acceptance criteria
+- A half heart is drawn as half a heart: its left half filled and its right half empty, with the empty heart's outline, so 1½ hearts can't be read as 2.
+- The vitals (hearts, crystals, relics) get a soft backing like the objective's, so they stay readable over bright sky, snow, and sand. Nothing else moves, and the phone layouts still don't overlap.
+- At one heart or less (and above none), the hearts pulse gently and take a warm outline. Under reduced motion they keep the outline but don't pulse. A hit that leaves you there also plays a soft heartbeat, a few beats on the effects bus, so it follows the effects volume and mute.
+- The hearts have an accessible label that gives the value, for example "Health: 1½ of 3 hearts".
+
+Verification
+- Unit tests for the heart states and the label (whole, half, and empty hearts at every health value, and odd maximums).
+- A browser check: at 3 of 6 health, the second heart is drawn half filled, measured from the pixels of its left and right halves. At full health the hearts don't pulse. At 2 or less they pulse, and under reduced motion they don't. A real guardian strike that takes Alder to one heart schedules the heartbeat voices, and with effects at 0 it schedules none. The label gives the value. Each part fails on `main`.
+- Contrast: the luminance contrast of the relic count against what's behind it, measured from screenshots in the village, Frostveil, and the Saffron Wastes, before and after.
+- The phone overlap groups still pass in all twelve layouts and orientations. Screenshots: full, half, and low health on desktop, and a phone.
+
+### B. The guardian hall counts the fallen
+
+Acceptance criteria
+- In a guardian hall the objective keeps its sentence and adds a count, "Defeat the four guardians to break the second seal · 1 / 4 fallen", which updates as each one falls. Counts keep to one line (round 8). The puzzle, warden, and relic objectives don't change.
+
+Verification
+- A browser check in the Rootbound Hollow: the count reads 0 / 4 at the start of the hall and 2 / 4 after two guardians fall to the normal damage code. After a defeat and the return to the hall's checkpoint, it still reads 2 / 4. Once the seal breaks, the objective moves on to the warden. It fails on `main`.
+
+### C. The pause menu fits on a laptop screen
+
+Acceptance criteria
+- With normal text, every pause-menu choice is fully visible without scrolling at 1280×720, 1366×768, 1024×768, 1280×800, 1440×900, and 1920×1080. With larger text, the same holds at 1280×800 and above.
+- On short screens where it still can't fit (a phone held sideways), the sheet scrolls as today, and focus moving with the keyboard or a gamepad brings the focused row into view.
+- Keyboard and gamepad order is unchanged: ↓ goes through the choices in the same order as today.
+
+Verification
+- A browser check that opens the pause menu at each size, with normal and larger text, and checks that every button lies inside the sheet's visible box. It fails on `main` at 1280×720, 1366×768, and 1024×768. On a phone held sideways, focusing the last row with the keyboard scrolls it into view. The existing keyboard-menu and gamepad groups still pass. Screenshots at 1280×720 and with larger text.
+
+### D. The captured-mouse-look check stops flaking
+
+Acceptance criteria and verification
+- While it measures turning with synthetic moves, the check holds back the browser's own trusted `pointermove` events and counts them. It waits for the notice instead of reading it at once. The game doesn't change. The group passes on ten runs in a row, where it failed on 3 of 7 runs with the game and the check unchanged (the last four with a more detailed failure message only).
+- Honest limit: these stray moves come from Playwright's emulated mouse in headless Chromium, and I couldn't show that a real mouse in a real browser sends anything like them, so the game doesn't filter them.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, and deleting a journey (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); and real-device checks (a phone and real controllers). The pre-existing nudge when a saved spot is inside a collider stays as it is, because play can't put Alder there; only test teleports have.
+
