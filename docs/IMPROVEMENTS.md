@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), and [Round 5 results](#round-5-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 5 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), and [Round 6 scope](#round-6-scope--7-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -592,3 +592,78 @@ Still deferred, and why:
 - **Skinned characters and new enemy art (14), traversal tools (15):** large jobs.
 - **Full touch remapping:** moving individual buttons needs a layout editor; this round covers handedness and size.
 - **Performance tuning (rest of 11):** the desktop iGPU still has headroom; a phone is still unmeasured.
+
+## Round 6 scope — 7 October 2026
+
+Branch `improvements-6`, from `main` at `df6074c` (in sync with `origin/main`). Baseline: 112 / 112 Vitest tests, and all 39 `tests/run-browser-checks.mjs` groups green (load average 5 to 6).
+
+Rounds 1 to 5 covered gamepad, touch, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, and the camera. Playing the build again with a keyboard only, then as a phone player, I found these:
+
+- **You can't start the game with the keyboard alone.** On the title, nothing has focus, and the game swallows Tab and the arrow keys, so there is no way to reach "Begin your journey" without a mouse. The same is true of the pause menu, the settings sheet (including the key remapping it offers), the journal, and the map. Escape in Settings closes everything instead of going back to the pause menu, as B does on a gamepad.
+- **Settings wait until after the opening.** Volume, larger text, reduced motion, and the key and button layouts are only reachable from the pause menu, so a player who needs them has to sit through the title camera drift and the three-page opening first.
+- **No full screen.** On a phone held sideways, the browser's own bars take a large share of the height, and there is no button to go full screen on any device.
+- **A phone can lose recent progress.** Progress is saved every 25 seconds, at events, and on `beforeunload`. Phones often don't fire `beforeunload` when you switch apps and the browser later discards the tab, so up to 25 seconds of walking (and the marker reached in that time) can be lost.
+- **Nobody has measured the fights.** Since round 2 added warden signature attacks and ranged warders, no playthrough has judged the net difficulty, and the direction is the owner's call. Measuring it doesn't change it.
+
+Ground rules (unchanged from round 5):
+- **No difficulty numbers change.** Health, damage, enemy numbers, timings, and crystal income stay as they are. No new combat aids.
+- **No new story writing.** Only interface text.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load.
+
+### A. Menus with the keyboard alone
+
+Acceptance criteria
+- On every sheet (title, dialogue and story, pause, settings, journal, map, flute), ↑ and ↓ (and Tab and Shift+Tab) move the focus through its buttons, and Enter or Space chooses the focused one. With nothing focused, Enter chooses the first, as A does on a gamepad.
+- Focus is drawn plainly on every focusable button.
+- Escape goes back one step: from Settings to the pause menu (or the title, see B), and closes the other sheets as before. It never chooses the crossing promise.
+- Key remapping works without a mouse: choose a row with the arrows and Enter, then press the new key.
+- Nothing changes in play: arrows still turn the camera and switch lock-on targets, Tab still opens the journal (and closes it), and remapped keys still work.
+
+Verification
+- A browser check with real Playwright key presses only: from the title, start a new game, read through the opening, open the pause menu, open Settings, raise the master volume, rebind Sword to K, go back to the pause menu with Escape, and return to the world, where K swings. Tab opens and closes the journal in play.
+- A screenshot of the focus ring in the pause menu and settings.
+
+### B. Settings before you begin
+
+Acceptance criteria
+- The title has a **Settings** button. It opens the same sheet, and Back, ×, Escape, and B return to the title.
+- Changes made there apply at once and are stored (larger text shows on the title and the opening; reduced motion stops the title camera drift).
+- Nothing starts the journey early: the save isn't touched until the player begins or continues.
+
+Verification
+- The A check opens Settings from the title by keyboard, turns on larger text, returns to the title, and confirms the opening scene uses it. A synthetic pad and a mouse each reach it too. The review page's save key stays empty.
+- Screenshot of the title with the new button.
+
+### C. Full screen
+
+Acceptance criteria
+- The title and the pause menu have a **Full screen** button where the browser allows it (`document.fullscreenEnabled`); it shows its state and toggles back. Where full screen isn't available (an iPhone's Safari), the button isn't shown.
+- Leaving full screen with the browser's own Escape or gesture updates the button. The game pauses or resizes cleanly.
+
+Verification
+- A browser check on the phone-landscape page with a real CDP tap: the game enters full screen and the button says so; a second tap leaves it. On a page where `fullscreenEnabled` is false, the button is absent.
+- Screenshot of the phone-landscape pause menu.
+
+### D. Keep progress when a phone puts the game away
+
+Acceptance criteria
+- When the page is hidden (`visibilitychange`) or unloaded (`pagehide`) during a journey, the game saves at once, as it does today on `beforeunload`. It still pauses when hidden.
+- The review and test pages still never write a save.
+
+Verification
+- A browser check in a fresh, throwaway browser context on the normal URL: start a journey, walk, hide the page through the DevTools Protocol, and read `localStorage` to confirm the new position. The same check on `/?review=polish` finds no save.
+
+### E. Measure the fights (evidence for the owner, no tuning)
+
+Acceptance criteria
+- A scripted fighter plays every guardian hall and warden arena in all seven sanctuaries with real key events on the game's deterministic clock: no placement of foes, no forced attacks, and no damage except from the sword. It uses the campaign's real health and sword for each sanctuary.
+- Two play styles: **steady** (locks on, strikes between attacks, guards blockable blows and steps out of shockwaves, volleys, and charge lanes after a human-like reaction delay) and **rushing** (locks on and swings, never guards or dodges). Several seeds each.
+- It records time to clear, hearts lost, guarded blows, and defeats per hall and arena into `docs/artifacts/combat-round6.json`, and IMPROVEMENTS.md reports the table with its limits.
+- No health, damage, timing, or enemy value changes.
+
+Verification
+- The run itself, repeated with the same seeds to confirm it's deterministic, and a control: with the shield key never pressed, the steady fighter's guard count is 0.
+- I'll say plainly that a scripted fighter is not a person: it shows which fights hurt and how long they take, not how they feel.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes and puzzle hints (owner decisions), branching dungeons (a level-design pass), new skinned art and traversal (large jobs), full touch remapping (a layout editor), and phone performance (needs a phone).
