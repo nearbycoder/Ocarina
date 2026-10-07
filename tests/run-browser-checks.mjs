@@ -562,10 +562,14 @@ await run("journey files", async () => {
   return results.length;
 });
 
-// HUD pieces and touch controls that must never overlap on a phone.
+// HUD pieces and touch controls that must never overlap on a phone, in two
+// scenes: exploring (with an interaction prompt) and a warden fight (with its
+// bar). The two never show together: the only prompt in an arena is the
+// relic's, after the warden falls. Each scene also shows a long toast and the
+// longest objective.
 const hudOverlaps = (p) =>
   p.evaluate(() => {
-    const pieces = {
+    const always = {
       vitals: ".vitals",
       location: ".location",
       compass: "#compass",
@@ -574,38 +578,74 @@ const hudOverlaps = (p) =>
       minimap: "#minimap",
       stick: "#touch-stick",
       actions: ".touch-actions",
+      toast: "#toast",
     };
-    // The longest names the HUD can show: the adult eyebrow, the longest
-    // region, and a compass naming a sanctuary far away.
+    const scenes = {
+      exploring: { ...always, prompt: "#prompt" },
+      fight: { ...always, warden: "#boss" },
+    };
+    // The longest texts the HUD can show: the adult eyebrow, the longest
+    // region, a compass naming a sanctuary far away, the longest objective
+    // (the Glass Monastery's hint), prompt, and warden name, and a long toast.
     const game = window.__BELL_OF_AGES__.debug.game();
+    const ui = game.ui;
     const age = game.save.age;
     game.save.age = "adult";
-    game.ui.hud(game.save, "The Sunken Observatory");
+    ui.hud(
+      game.save,
+      "The Sunken Observatory",
+      "Turn each mirror until all three face the northern star. Their beams must point away from the entrance.",
+    );
     document.getElementById("compass-text").textContent =
       "The Rootbound Hollow · 188 paces";
     document.getElementById("compass-arrow").hidden = false;
-    const rects = Object.entries(pieces).map(([name, sel]) => [
-      name,
-      document.querySelector(sel).getBoundingClientRect(),
-    ]);
+    const toast = document.getElementById("toast");
+    toast.style.transition = "none";
+    ui.toast(
+      "Browser storage is unavailable. Keep this tab open to preserve this journey.",
+    );
+    const hit = [];
+    for (const [scene, pieces] of Object.entries(scenes)) {
+      ui.prompt(
+        scene === "exploring" ? "The Sunken Observatory · restored" : "",
+      );
+      ui.wardenBar(scene === "fight" ? "The Frostbound Sentinel" : null);
+      const rects = Object.entries(pieces).flatMap(([name, sel]) => {
+        const el = document.querySelector(sel);
+        const r = el.getBoundingClientRect();
+        // A piece the scene doesn't show (the objective, during a fight on
+        // a phone held upright) can't overlap anything.
+        return r.width && r.height && getComputedStyle(el).display !== "none"
+          ? [[name, r]]
+          : [];
+      });
+      for (const [name, r] of rects)
+        if (
+          r.left < 0 ||
+          r.top < 0 ||
+          r.right > innerWidth ||
+          r.bottom > innerHeight
+        )
+          hit.push(`${scene}: ${name}/screen edge`);
+      for (let i = 0; i < rects.length; i++)
+        for (let j = i + 1; j < rects.length; j++) {
+          const [a, r] = rects[i],
+            [b, s] = rects[j];
+          if (
+            r.left < s.right &&
+            s.left < r.right &&
+            r.top < s.bottom &&
+            s.top < r.bottom
+          )
+            hit.push(`${scene}: ${a}/${b}`);
+        }
+    }
+    ui.prompt("");
+    ui.wardenBar(null);
+    toast.classList.remove("visible");
+    toast.style.transition = "";
     game.save.age = age;
     game.refreshHUD();
-    const hit = [];
-    for (const [name, r] of rects)
-      if (r.left < 0 || r.right > innerWidth || r.bottom > innerHeight)
-        hit.push(`${name}/screen edge`);
-    for (let i = 0; i < rects.length; i++)
-      for (let j = i + 1; j < rects.length; j++) {
-        const [a, r] = rects[i],
-          [b, s] = rects[j];
-        if (
-          r.left < s.right &&
-          s.left < r.right &&
-          r.top < s.bottom &&
-          s.top < r.bottom
-        )
-          hit.push(`${a}/${b}`);
-      }
     return hit;
   });
 // Every touch layout: right- and left-handed, in all three sizes.

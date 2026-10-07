@@ -2769,11 +2769,10 @@ export class Game {
     const boss = this.enemies.find(
       (e) => e.boss && e.state !== "dead" && this.hero.group.position.z < -21,
     );
-    this.ui.el("boss").hidden = !boss;
-    if (boss) {
-      this.ui.el("boss-name").textContent = this.world.dungeon!.boss;
-      this.ui.el("boss-fill").style.width = `${(boss.hp / boss.maxHp) * 100}%`;
-    }
+    this.ui.wardenBar(
+      boss ? this.world.dungeon!.boss : null,
+      boss ? boss.hp / boss.maxHp : 1,
+    );
   }
   /** A guardian kind's attack, if it is in position to make one. */
   private guardianMove(e: Enemy, distance: number): WardenMove | null {

@@ -215,6 +215,15 @@ export class UI {
       ? `<kbd>${interactGlyph(this.device, this.names)}</kbd><span>${text}</span>`
       : "";
   }
+  /** The warden's bar during its fight; null hides it. */
+  wardenBar(name: string | null, fraction = 1) {
+    this.el("boss").hidden = !name;
+    // Phones held upright give the bar the objective's place (style.css).
+    this.el("hud").classList.toggle("warden-fight", !!name);
+    if (!name) return;
+    this.el("boss-name").textContent = name;
+    this.el("boss-fill").style.width = `${fraction * 100}%`;
+  }
   toast(text: string) {
     this.el("toast").textContent = this.say(text);
     this.el("toast").classList.add("visible");

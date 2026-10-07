@@ -1646,7 +1646,32 @@ body.large-text .sheet {
 @media (max-width: 600px) {
   /* Keep notices clear of the objective panel on narrow screens. */
   #toast {
-    top: 36%;
+    top: 41%;
+  }
+}
+@media (pointer: coarse) and (max-width: 520px) {
+  /* A phone held upright: the prompt sits on the right above the controls,
+     clear of the minimap, and the warden's bar takes the objective's place
+     during its fight. */
+  #prompt {
+    left: auto;
+    right: 18px;
+    bottom: calc(62px + 132px * var(--ts));
+    transform: none;
+    max-width: 190px;
+    white-space: normal;
+    line-height: 1.4;
+  }
+  #hud.warden-fight .quest {
+    display: none;
+  }
+  #boss {
+    top: 146px;
+    bottom: auto;
+    left: 18px;
+    right: 18px;
+    width: auto;
+    transform: none;
   }
 }
 @media (pointer: coarse) and (max-height: 500px) {
@@ -1678,6 +1703,26 @@ body.large-text .sheet {
   }
   .vitals {
     top: 14px;
+  }
+  /* Notices, prompts, and the warden's bar keep to the middle column,
+     between the vitals and the objective and above the controls. */
+  #toast {
+    top: 92px;
+    max-width: 320px;
+  }
+  #prompt {
+    max-width: 300px;
+    white-space: normal;
+  }
+  #boss {
+    width: 260px;
+  }
+  /* The objective stays clear of a thumbstick on the right. */
+  .quest {
+    top: 70px;
+  }
+  .quest small {
+    display: none;
   }
 }
 @media (max-height: 500px) {
