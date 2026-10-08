@@ -62,8 +62,9 @@ window.wayQA = (() => {
       `On the coast road it names the Tidal Archive (${text()})`,
     );
     // Facing the Archive, the arrow points straight up.
+    // From the north it leads round the arch to the door, so face that way.
     const p = api.getState().position,
-      t = { x: 77, z: 60 };
+      t = game.destination;
     game.yaw = Math.atan2(p.x - t.x, p.z - t.z);
     settle();
     assert(
@@ -261,5 +262,119 @@ window.wayQA = (() => {
     game.refreshHUD();
     return results;
   }
-  return { compass, marker, home };
+  // Walks with key presses only, toward wherever the compass arrow points,
+  // sidestepping for a moment when the paces stop falling, as a player would
+  // round a tree. Resolves with the game seconds it took to reach `id`'s prompt.
+  const STEP = {
+    0: ["KeyW"],
+    1: ["KeyW", "KeyD"],
+    2: ["KeyD"],
+    3: ["KeyS", "KeyD"],
+    4: ["KeyS"],
+  };
+  const sector = (a) => {
+    const n = Math.round(Math.atan2(Math.sin(a), Math.cos(a)) / (Math.PI / 4));
+    const keys = STEP[Math.abs(n)];
+    return n < 0 ? keys.map((k) => (k === "KeyD" ? "KeyA" : k)) : keys;
+  };
+  async function follow(id, limit = 90) {
+    const held = new Set();
+    const hold = (codes) => {
+      for (const c of [...held])
+        if (!codes.includes(c)) {
+          window.dispatchEvent(new KeyboardEvent("keyup", { code: c }));
+          held.delete(c);
+        }
+      for (const c of codes)
+        if (!held.has(c)) {
+          window.dispatchEvent(new KeyboardEvent("keydown", { code: c }));
+          held.add(c);
+        }
+    };
+    const paces = () => Number(/· (\d+) pace/.exec(text())?.[1] ?? NaN);
+    let t = 0,
+      best = Infinity,
+      since = 0,
+      detour = -1,
+      side = 1;
+    try {
+      while (t < limit) {
+        if (api.getState().interaction === id) return t;
+        const n = paces();
+        if (n < best - 0.5) [best, since] = [n, t];
+        if (t - since > 1.5) {
+          detour = t + 1.2;
+          since = detour;
+          side = -side;
+          best = n;
+        }
+        hold(
+          sector(game.compassAngle + (t < detour ? (side * Math.PI) / 2 : 0)),
+        );
+        api.debug.advance(0.1);
+        t += 0.1;
+      }
+    } finally {
+      hold([]);
+    }
+    const q = api.getState().position;
+    throw new Error(
+      `Following the compass doesn't reach ${id} in ${limit} s: it stops at (${q.x.toFixed(1)}, ${q.z.toFixed(1)}) reading "${text()}"`,
+    );
+  }
+  // From the village, then from each door in turn, to every sanctuary door
+  // (and the bell between the ages), walking only where the arrow points.
+  async function doors() {
+    setup();
+    const s = game.save,
+      times = [];
+    const door = (id) =>
+      game.world.interactables.find((i) => i.id === id && i.kind === "portal");
+    const legs = [
+      ["child", [], [0, 57], "tide"],
+      ["child", ["tide"], null, "ember"],
+      ["child", ["tide", "ember"], null, "root"],
+      ["child", ["tide", "ember", "root"], null, "ages"],
+      ["adult", ["tide", "ember", "root"], [0, 14], "moon"],
+      ["adult", ["tide", "ember", "root", "moon"], null, "frost"],
+      ["adult", ["tide", "ember", "root", "moon", "frost"], null, "sun"],
+      [
+        "adult",
+        ["tide", "ember", "root", "moon", "frost", "sun"],
+        null,
+        "crown",
+      ],
+    ];
+    let from = null;
+    for (const [age, completed, start, id] of legs) {
+      if (s.age !== age) {
+        s.age = age;
+        s.story.reunited = age === "adult";
+        game.replaceHero();
+      }
+      s.completed = [...completed];
+      game.loadWorld();
+      from = start || from;
+      api.debug.teleport(...from);
+      game.yaw = 0;
+      settle();
+      const name = text().split(" ·")[0];
+      const seconds = await follow(id);
+      times.push(`${id} ${seconds.toFixed(1)} s`);
+      assert(
+        true,
+        `Following only the compass to ${name} reaches its ${id === "ages" ? "bell" : "door"} (${seconds.toFixed(1)} s)`,
+      );
+      if (id !== "ages") {
+        const d = door(id);
+        from = [d.x, d.z];
+      } else from = [0, 14];
+    }
+    s.age = before.age;
+    s.story.reunited = before.reunited;
+    game.replaceHero();
+    restore();
+    return results.splice(0);
+  }
+  return { compass, marker, home, doors };
 })();

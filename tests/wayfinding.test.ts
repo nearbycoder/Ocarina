@@ -10,7 +10,9 @@ import {
   LANDMARKS,
   bearing,
   compassTarget,
+  doorway,
   journeyTarget,
+  pacesText,
   mapToWorld,
   minimapPoint,
 } from "../src/wayfinding";
@@ -75,6 +77,96 @@ describe("where the compass points", () => {
     });
     s.marker = null;
     expect(compassTarget(s, -20, 40)?.name).toBe("The Rootbound Hollow");
+  });
+});
+
+describe("finding a sanctuary's door", () => {
+  // Every arch faces south (+z); its door is used from 3 m in front.
+  const tide = DUNGEONS.find((d) => d.id === "tide")!;
+  const door = { x: tide.x, z: tide.z + 3 };
+  const way = (x: number, z: number) => doorway(x, z, tide.x, tide.z)!;
+  it("leads straight to the doorstep from in front", () => {
+    const w = way(tide.x + 6, tide.z + 20);
+    expect(w).toMatchObject(door);
+    expect(w.paces).toBeCloseTo(Math.hypot(6, 17));
+  });
+  it("goes round to the front from beside the arch", () => {
+    for (const side of [-1, 1]) {
+      const w = way(tide.x + side * 12, tide.z - 4);
+      expect(Math.sign(w.x - tide.x)).toBe(side);
+      expect(Math.abs(w.x - tide.x)).toBeGreaterThan(4.6);
+      expect(w.z).toBeGreaterThan(tide.z + 1.5);
+      // The count is the whole way: to the corner, then to the door.
+      expect(w.paces).toBeCloseTo(
+        Math.hypot(w.x - (tide.x + side * 12), w.z - (tide.z - 4)) +
+          Math.hypot(w.x - door.x, w.z - door.z),
+      );
+    }
+  });
+  it("leaves the back of the arch by its nearer corner", () => {
+    for (const side of [-1, 1]) {
+      const from = { x: tide.x + side * 1, z: tide.z - 6 };
+      const w = way(from.x, from.z);
+      expect(Math.sign(w.x - tide.x)).toBe(side);
+      // Behind the pillars, not through them.
+      expect(Math.abs(w.x - tide.x)).toBeGreaterThan(4.6);
+      expect(w.z).toBeLessThan(tide.z - 1.5);
+      expect(w.paces).toBeGreaterThan(Math.hypot(1, 9));
+    }
+    // Standing in the recess behind the door, first step back out of it.
+    const recess = way(tide.x + 0.5, tide.z);
+    expect(recess.z).toBeLessThan(tide.z - 1.5);
+    expect(Math.abs(recess.x - tide.x)).toBeLessThan(2.4);
+  });
+  it("never aims through a pillar, from anywhere round the arch", () => {
+    // Pillars: 2.4 to 4.6 m either side, 1.5 m deep; the door between them.
+    const blocked = (x: number, z: number) =>
+      Math.abs(z - tide.z) < 1.5 + 0.4 &&
+      Math.abs(x - tide.x) < 4.6 + 0.4 &&
+      (Math.abs(x - tide.x) > 2.4 - 0.4 || z > tide.z + 1.5 - 0.4);
+    for (let a = 0; a < 64; a++)
+      for (const r of [3, 6, 10, 20]) {
+        const x = tide.x + Math.sin((a / 64) * 2 * Math.PI) * r,
+          z = tide.z + Math.cos((a / 64) * 2 * Math.PI) * r;
+        if (blocked(x, z)) continue;
+        const w = way(x, z);
+        for (let t = 0.02; t < 1; t += 0.02)
+          expect(
+            blocked(x + (w.x - x) * t, z + (w.z - z) * t),
+            `from (${x.toFixed(1)}, ${z.toFixed(1)})`,
+          ).toBe(false);
+      }
+  });
+  it("only reroutes sanctuaries", () => {
+    expect(doorway(0, 57, LANDMARKS.village.x, LANDMARKS.village.z)).toBeNull();
+    expect(doorway(0, 57, 12, -30)).toBeNull();
+    for (const d of DUNGEONS)
+      expect(doorway(d.x, d.z + 30, d.x, d.z)).toMatchObject({
+        x: d.x,
+        z: d.z + 3,
+      });
+  });
+  it("points the compass at the door, the player's marker too", () => {
+    const s = afterPrologue();
+    const t = compassTarget(s, 77, 30)!;
+    // From the north: first to a corner behind the arch, clear of it.
+    expect(t.name).toBe("The Tidal Archive");
+    expect(Math.abs(t.x - 77)).toBeGreaterThan(4.6);
+    expect(t.z).toBeLessThan(60 - 1.5);
+    expect(t.paces).toBeGreaterThan(33);
+    s.marker = { x: LANDMARKS.root.x, z: LANDMARKS.root.z };
+    expect(compassTarget(s, LANDMARKS.root.x, 40)).toMatchObject({
+      x: LANDMARKS.root.x,
+      z: LANDMARKS.root.z + 3,
+      name: "Your marker",
+      marker: true,
+    });
+  });
+  it("counts one pace, and many paces", () => {
+    expect(pacesText(1)).toBe("1 pace");
+    expect(pacesText(0.6)).toBe("1 pace");
+    expect(pacesText(0)).toBe("0 paces");
+    expect(pacesText(14.2)).toBe("14 paces");
   });
 });
 

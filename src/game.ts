@@ -49,6 +49,7 @@ import {
   bearing,
   compassTarget,
   journeyTarget,
+  pacesText,
   minimapPoint,
   type Destination,
 } from "./wayfinding";
@@ -3558,7 +3559,7 @@ export class Game {
     const destination = (this.destination =
       !d && this.started ? compassTarget(this.save, p.x, p.z) : null);
     this.ui.el("compass-text").textContent = destination
-      ? `${destination.name} · ${Math.round(Math.hypot(p.x - destination.x, p.z - destination.z))} paces`
+      ? `${destination.name} · ${pacesText(destination.paces ?? Math.hypot(p.x - destination.x, p.z - destination.z))}`
       : "N";
     const arrow = this.ui.el("compass-arrow");
     arrow.hidden = !destination;

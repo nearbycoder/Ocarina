@@ -95,6 +95,12 @@ await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
 await inPage("map discoveries", async () => (await mapQA.run()).length);
 await inPage("wayfinding: compass", async () => (await wayQA.compass()).length);
+// Key presses only, steering at the arrow; each leg's game time is logged.
+await run("wayfinding: every door by the compass", async () => {
+  const legs = await page.evaluate(() => wayQA.doors());
+  for (const leg of legs) console.log(`  ${leg}`);
+  return legs.length;
+});
 await inPage("hud: home region", async () => (await wayQA.home()).length);
 // The objective's count ("0 / 3") stays on one line of the panel.
 await inPage("objective: counts on one line", async () => {

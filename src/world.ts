@@ -14,6 +14,7 @@ import {
 } from "./architecture";
 import { ALCOVE, LAYOUTS } from "./layouts";
 import { buildTerrain } from "./terrain";
+import { DOORSTEP } from "./wayfinding";
 import { stoneMaterial, waterMaterial } from "./surfaces";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { Collider } from "./physics";
@@ -341,7 +342,7 @@ function portal(w: World, d: Dungeon, s: SaveData) {
     d.id,
     "portal",
     d.x,
-    d.z + 3,
+    d.z + DOORSTEP,
     restored ? `${d.name} · restored` : `Enter ${d.name}`,
     g,
   );
