@@ -307,6 +307,9 @@ function markMesh(
 }
 /** How far the Ember Vault's stone sinks into its seal once it opens it. */
 const BLOCK_SETTLED = -1.2;
+/** The sword trail's opacity at its brightest, and its fade once a cut ends. */
+const TRAIL_OPACITY = 0.62;
+const TRAIL_FADE = 0.14;
 /** Where the title's view looks: depth of field keeps it sharp (Ultra). */
 const TITLE_FOCUS = new T.Vector3(-4, 2.8, 44);
 export class Game {
@@ -375,6 +378,10 @@ export class Game {
   private guardBlend = 0;
   private trailHistory: { base: T.Vector3; tip: T.Vector3 }[] = [];
   private trailVertices = new Float32Array(7 * 6 * 3);
+  /** Each trail vertex's warm white and opacity (see drawTrail). */
+  private trailColors = new Float32Array(7 * 6 * 4);
+  /** The trail's own fade once the cut ends: 1 while it's drawn. */
+  private trailFade = 0;
   private bladeBase = new T.Vector3();
   private bladeTip = new T.Vector3();
   dodgeTime = 0;
@@ -482,14 +489,22 @@ export class Game {
       "position",
       new T.BufferAttribute(this.trailVertices, 3).setUsage(T.DynamicDrawUsage),
     );
+    ribbon.setAttribute(
+      "color",
+      new T.BufferAttribute(this.trailColors, 4).setUsage(T.DynamicDrawUsage),
+    );
     ribbon.setDrawRange(0, 0);
+    // A pale warm arc: brightest along the blade's edge and the newest
+    // sample, fading to nothing toward the hilt and the oldest. A touch over
+    // white, so the edge catches the bloom on High and Ultra.
     this.trail = new T.Mesh(
       ribbon,
       new T.MeshBasicMaterial({
-        color: "#d4d8cd",
+        color: new T.Color(1.35, 1.28, 1.12),
+        vertexColors: true,
         side: T.DoubleSide,
         transparent: true,
-        opacity: 0.3,
+        opacity: TRAIL_OPACITY,
         depthWrite: false,
       }),
     );
@@ -2610,6 +2625,41 @@ export class Game {
     this.bladeBase.set(0, 0, -0.24).applyMatrix4(this.hero.sword.matrixWorld);
     this.bladeTip.set(0, 0, -1.06).applyMatrix4(this.hero.sword.matrixWorld);
   }
+  /** Writes the trail's ribbon from the blade's recent positions. */
+  drawTrail() {
+    const history = this.trailHistory,
+      newest = history.length - 1;
+    let at = 0,
+      c = 0;
+    for (let i = 1; i < history.length; i++) {
+      const a = history[i - 1],
+        b = history[i];
+      // Older samples fade; along the blade, the hilt end fades.
+      const age = (k: number) => Math.pow(k / newest, 1.4);
+      const edge = (v: T.Vector3, k: number) =>
+        v === history[k].tip ? 1 : 0.08;
+      for (const [v, k] of [
+        [a.base, i - 1],
+        [a.tip, i - 1],
+        [b.tip, i],
+        [a.base, i - 1],
+        [b.tip, i],
+        [b.base, i],
+      ] as [T.Vector3, number][]) {
+        this.trailVertices[at++] = v.x;
+        this.trailVertices[at++] = v.y;
+        this.trailVertices[at++] = v.z;
+        this.trailColors.set([1, 1, 1, age(k) * edge(v, k)], c);
+        c += 4;
+      }
+    }
+    const geometry = this.trail.geometry;
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+    geometry.setDrawRange(0, at / 3);
+    (this.trail.material as T.MeshBasicMaterial).opacity = TRAIL_OPACITY;
+    this.trail.visible = at > 0;
+  }
   updateAttack(dt: number) {
     if (this.recoil >= 0) {
       this.recoil += dt;
@@ -2711,19 +2761,14 @@ export class Game {
         tip: this.bladeTip.clone(),
       });
       if (this.trailHistory.length > 8) this.trailHistory.shift();
-      let at = 0;
-      for (let i = 1; i < this.trailHistory.length; i++) {
-        const a = this.trailHistory[i - 1],
-          b = this.trailHistory[i];
-        for (const v of [a.base, a.tip, b.tip, a.base, b.tip, b.base]) {
-          this.trailVertices[at++] = v.x;
-          this.trailVertices[at++] = v.y;
-          this.trailVertices[at++] = v.z;
-        }
-      }
-      this.trail.geometry.attributes.position.needsUpdate = true;
-      this.trail.geometry.setDrawRange(0, at / 3);
-      this.trail.visible = at > 0;
+      this.trailFade = 1;
+      this.drawTrail();
+    } else if (this.trailFade > 0 && this.attackElapsed > spec.end) {
+      // The arc fades out over a moment instead of vanishing with the cut.
+      this.trailFade = Math.max(0, this.trailFade - dt / TRAIL_FADE);
+      (this.trail.material as T.MeshBasicMaterial).opacity =
+        TRAIL_OPACITY * this.trailFade;
+      this.trail.visible = this.trailFade > 0;
     } else this.trail.visible = false;
     if (this.attackElapsed >= spec.duration) {
       if (this.attackQueued) this.beginAttack((this.combo + 1) % 3);

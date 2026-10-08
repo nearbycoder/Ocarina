@@ -206,5 +206,52 @@ window.polishQA = (() => {
     bellQA.close();
     return results;
   }
-  return { scenery, sword, combo, sparks, results, key, wait };
+  // The sword's trail: brightest at the blade's edge and the newest sample,
+  // fading toward the hilt and the oldest, then fading out after the cut.
+  async function trail() {
+    const game = api.debug.game();
+    bellQA.close();
+    api.debug.teleport(18, -26);
+    api.debug.face(0);
+    api.debug.advance(0.3);
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+    for (let t = 0; t < 40 && game.attackElapsed < 0.3; t++)
+      api.debug.advance(1 / 120);
+    const mesh = game.trail,
+      material = mesh.material;
+    const count = mesh.geometry.drawRange.count,
+      alpha = mesh.geometry.attributes.color.array;
+    assert(
+      mesh.visible && count >= 12,
+      `Mid-cut the trail is drawn (${count} vertices)`,
+    );
+    // Each quad is a.base, a.tip, b.tip, a.base, b.tip, b.base.
+    const last = count / 6 - 1;
+    const newestTip = alpha[(last * 6 + 2) * 4 + 3],
+      newestBase = alpha[(last * 6 + 5) * 4 + 3],
+      oldestTip = alpha[1 * 4 + 3];
+    assert(
+      newestTip === 1 && newestBase < 0.1 && oldestTip < 0.05,
+      `It fades from the newest edge (${newestTip}) to the hilt (${newestBase.toFixed(2)}) and the oldest sample (${oldestTip.toFixed(3)})`,
+    );
+    assert(
+      material.vertexColors && material.color.r > 1,
+      "Its pale warm white sits a touch over white, for the bloom",
+    );
+    const full = material.opacity;
+    for (let t = 0; t < 40 && game.attackElapsed <= 0.38; t++)
+      api.debug.advance(1 / 120);
+    assert(
+      mesh.visible && material.opacity < full && material.opacity > 0,
+      `Just after the cut it is fading (${material.opacity.toFixed(2)} of ${full})`,
+    );
+    api.debug.advance(0.2);
+    assert(!mesh.visible, "and gone 0.2 s later");
+    // Coloured sparks glow; grey dust stays lit.
+    const sparks = game.sparks.mesh.material;
+    assert(sparks.emissiveIntensity >= 1, "Sparks glow in their own colour");
+    return results;
+  }
+  return { scenery, sword, combo, sparks, trail, results, key, wait };
 })();

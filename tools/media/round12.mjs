@@ -12,7 +12,7 @@
 // Shots freeze the game's clock, so wind, water, and clouds are in the same
 // place in every step. Perf runs with vsync off and records the load average.
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { loadavg, cpus } from "node:os";
 
 const BASE = process.env.BELL_URL || "http://127.0.0.1:5174/";
@@ -108,6 +108,46 @@ if (command === "shots") {
       await page.screenshot({ path, type: "jpeg", quality: 88 });
       console.log(path);
     }
+    if (errors.length) console.log(`page errors (${step}):`, errors);
+    await context.close();
+  }
+} else if (command === "swing") {
+  // Mid-cut, with a burst of hit sparks, at each step (B).
+  for (const step of STEPS) {
+    const { context, page, errors } = await open(step);
+    await page.addScriptTag({
+      content: readFileSync(
+        new URL("../../tests/browser-checks.js", import.meta.url),
+        "utf8",
+      ),
+    });
+    await page.evaluate(async () => {
+      window.BELL_TEST_MANUAL = true;
+      await bellQA.start();
+      bellQA.close();
+      document.getElementById("toast").style.display = "none";
+      const api = window.__BELL_OF_AGES__,
+        game = api.debug.game();
+      api.debug.teleport(18, -26);
+      api.debug.face(Math.PI * 0.5);
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyJ" }));
+      api.debug.advance(1 / 60);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      api.debug.advance(0.25);
+      const tip = game.bladeTip.clone();
+      game.burst(tip.x, tip.y, tip.z, "#e5b06e", 12);
+      api.debug.advance(0.06);
+      // Hold the sparks where they are, and frame Alder's front and the arc.
+      game.sparks.update = () => {};
+      const hero = game.hero.group.position;
+      game.camera.position.set(hero.x - 3.4, hero.y + 2.3, hero.z + 2.6);
+      game.camera.lookAt(hero.x - 1.1, hero.y + 1, hero.z);
+    });
+    await freeze(page);
+    await frames(page, 20);
+    const path = `${OUT}/b-swing-${step}${SUFFIX}.jpg`;
+    await page.screenshot({ path, type: "jpeg", quality: 90 });
+    console.log(path);
     if (errors.length) console.log(`page errors (${step}):`, errors);
     await context.close();
   }

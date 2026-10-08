@@ -204,6 +204,10 @@ await inPage("polish: scenery", async () => {
 await inPage("polish: sword", async () => (await polishQA.sword()).length);
 await inPage("polish: combo", async () => (await polishQA.combo()).length);
 await inPage("polish: sparks", async () => (await polishQA.sparks()).length);
+await inPage(
+  "polish: sword trail",
+  async () => (await polishQA.trail()).length,
+);
 await page.close();
 
 // Captured mouse look (opt-in): real clicks and button presses; the

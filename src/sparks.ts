@@ -25,20 +25,28 @@ export class Sparks {
   /** Multiplies each burst's count (Ultra's denser sparks). */
   density = 1;
   constructor(readonly capacity = 192) {
-    // Embers: they glow in their own color (bright enough to catch the bloom
-    // on High and Ultra), with both colors taken from each spark's instance
-    // color, and stretch along their flight.
+    // Embers: a coloured burst glows in a deeper shade of its color (bright
+    // enough to catch the bloom on High and Ultra) instead of being lit, while
+    // a grey burst (dust from a broken wall) stays lit dust, as before. Both
+    // colors come from each spark's instance color.
     const material = new T.MeshStandardMaterial({
       color: "#ffffff",
       roughness: 0.6,
       emissive: "#ffffff",
-      emissiveIntensity: 1.25,
+      emissiveIntensity: 1,
     });
     material.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "vec3 totalEmissiveRadiance = emissive;",
-        "vec3 totalEmissiveRadiance = emissive * vColor.rgb;",
-      );
+      // The emissive line comes before the color include in three's shader.
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "vec3 totalEmissiveRadiance = emissive;",
+          `float heat = clamp((max(vColor.r, max(vColor.g, vColor.b)) - min(vColor.r, min(vColor.g, vColor.b))) * 1.8, 0., 1.);
+vec3 totalEmissiveRadiance = emissive * mix(vColor.rgb * .65, vColor.rgb * vColor.rgb * 1.9, heat);`,
+        )
+        .replace(
+          "#include <color_fragment>",
+          "#include <color_fragment>\ndiffuseColor.rgb *= 1. - .75 * heat;",
+        );
     };
     this.mesh = new T.InstancedMesh(UNIT, material, capacity);
     this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
