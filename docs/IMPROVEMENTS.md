@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), and [Round 10 scope](#round-10-scope--7-october-2026).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), [Round 10 scope](#round-10-scope--7-october-2026), and [Round 10 results](#round-10-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -1099,3 +1099,40 @@ Verification
 - A unit test: the new-journey position, the five cottages, and the villagers are in Alder Village; the Bell Sanctuary's centre, the meadow between them, and every sanctuary door keep their regions. A browser check: the HUD reads "Alder Village" right after the opening. It fails on `main`.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, and the heartbeat's behaviour (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); real-device checks (a phone and real controllers); and a full playthrough with real input only.
+
+## Round 10 results
+
+All four scoped items shipped on `improvements-10`. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round10.json](artifacts/improvements-round10.json).
+
+| Item | Commit | Verified by | Screenshots (`docs/media/improvements/round10/`) |
+| --- | --- | --- | --- |
+| A. Warning rings you can see on sand and snow | `b0bb69d` | 1 unit test; 13 browser assertions; contrast measured on grass, sand, and snow | `a-ring-saffron`, `a-ring-frost` (and `-before`), `a-ring-grass` |
+| B. Foes fall instead of vanishing | `49b1a14` | 2 unit tests; 11 browser assertions, through a defeat | `b-fall` |
+| C. A camera that follows as you walk | `cfe8ce4` | 5 unit tests; 11 browser assertions with a synthetic gamepad and key presses | `c-settings` |
+| D. Home is in Alder Village | `494a80d` | 2 unit tests; 3 browser assertions | `d-home` (and `-before`) |
+
+Unit tests: 144 / 144 (134 before). All 56 browser-check groups pass (52 before) in one full run at a load average of 23.8 at the start and 23.5 at the end, with no page errors; every earlier group is unchanged (campaign counter 104). The build and asset check pass, and the production build works from `/Ocarina/`. Every new check fails on the unchanged game.
+
+What changed for a player:
+- **Warning rings you can see.** Every ground warning (the slam ring, charge lanes, shockwave rings, volley circles, and a warder's circle) has a thin dark outline that fades in and out with it, so it reads on the Saffron Wastes' sand and Frostveil's snow as it already did on grass. The gold itself keeps its size, colour, and timing.
+- **Foes fall.** A felled guardian tips back, raises dust as it lands, and sinks into the ground over a second; a warden takes 1.6 seconds. It's down from the first frame, as before: the count, the seal, lock-on, the relic, and the save all move on at once.
+- **The camera follows.** **Settings → Camera → Camera follows**: Automatic (the default) trails the view behind Alder as he walks with a gamepad or touch, and leaves a keyboard and mouse as they were; Always and Never are the other choices. It swings with his sideways movement only, as if on a leash, and stays out of the way while he's locked on, while the player turns the view (and for 0.8 s after), and during a recentre.
+- **Home.** A new journey's HUD, and the title's Continue line for a journey saved at home, say Alder Village instead of The Long Meadow.
+
+Honest notes:
+- **Ring contrast, measured.** A guardian winds up at a fixed view on grass, in the Saffron Wastes, and in Frostveil Heights, halfway through its wind-up at the pulse's mean opacity. For every pixel the ring changes against the same frame without it, I took the WCAG contrast. Median / 90th percentile went from 1.38 / 1.79 to 1.43 / 2.50 on grass, 1.10 / 1.13 to 1.13 / 2.55 on sand, and 1.02 / 1.30 to 1.29 / 2.42 on snow. Pixels at 1.5 : 1 or more went from 641 to 3,926 on grass, 0 to 2,943 on sand, and 13 to 2,600 on snow. The medians barely move because most of a ring's pixels are the gold band, which is unchanged; the outline is what now stands out. One fixed view per ground; the warden's marks use the same outline but weren't measured. (`tools/media/round10.mjs rings`, `rings.json` and `rings-before.json`.)
+- **The fall is procedural.** The single rigid enemy model tips over as a whole; there's no authored death animation, which is still part of the new-art job.
+- **Camera follows is a new default for gamepad and touch.** I chose Automatic so keyboard-and-mouse play is unchanged, and because turning the view takes a second thumb on a pad or a phone. It was checked with a synthetic gamepad and synthetic key presses in headless Chromium: two seconds of the stick held right turn the view by 1.06 rad over 12.4 m, and the same walk with Never, or with the keyboard on Automatic, turns it by 0.000 rad. How it feels in the hand, and whether 60% of a leash camera's swing is the right amount, is untested. Whether it should be on by default is the owner's call.
+- **No difficulty change.** No health, damage, healing, timing, reach, enemy, or crystal values changed. The rings' size, timing, and gold are unchanged; the outline only makes them visible on pale ground. A felled foe stops attacking on the same frame as before.
+- **No new story writing.** Only interface text: the new setting and its note. No save-format change; older settings load with Automatic.
+- **Performance.** Each warning gains one mesh with a shared geometry, drawn only while the warning is. A falling foe moves one group for a second. I didn't take new frame samples.
+- **Controls that must fail.** On the unchanged game: the outline group fails at "the slam ring has a dark outline", the fall group at "dead at once, still in view", the follow group at its first step (no setting; a two-second stick walk there leaves the view at 0.000 rad), and the home-region group and unit test at (−10, 71) reading The Long Meadow.
+
+Still deferred, and why:
+- **Balance and difficulty, puzzle hints, deleting a journey, the heartbeat's behaviour, and Camera follows' default:** the owner's call.
+- **Branching dungeons:** need a level-design pass and a larger chamber layout.
+- **Skinned characters, new enemy art and death animations, traversal tools:** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Real-device checks:** a phone and real controllers are still needed, now including how the following camera feels.
+- **A full playthrough with real input only:** every check still stages scenes with the debug API; a scripted run from the title to the ending, walking every route, would be the next step toward measured completion times.
+- **The nudge when a saved spot is inside a collider:** play can't put Alder there; only test teleports have.

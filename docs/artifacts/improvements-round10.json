@@ -1,0 +1,77 @@
+{
+ "date": "2026-10-07",
+ "branch": "improvements-10",
+ "base": "1d725f1 (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save and journey checks use fresh throwaway browser contexts on the normal URL). Controls ran against the unchanged game code (src/ from main) on the same dev server.",
+ "unitTests": {
+  "files": 23,
+  "tests": 144,
+  "passed": 144
+ },
+ "build": "pass",
+ "assetCheck": {
+  "assets": 31,
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "baseline": "All 52 groups pass on main (1d725f1) at a load average of 10 to 22",
+ "browserGroups": "All 56 groups pass (52 before) in one full run at a load average of 23.8 at the start and 23.5 at the end; every earlier group unchanged (campaign counter 104); no page errors",
+ "newBrowserGroups": {
+  "foesWarningOutlines": 13,
+  "foesFalls": 11,
+  "cameraFollows": 11,
+  "hudHomeRegion": 3
+ },
+ "items": {
+  "A. Warning rings you can see on sand and snow": {
+   "commit": "b0bb69d",
+   "unitTests": 1,
+   "browserAssertions": 13,
+   "control": "Fails at 'the slam ring has a dark outline in step with it'",
+   "ringContrast": {
+    "method": "Guardian slam halfway through its wind-up at the pulse's mean opacity, fixed view; WCAG contrast of every pixel the ring changes against the same frame without it (tools/media/round10.mjs rings)",
+    "medianP90": {
+     "grass": { "main": [1.38, 1.79], "branch": [1.43, 2.5] },
+     "saffron": { "main": [1.1, 1.13], "branch": [1.13, 2.55] },
+     "frost": { "main": [1.02, 1.3], "branch": [1.29, 2.42] }
+    },
+    "pixelsAtLeast1.5": {
+     "grass": { "main": 641, "branch": 3926 },
+     "saffron": { "main": 0, "branch": 2943 },
+     "frost": { "main": 13, "branch": 2600 }
+    }
+   }
+  },
+  "B. Foes fall instead of vanishing": {
+   "commit": "49b1a14",
+   "unitTests": 2,
+   "browserAssertions": 11,
+   "control": "Fails at 'a felled guardian is dead at once, still in view, and the lock moves on'",
+   "measured": { "tiltAt0.3s": -0.6, "sinkAt0.7sMetres": 1.04, "guardianGoneBy": 1.2, "wardenStillFallingAt": 1.2, "wardenGoneBy": 1.8 }
+  },
+  "C. A camera that follows as you walk": {
+   "commit": "cfe8ce4",
+   "unitTests": 5,
+   "browserAssertions": 11,
+   "control": "Fails at its first step (no setting); on main a two-second synthetic stick walk to the right leaves the view at 0.000 rad",
+   "measured": {
+    "padTwoSecondsRight": { "yaw": -1.06, "metres": 12.4, "heading": -0.97 },
+    "padNever": 0,
+    "keyboardAutomatic": 0,
+    "keyboardAlways": -1.06,
+    "afterRightStick0.6s": 0,
+    "nextSecond": -0.43
+   }
+  },
+  "D. Home is in Alder Village": {
+   "commit": "494a80d",
+   "unitTests": 2,
+   "browserAssertions": 3,
+   "control": "Browser group and unit test fail at (-10, 71), which reads The Long Meadow"
+  }
+ },
+ "productionSubpath": "dist served by vite preview --base /Ocarina/; throwaway context at 1280x720: no failed or third-party requests, no console errors, debug API absent; a journey begins with a real click, the HUD says Alder Village, and Settings shows Camera follows 'Automatic · off' with the keyboard",
+ "limits": "No physical phone, tablet, or controller; the following camera was checked with synthetic pad and key input. Ring contrast measured at one fixed view per ground for a guardian's slam. No frame samples. No manual playthrough or difficulty tuning."
+}
