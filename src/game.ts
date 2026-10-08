@@ -1837,7 +1837,9 @@ export class Game {
       const chosen = into?.querySelector<HTMLButtonElement>(
         '[aria-checked="true"]',
       );
-      (chosen ?? buttons[next]).focus();
+      const target = chosen ?? buttons[next];
+      if (target !== buttons[focused]) this.sound.focus();
+      target.focus();
       return;
     }
     const panel = this.ui.panel;

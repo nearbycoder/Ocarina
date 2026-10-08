@@ -182,11 +182,15 @@ export class UI {
     return document.getElementById(id)!;
   }
   setPanel(panel: Panel, html = "") {
+    // A sheet eases in when it opens, not each time it redraws.
+    const opening = panel !== this.panel;
     this.panel = panel;
     // Every sheet needs the pointer back (captured mouse look).
     if (panel && document.pointerLockElement) document.exitPointerLock();
     this.el("panel").innerHTML = html;
-    this.el("panel").className = panel ? `panel-wrap ${panel}` : "";
+    this.el("panel").className = panel
+      ? `panel-wrap ${panel}${opening ? " opening" : ""}`
+      : "";
     this.el("hud").hidden = panel === "title" || !this.inJourney();
     this.el("touch").hidden = panel !== null;
     // Pads have no pointer: start with the first choice selected.

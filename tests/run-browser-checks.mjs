@@ -1113,6 +1113,230 @@ await run("transitions: the veil", async () => {
   return n;
 });
 
+// Menus answer every press: a tick when keyboard or pad focus moves (none
+// at 0% effects), a pressed dip, a hover, a gold focus ring, and sheets that
+// ease in (not under reduced motion).
+await run("menus: feedback", async () => {
+  const mPage = await open({ viewport: { width: 1280, height: 800 } });
+  let n = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    n++;
+  };
+  const ticks = () =>
+    mPage.evaluate(
+      () => window.__BELL_OF_AGES__.debug.game().sound.stats.focus || 0,
+    );
+  try {
+    await mPage.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    await mPage.keyboard.press("Escape");
+    const opened = await mPage.evaluate(() => ({
+      wrap: document.getElementById("panel").className,
+      sheet: getComputedStyle(document.querySelector(".pause-sheet"))
+        .animationName,
+    }));
+    check(
+      opened.wrap.includes("opening") && opened.sheet === "sheet-in",
+      `The pause sheet eases in (${JSON.stringify(opened)})`,
+    );
+    let before = await ticks();
+    await mPage.keyboard.press("ArrowDown");
+    await mPage.keyboard.press("ArrowDown");
+    check(
+      (await ticks()) === before + 2,
+      "Each ↓ that moves the focus plays a soft tick",
+    );
+    const ring = await mPage.evaluate(() => {
+      const b = document.activeElement,
+        cs = getComputedStyle(b);
+      return {
+        style: cs.outlineStyle,
+        color: cs.outlineColor,
+        halo: cs.boxShadow,
+      };
+    });
+    check(
+      ring.style === "solid" &&
+        ring.color === "rgb(239, 204, 133)" &&
+        ring.halo !== "none",
+      `Keyboard focus shows the gold ring and halo (${JSON.stringify(ring)})`,
+    );
+    // The pad's D-pad moves the focus with the same tick.
+    before = await ticks();
+    await mPage.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      const pad = {
+        id: "Synthetic standard gamepad",
+        index: 0,
+        connected: true,
+        mapping: "standard",
+        axes: [0, 0, 0, 0],
+        buttons: Array.from({ length: 17 }, (_, i) => ({
+          pressed: i === 13,
+          value: i === 13 ? 1 : 0,
+        })),
+      };
+      Object.defineProperty(navigator, "getGamepads", {
+        configurable: true,
+        value: () => [pad],
+      });
+      game.pollGamepad(1 / 60);
+      pad.buttons[13] = { pressed: false, value: 0 };
+      game.pollGamepad(1 / 60);
+      Object.defineProperty(navigator, "getGamepads", {
+        configurable: true,
+        value: () => [],
+      });
+    });
+    check((await ticks()) === before + 1, "The pad's D-pad ticks too");
+    await mPage.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.effects = 0;
+      game.applySettings();
+    });
+    before = await ticks();
+    await mPage.keyboard.press("ArrowDown");
+    check((await ticks()) === before, "At 0% effects the focus moves silently");
+    await mPage.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.effects = 100;
+      game.applySettings();
+    });
+    // Hover and press with the real mouse; release away, so nothing is chosen.
+    const journal = mPage.locator('[data-action="journal"]');
+    const box = await journal.boundingBox();
+    const idle = await journal.evaluate((b) => getComputedStyle(b).borderColor);
+    await mPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await mPage.waitForTimeout(250);
+    const hover = await journal.evaluate(
+      (b) => getComputedStyle(b).borderColor,
+    );
+    check(hover !== idle, `Hovering lights the border (${idle} → ${hover})`);
+    await mPage.mouse.down();
+    await mPage.waitForTimeout(120);
+    const pressed = await journal.evaluate(
+      (b) => getComputedStyle(b).transform,
+    );
+    await mPage.mouse.move(5, 5);
+    await mPage.mouse.up();
+    check(
+      pressed !== "none" &&
+        (await mPage.evaluate(
+          () => window.__BELL_OF_AGES__.getState().panel,
+        )) === "pause",
+      `Pressing dips the button (${pressed}); releasing away chooses nothing`,
+    );
+    // A redraw (Sound toggled) doesn't replay the entrance.
+    await mPage.waitForTimeout(300);
+    await mPage.click('[data-action="sound"]');
+    check(
+      !(await mPage.evaluate(() =>
+        document.getElementById("panel").className.includes("opening"),
+      )),
+      "Redrawing the open sheet doesn't ease it in again",
+    );
+    await mPage.click('[data-action="sound"]');
+    await mPage.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.reducedMotion = true;
+      game.applySettings();
+      game.action("close");
+    });
+    await mPage.keyboard.press("Escape");
+    const still = await mPage.evaluate(
+      () =>
+        getComputedStyle(document.querySelector(".pause-sheet")).animationName,
+    );
+    check(
+      still === "none",
+      `Under reduced motion it appears at once (${still})`,
+    );
+  } finally {
+    await mPage.close();
+  }
+  return n;
+});
+
+// Every settings row, the slider included, can be reached with ↓ alone and
+// sits wholly inside the sheet's visible box, at the sizes the pause menu's
+// fit check uses, with larger text at a laptop size, and on phones.
+await run("settings: fit", async () => {
+  const fPage = await open({ viewport: { width: 1280, height: 800 } });
+  let n = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    n++;
+  };
+  try {
+    for (const [w, h, large] of [
+      [1280, 720],
+      [1366, 768],
+      [1024, 768],
+      [1280, 800],
+      [1440, 900],
+      [1920, 1080],
+      [1366, 768, true],
+      [844, 390],
+      [390, 844],
+    ]) {
+      await fPage.setViewportSize({ width: w, height: h });
+      await fPage.evaluate((large) => {
+        const game = window.__BELL_OF_AGES__.debug.game();
+        game.settings.largeText = !!large;
+        game.applySettings();
+        game.showTitle();
+      }, large);
+      await fPage.click('[data-action="settings"]');
+      await fPage.waitForTimeout(300);
+      const stops = new Set(),
+        bad = [];
+      let first = "";
+      for (let i = 0; i < 80; i++) {
+        await fPage.keyboard.press("ArrowDown");
+        const r = await fPage.evaluate(() => {
+          const el = document.activeElement,
+            sheet = document.querySelector(".settings-sheet");
+          const a = el.getBoundingClientRect(),
+            s = sheet.getBoundingClientRect();
+          const top = Math.max(s.top, 0),
+            bottom = Math.min(s.bottom, innerHeight);
+          return {
+            action: el.dataset.action,
+            inside:
+              a.top >= top - 1 &&
+              a.bottom <= bottom + 1 &&
+              a.left >= Math.max(s.left, 0) - 1 &&
+              a.right <= Math.min(s.right, innerWidth) + 1,
+            clipped: el.scrollWidth > el.clientWidth + 1,
+          };
+        });
+        if (r.action === first) break;
+        first ||= r.action;
+        stops.add(r.action);
+        if (!r.inside || r.clipped) bad.push(r.action);
+      }
+      check(
+        stops.has("set-fidelity-medium") &&
+          stops.has("set-master-down") &&
+          stops.has("padbind-reset") &&
+          stops.has("pause"),
+        `${w}×${h}${large ? " larger text" : ""}: ↓ reaches the slider and every section (${stops.size} stops)`,
+      );
+      check(
+        bad.length === 0,
+        `${w}×${h}${large ? " larger text" : ""}: every row is in view and whole when focused (${bad.join(", ")})`,
+      );
+      await fPage.keyboard.press("Escape");
+    }
+  } finally {
+    await fPage.close();
+  }
+  return n;
+});
+
 // The mouse wheel moves the camera distance setting, and a reload keeps it.
 await run("camera: wheel and reload", async () => {
   const camPage = await open({ viewport: { width: 1280, height: 800 } });

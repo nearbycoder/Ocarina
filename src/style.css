@@ -1220,10 +1220,6 @@ body.touch-left .touch-actions {
   background: #e9d6a5c4;
   color: #233a30;
 }
-body[data-device="gamepad"] #panel button:focus {
-  outline: 2px solid #efcc85;
-  outline-offset: 4px;
-}
 @media (pointer: coarse) {
   #touch:not([hidden]) {
     display: flex;
@@ -1773,6 +1769,87 @@ body[data-device="gamepad"] #panel button:focus {
   .quest {
     top: 146px;
   }
+}
+/* Every button on every screen answers the same way: a hover, a pressed dip,
+   and a gold focus ring with a soft halo for keyboard and pad focus (a mouse
+   click shows no ring). */
+#panel button,
+#boot button {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s ease;
+}
+#panel .menu-list > button:not(.primary):hover,
+#panel .menu-pair > button:hover,
+#panel .setting-row.toggle:hover,
+#panel .setting-row.bind:hover,
+#panel .stepper button:hover {
+  border-color: #e7d3a066;
+}
+#panel .stepper button:hover,
+#panel .close:hover {
+  color: #f2e3b8;
+}
+#panel .stepper button:hover {
+  background: #e7d3a01f;
+}
+#panel .quiet:hover {
+  color: #f7ecd0;
+  border-bottom-color: #efcc85;
+}
+#panel button:not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
+  filter: brightness(0.92);
+  transition-duration: 0.04s;
+}
+#panel .primary:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+#panel button:focus-visible,
+body[data-device="gamepad"] #panel button:focus {
+  outline: 2px solid #efcc85;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #efcc851f;
+}
+/* On the fidelity slider the ring circles the step's dot, not the column. */
+#panel .fidelity button:focus-visible,
+body[data-device="gamepad"] #panel .fidelity button:focus {
+  outline: none;
+  box-shadow: none;
+}
+#panel .fidelity button:focus-visible b,
+body[data-device="gamepad"] #panel .fidelity button:focus b {
+  box-shadow:
+    0 0 0 3px #1e3731,
+    0 0 0 5px #efcc85,
+    0 0 0 9px #efcc851f;
+}
+#panel .fidelity button:focus-visible span,
+body[data-device="gamepad"] #panel .fidelity button:focus span {
+  color: #f7ecd0;
+}
+/* Sheets and story boxes ease in when they open. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+@keyframes veil-in {
+  from {
+    background-color: transparent;
+    backdrop-filter: blur(0);
+  }
+}
+.panel-wrap.opening:not(.title) {
+  animation: veil-in 0.25s ease-out;
+}
+.panel-wrap.opening .sheet,
+.panel-wrap.opening .dialogue-box {
+  animation: sheet-in 0.24s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 /* Comfort: reduced motion removes interface movement. */
 body.reduced-motion *,

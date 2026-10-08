@@ -271,6 +271,10 @@ export class Sound {
   ui() {
     this.tone(1320, 0.05, "sine", 0.025, 0, "effects", 0, "ui");
   }
+  /** A softer, shorter tick when keyboard or pad focus moves in a menu. */
+  focus() {
+    this.tone(1760, 0.035, "sine", 0.011, 0, "effects", 0, "focus");
+  }
   /** Crystals collected from a fallen guardian. */
   pickup() {
     this.tone(1174.66, 0.18, "sine", 0.035, 0, "effects", 0, "pickup");
