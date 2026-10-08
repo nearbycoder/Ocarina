@@ -79,6 +79,10 @@ await inPage(
 );
 await inPage("puzzles", async () => (await puzzleQA.run()).length);
 await inPage("checkpoints", async () => (await bellQA.checkpoint()).length);
+await inPage(
+  "leaving a sanctuary",
+  async () => (await bellQA.leaving()).length,
+);
 await inPage("foes: wardens", async () => (await foeQA.wardens()).length);
 await inPage("foes: kinds", async () => (await foeQA.kinds()).length);
 await inPage(

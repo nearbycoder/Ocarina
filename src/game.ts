@@ -1988,6 +1988,13 @@ export class Game {
       this.ui.setPanel(null);
       this.keys.clear();
     }
+    if (a === "leave-confirm") {
+      this.ui.setPanel(null);
+      this.loadWorld();
+      this.persist();
+      this.refreshHUD();
+      return;
+    }
     if (a === "checkpoint-confirm") {
       this.ui.setPanel(null);
       this.checkpoint();
@@ -2218,6 +2225,21 @@ export class Game {
             : ""),
       );
     } else if (i.kind === "exit") {
+      // Leaving closes the sanctuary again; say so before it undoes anything.
+      const opened =
+        this.puzzleSolved ||
+        this.crackBroken ||
+        this.enemies.some((e) => e.state === "dead");
+      if (opened) {
+        this.ui.dialogue(
+          "RETURN TO THE MEADOW",
+          `Leave ${this.world.dungeon!.name}? What you've opened here closes again: the puzzle resets, and its guardians and warden return.`,
+          "leave-confirm",
+          "Leave",
+          "Stay here",
+        );
+        return;
+      }
       this.loadWorld();
       this.persist();
     } else if (i.kind === "puzzle") this.activatePuzzle(i);

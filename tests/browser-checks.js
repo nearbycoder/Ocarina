@@ -26,6 +26,11 @@ window.bellQA = (() => {
     api.debug.teleport(x, z);
     await key("KeyE");
   };
+  // Uses a sanctuary's way out, answering "Leave" if it asks first.
+  const leave = async () => {
+    await interactAt(0, 31);
+    document.querySelector('[data-action="leave-confirm"]')?.click();
+  };
   const close = () => {
     for (let n = 0; n < 30 && api.getState().story.pending; n++) {
       const button = document.querySelector(
@@ -221,7 +226,7 @@ window.bellQA = (() => {
     api.debug.teleport(16, 25);
     await key("KeyD", 500);
     assert(api.getState().position.x < 17, "Dungeon wall blocks movement");
-    await interactAt(0, 31);
+    await leave();
     assert(
       api.getState().dungeon === null,
       "Dungeon exit returns to overworld",
@@ -304,7 +309,7 @@ window.bellQA = (() => {
         api.getState().arenaClear,
       "Checkpoint: confirming R returns to the last broken seal",
     );
-    await interactAt(0, 31);
+    await leave();
     assert(api.getState().dungeon === null, "Checkpoint: exited the Hollow");
     close();
     api.debug.teleport(-60, 20);
@@ -317,8 +322,73 @@ window.bellQA = (() => {
     close();
     return results.slice(-14);
   }
+  // The way out leaves at once until something here is opened; then it asks.
+  async function leaving() {
+    const before = results.length;
+    close();
+    await interactAt(-68, 11);
+    close();
+    assert(api.getState().dungeon === "root", "Leaving: in the Hollow");
+    await interactAt(0, 31);
+    let s = api.getState();
+    assert(
+      s.dungeon === null && s.panel === null,
+      "Leaving: with nothing opened, the way out leaves at once",
+    );
+    await interactAt(-68, 11);
+    close();
+    for (const [x, z] of [
+      [7, 20],
+      [0, 14],
+      [-7, 20],
+    ])
+      await interactAt(x, z);
+    assert(api.getState().puzzleSolved, "Leaving: puzzle solved");
+    await interactAt(0, 31);
+    s = api.getState();
+    const text = document.querySelector(".dialogue-box p")?.textContent || "";
+    assert(
+      s.panel === "dialogue" &&
+        s.dungeon === "root" &&
+        /closes again/.test(text) &&
+        document.querySelector('[data-action="leave-confirm"]'),
+      `Leaving: after the puzzle, the way out asks first ("${text}")`,
+    );
+    await key("Escape");
+    s = api.getState();
+    assert(
+      s.panel === null && s.dungeon === "root" && s.puzzleSolved,
+      "Leaving: Escape stays, with the puzzle still solved",
+    );
+    // Asked again, Enter answers Leave (the focused choice).
+    await interactAt(0, 31);
+    assert(api.getState().panel === "dialogue", "Leaving: it asks again");
+    await key("Enter");
+    s = api.getState();
+    assert(
+      s.dungeon === null && s.panel === null,
+      "Leaving: Enter on Leave returns to the meadow",
+    );
+    await interactAt(-68, 11);
+    close();
+    assert(
+      !api.getState().puzzleSolved,
+      "Leaving: coming back, the sanctuary has closed again, as before",
+    );
+    api.debug.damageEnemy(0, 100);
+    await interactAt(0, 31);
+    assert(
+      api.getState().panel === "dialogue",
+      "Leaving: a felled guardian alone also makes it ask",
+    );
+    document.querySelector('[data-action="leave-confirm"]').click();
+    assert(api.getState().dungeon === null, "Leaving: a click on Leave leaves");
+    close();
+    return results.slice(before);
+  }
   return {
     start,
+    leaving,
     checkpoint,
     dungeon,
     age,
@@ -327,6 +397,7 @@ window.bellQA = (() => {
     close,
     key,
     interactAt,
+    leave,
     assert,
     wait,
   };

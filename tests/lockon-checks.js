@@ -214,7 +214,7 @@ window.lockQA = (() => {
   }
   // Back out through the entrance, as the other groups do.
   async function leave() {
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     assert(api.getState().dungeon === null, "Back out in the overworld");
   }

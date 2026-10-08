@@ -202,7 +202,7 @@ window.polishQA = (() => {
       game.sparks.alive === 0 && !game.sparks.mesh.visible,
       `Sparks fade out once the fight stops (${game.sparks.alive} left, panel ${api.getState().panel})`,
     );
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }

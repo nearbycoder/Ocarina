@@ -164,7 +164,7 @@ window.inputQA = (() => {
     pad.connected = false;
     step(1 / 30);
     api.debug.teleport(0, 29);
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }
@@ -296,7 +296,7 @@ window.inputQA = (() => {
     pad.connected = false;
     step(1 / 30);
     api.debug.teleport(0, 29);
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results.splice(0);
   }

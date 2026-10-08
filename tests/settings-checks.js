@@ -112,7 +112,7 @@ window.settingsQA = (() => {
     if (before === null) localStorage.removeItem("bell-of-ages-settings-v1");
     else localStorage.setItem("bell-of-ages-settings-v1", before);
     game.loadSettings();
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }
@@ -207,7 +207,7 @@ window.settingsQA = (() => {
       "The drums stop when the warden falls",
     );
     game.invulnerable = 0;
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }

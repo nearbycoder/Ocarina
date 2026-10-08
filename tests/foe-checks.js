@@ -149,7 +149,7 @@ window.foeQA = (() => {
     }
     shield(false);
     assert(staggered, "A guarded guardian strike staggers the guardian");
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }
@@ -275,7 +275,7 @@ window.foeQA = (() => {
       new Set(sizes).size === 3,
       "The three kinds have different silhouettes",
     );
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }
@@ -380,7 +380,7 @@ window.foeQA = (() => {
         !shut(foes[0].homeX, foes[0].homeZ) && !shut(0, -45),
         `${name}: closed seals still wall off the hall and arena`,
       );
-      await bellQA.interactAt(0, 31);
+      await bellQA.leave();
       bellQA.close();
     }
     assert(signatures.size === 7, "Every sanctuary's layout is different");
@@ -476,7 +476,7 @@ window.foeQA = (() => {
       );
       if (id === "root") {
         // Leaving without reading puts the wall back for the next visit.
-        await bellQA.interactAt(0, 31);
+        await bellQA.leave();
         bellQA.close();
         api.debug.enter(id);
         bellQA.close();
@@ -508,7 +508,7 @@ window.foeQA = (() => {
         game.crackBroken,
         `${name}: a checkpoint return keeps the wall open`,
       );
-      await bellQA.interactAt(0, 31);
+      await bellQA.leave();
       bellQA.close();
       api.debug.enter(id);
       bellQA.close();
@@ -516,7 +516,7 @@ window.foeQA = (() => {
         game.crackBroken && !game.world.crack.wall.visible,
         `${name}: once read, the alcove stays open on later visits`,
       );
-      await bellQA.interactAt(0, 31);
+      await bellQA.leave();
       bellQA.close();
     }
     api.debug.action("journal");

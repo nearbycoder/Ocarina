@@ -96,7 +96,7 @@ window.puzzleQA = (() => {
       sliding && blockZ() === 18,
       `E during a slide completes it and pushes once more (${blockZ()})`,
     );
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
 
     // Glass Monastery: beams show where mirrors point and brighten north.
@@ -139,7 +139,7 @@ window.puzzleQA = (() => {
         [0, 1, 2].every((i) => beam(i).opacity > 0.8),
       "All three beams bright: the seal opens",
     );
-    await bellQA.interactAt(0, 31);
+    await bellQA.leave();
     bellQA.close();
     return results;
   }
