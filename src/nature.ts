@@ -286,13 +286,13 @@ export function addNature(w: World, s: SaveData) {
 }
 export function updateNature(w: World, eye: T.Vector3, quality: number) {
   if (!w.nature) return;
-  const grassDistance = quality === 0 ? 44 : quality === 1 ? 64 : 78;
+  // Quality is the Graphics fidelity detail level, 0 (Low) to 3 (Ultra).
+  const grassDistance = [44, 64, 78, 96][quality];
   for (const c of w.nature) {
     const dist = Math.hypot(c.x - eye.x, c.z - eye.z);
     c.mesh.visible = dist < (c.grass ? grassDistance + 35 : 190);
     if (c.near && c.far)
-      c.mesh.geometry =
-        dist > (quality === 0 ? 52 : quality === 1 ? 75 : 105) ? c.far : c.near;
+      c.mesh.geometry = dist > [52, 75, 105, 135][quality] ? c.far : c.near;
     if (c.grass)
       c.mesh.count = Math.floor(
         c.fullCount * (quality === 0 ? 0.42 : quality === 1 ? 0.76 : 1),

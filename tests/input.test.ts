@@ -55,6 +55,12 @@ describe("gamepad buttons", () => {
     expect(padActions(none, buttons(PAD.B), "flute")).toEqual(["close"]);
     expect(padActions(none, buttons(PAD.Down), "menu")).toEqual(["focus-next"]);
     expect(padActions(none, buttons(PAD.Up), "menu")).toEqual(["focus-prev"]);
+    expect(padActions(none, buttons(PAD.Left), "menu")).toEqual([
+      "adjust-prev",
+    ]);
+    expect(padActions(none, buttons(PAD.Right), "menu")).toEqual([
+      "adjust-next",
+    ]);
     expect(padActions(none, buttons(PAD.A, PAD.B), "menu")).toEqual([
       "confirm",
       "back",
@@ -70,10 +76,10 @@ describe("gamepad buttons", () => {
 describe("keyboard menus", () => {
   it("moves with the arrows and Tab and chooses with Enter or Space, like the pad", () => {
     expect(menuKey("ArrowDown")).toBe("focus-next");
-    expect(menuKey("ArrowRight")).toBe("focus-next");
+    expect(menuKey("ArrowRight")).toBe("adjust-next");
     expect(menuKey("Tab")).toBe("focus-next");
     expect(menuKey("ArrowUp")).toBe("focus-prev");
-    expect(menuKey("ArrowLeft")).toBe("focus-prev");
+    expect(menuKey("ArrowLeft")).toBe("adjust-prev");
     expect(menuKey("Tab", true)).toBe("focus-prev");
     for (const code of ["Enter", "NumpadEnter", "Space"])
       expect(menuKey(code)).toBe("confirm");

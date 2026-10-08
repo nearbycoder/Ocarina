@@ -245,20 +245,27 @@ export function padActions(
     if (pressed(PAD.B)) out.push("back");
     if (pressed(PAD.Start)) out.push("start");
     if (pressed(pad.map)) out.push("map");
-    if (pressed(PAD.Up) || pressed(PAD.Left)) out.push("focus-prev");
-    if (pressed(PAD.Down) || pressed(PAD.Right)) out.push("focus-next");
+    if (pressed(PAD.Up)) out.push("focus-prev");
+    if (pressed(PAD.Down)) out.push("focus-next");
+    // Sideways moves a slider's step, or the focus elsewhere.
+    if (pressed(PAD.Left)) out.push("adjust-prev");
+    if (pressed(PAD.Right)) out.push("adjust-next");
   }
   return out;
 }
 
 /**
  * Menus with the keyboard alone, mirroring the pad's D-pad and A: the arrows
- * and Tab move the focus, Enter and Space choose.
+ * and Tab move the focus (← and → move a slider's step instead), Enter and
+ * Space choose.
  */
 export function menuKey(code: string, shift = false) {
   if (code === "Tab") return shift ? "focus-prev" : "focus-next";
-  if (code === "ArrowUp" || code === "ArrowLeft") return "focus-prev";
-  if (code === "ArrowDown" || code === "ArrowRight") return "focus-next";
+  if (code === "ArrowUp") return "focus-prev";
+  if (code === "ArrowDown") return "focus-next";
+  // Sideways moves a slider's step, or the focus elsewhere.
+  if (code === "ArrowLeft") return "adjust-prev";
+  if (code === "ArrowRight") return "adjust-next";
   if (code === "Enter" || code === "NumpadEnter" || code === "Space")
     return "confirm";
   return null;

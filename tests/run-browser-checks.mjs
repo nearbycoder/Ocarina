@@ -803,6 +803,219 @@ await run("gamepad: remapping", async () => {
   }
 });
 
+// Graphics fidelity: one slider of four steps, chosen with real key presses,
+// real clicks, and a synthetic pad; each step reaches the renderer, and a
+// reload keeps it. The old Visual quality choice carries over.
+await run("graphics: fidelity slider", async () => {
+  const gPage = await open({ viewport: { width: 1280, height: 800 } });
+  let n = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    n++;
+  };
+  const state = () =>
+    gPage.evaluate(() => {
+      const s = window.__BELL_OF_AGES__.getState();
+      const game = window.__BELL_OF_AGES__.debug.game();
+      return {
+        quality: s.render.quality,
+        passes: s.render.passes,
+        shadow: s.render.shadowSize,
+        ratio: s.render.pixelRatio,
+        stored: JSON.parse(
+          localStorage.getItem("bell-of-ages-settings-v1") || "{}",
+        ).fidelity,
+        focused: document.activeElement?.dataset?.action || "",
+        checked: document.querySelector('.fidelity [aria-checked="true"]')
+          ?.dataset.action,
+        label: document.querySelector(".fidelity-row output")?.textContent,
+        sparks: game.sparks.density,
+      };
+    });
+  const frames = () => gPage.waitForTimeout(250);
+  try {
+    await gPage.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+    });
+    let st = await state();
+    check(st.quality === "medium", `A new player gets Medium (${st.quality})`);
+    check(
+      st.passes?.contact && st.passes.fxaa && !st.passes.bloom,
+      "Medium keeps today's contact shading and FXAA, without bloom",
+    );
+    await gPage.keyboard.press("Escape");
+    const shortcut = await gPage.locator('[data-action="graphics"]');
+    check(
+      (await shortcut.textContent()).includes("Medium"),
+      "The pause menu's Graphics shortcut names the step",
+    );
+    await shortcut.click();
+    st = await state();
+    check(
+      st.focused === "set-fidelity-medium" && st.checked === st.focused,
+      `The shortcut opens Settings on the chosen step (${st.focused})`,
+    );
+    await gPage.keyboard.press("ArrowRight");
+    await frames();
+    st = await state();
+    check(
+      st.quality === "high" &&
+        st.focused === "set-fidelity-high" &&
+        st.passes.bloom &&
+        st.passes.grade &&
+        st.label === "High",
+      "→ moves the slider to High: bloom and the colour grade",
+    );
+    await gPage.keyboard.press("ArrowRight");
+    await frames();
+    st = await state();
+    check(
+      st.quality === "ultra" &&
+        st.passes.smaa &&
+        !st.passes.fxaa &&
+        st.passes.contactScale === 1 &&
+        st.shadow === 4096 &&
+        st.ratio === 1.5 &&
+        st.sparks > 1,
+      `→ again: Ultra, with SMAA, full-resolution contact shading, 4096 shadows, 1.5× resolution, and denser sparks (${JSON.stringify(st)})`,
+    );
+    await gPage.keyboard.press("ArrowRight");
+    st = await state();
+    check(st.quality === "ultra", "Ultra is the top step");
+    await gPage.click('[data-action="set-fidelity-low"]');
+    await frames();
+    st = await state();
+    check(
+      st.quality === "low" &&
+        st.passes === null &&
+        st.shadow === 1024 &&
+        st.ratio === 0.85 &&
+        st.stored === "low",
+      `A click on Low: no post-processing, 1024 shadows, 0.85× resolution, saved (${JSON.stringify(st)})`,
+    );
+    // A synthetic pad: the D-pad moves the step, A on a step chooses it.
+    const padStep = (button) =>
+      gPage.evaluate((button) => {
+        const game = window.__BELL_OF_AGES__.debug.game();
+        const pad = {
+          id: "Synthetic standard gamepad",
+          index: 0,
+          connected: true,
+          mapping: "standard",
+          axes: [0, 0, 0, 0],
+          buttons: Array.from({ length: 17 }, (_, i) => ({
+            pressed: i === button,
+            value: i === button ? 1 : 0,
+          })),
+        };
+        Object.defineProperty(navigator, "getGamepads", {
+          configurable: true,
+          value: () => [pad],
+        });
+        game.pollGamepad(1 / 60);
+        pad.buttons[button] = { pressed: false, value: 0 };
+        game.pollGamepad(1 / 60);
+      }, button);
+    await padStep(15); // D-pad right
+    await frames();
+    st = await state();
+    check(
+      st.quality === "medium" && st.focused === "set-fidelity-medium",
+      `The pad's D-pad right moves Low to Medium (${st.quality})`,
+    );
+    // The slider is one row: up leaves it in one step, down comes back to
+    // the chosen step.
+    await padStep(12);
+    st = await state();
+    check(
+      st.focused === "pause",
+      `D-pad up leaves the slider in one step (${st.focused})`,
+    );
+    await padStep(13);
+    st = await state();
+    check(
+      st.focused === "set-fidelity-medium",
+      `D-pad down returns to the chosen step (${st.focused})`,
+    );
+    await padStep(14); // D-pad left
+    await padStep(0); // A
+    await frames();
+    st = await state();
+    check(st.quality === "low", "D-pad left and A choose Low");
+    await padStep(15);
+    await padStep(15);
+    await frames();
+    st = await state();
+    check(st.quality === "high", `Two presses right: High (${st.quality})`);
+    // ↓ and Tab leave the slider in one step; off it, sideways still moves
+    // the focus as before.
+    await gPage.keyboard.press("ArrowDown");
+    st = await state();
+    check(
+      st.focused === "set-master-down",
+      `↓ leaves the slider for the next row (${st.focused})`,
+    );
+    await gPage.keyboard.press("Shift+Tab");
+    st = await state();
+    check(
+      st.focused === "set-fidelity-high",
+      `Shift+Tab comes back to the chosen step (${st.focused})`,
+    );
+    await gPage.keyboard.press("ArrowDown");
+    await gPage.keyboard.press("ArrowDown");
+    st = await state();
+    const off = st.focused;
+    await gPage.keyboard.press("ArrowRight");
+    st = await state();
+    check(
+      st.quality === "high" && st.focused !== off,
+      `Off the slider, → moves the focus (${off} → ${st.focused})`,
+    );
+    await gPage.reload();
+    await gPage.waitForFunction(() => window.__BELL_OF_AGES__?.debug);
+    await gPage.waitForTimeout(400);
+    st = await state();
+    check(
+      st.quality === "high" && st.passes?.bloom,
+      `A reload keeps High (${st.quality})`,
+    );
+    // From the title, before any journey.
+    await gPage.click('[data-action="settings"]');
+    await gPage.click('[data-action="set-fidelity-ultra"]');
+    await frames();
+    st = await state();
+    check(
+      st.quality === "ultra" && st.stored === "ultra",
+      "Settings from the title change the step too",
+    );
+  } finally {
+    await gPage.close();
+  }
+  // A stored Visual quality choice from an older build carries over.
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
+  try {
+    await ctx.addInitScript(() =>
+      localStorage.setItem("bell-visual-quality", "performance"),
+    );
+    const old = await ctx.newPage();
+    old.on("pageerror", (e) => errors.push(e.message));
+    await old.goto(URL);
+    await old.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+    const q = await old.evaluate(
+      () => window.__BELL_OF_AGES__.getState().render.quality,
+    );
+    check(q === "low", `Performance from an older build becomes Low (${q})`);
+  } finally {
+    await ctx.close();
+  }
+  return n;
+});
+
 // The mouse wheel moves the camera distance setting, and a reload keeps it.
 await run("camera: wheel and reload", async () => {
   const camPage = await open({ viewport: { width: 1280, height: 800 } });

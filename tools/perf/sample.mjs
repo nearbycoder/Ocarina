@@ -4,9 +4,10 @@
 //   node tools/perf/sample.mjs [label] [out.json]   # BELL_URL=http://127.0.0.1:5174/
 //
 // Vsync and the frame-rate limit are off, so frame time is what a frame costs
-// rather than a 60 Hz cap. Visual quality is pinned to "High detail" unless
-// BELL_PERF_QUALITY says otherwise, so Adaptive's resolution changes can't
-// move the numbers by default. The page is a
+// rather than a 60 Hz cap. Graphics fidelity is pinned to High unless
+// BELL_PERF_QUALITY says otherwise (low, medium, high, or ultra; the old
+// names performance and adaptive mean Low and Medium), so Medium's resolution
+// changes can't move the numbers by default. The page is a
 // /?review=polish page in a throwaway context: no real save is read or written.
 // On a shared machine these numbers compare runs; they are not a benchmark.
 import { chromium } from "playwright";
@@ -38,10 +39,17 @@ const context = await browser.newContext({
   viewport: { width: Number(width), height: Number(height) },
   deviceScaleFactor: Number(scale),
 });
-// BELL_PERF_QUALITY=adaptive|performance samples the other quality modes.
-const QUALITY = process.env.BELL_PERF_QUALITY || "high";
+// BELL_PERF_QUALITY=low|medium|ultra samples the other fidelity steps.
+const QUALITY =
+  { performance: "low", adaptive: "medium" }[process.env.BELL_PERF_QUALITY] ||
+  process.env.BELL_PERF_QUALITY ||
+  "high";
 await context.addInitScript(
-  (q) => localStorage.setItem("bell-visual-quality", q),
+  (q) =>
+    localStorage.setItem(
+      "bell-of-ages-settings-v1",
+      JSON.stringify({ fidelity: q }),
+    ),
   QUALITY,
 );
 const page = await context.newPage();

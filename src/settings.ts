@@ -31,6 +31,38 @@ export function parseCameraFollow(raw: unknown): CameraFollow {
 export function cameraFollows(choice: CameraFollow, device: Device) {
   return choice === "on" || (choice === "auto" && device !== "keyboard");
 }
+/** Graphics fidelity, from lightest to richest. Medium is today's default. */
+export const FIDELITY_STEPS = ["low", "medium", "high", "ultra"] as const;
+export type Fidelity = (typeof FIDELITY_STEPS)[number];
+export const FIDELITY_NAMES: Record<Fidelity, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  ultra: "Ultra",
+};
+/** What each step changes, as the settings sheet says it. */
+export const FIDELITY_NOTES: Record<Fidelity, string> = {
+  low: "For weak graphics: lower resolution, simple shadows, no post-processing, and less distant grass",
+  medium:
+    "Contact shadows and smoothed edges. Lowers the 3D resolution, never the text, when frames run slow",
+  high: "Sharper, steady resolution, a soft glow on bright light, and a gentle colour grade",
+  ultra:
+    "Supersampled resolution, finer and softer shadows, richer light and edges, more grass and sparks, and depth of field in scenes",
+};
+/** The old pause-menu Visual quality choice (`bell-visual-quality`). */
+export const LEGACY_QUALITY_KEY = "bell-visual-quality";
+const LEGACY_QUALITY: Record<string, Fidelity> = {
+  performance: "low",
+  adaptive: "medium",
+  high: "high",
+};
+/**
+ * A stored step, or the old Visual quality choice carried over, or Medium.
+ */
+export function parseFidelity(raw: unknown, legacy?: unknown): Fidelity {
+  if (FIDELITY_STEPS.includes(raw as Fidelity)) return raw as Fidelity;
+  return (typeof legacy === "string" && LEGACY_QUALITY[legacy]) || "medium";
+}
 export interface Settings {
   version: 1;
   /** Percent, 0–100 in steps of 10. */
@@ -71,6 +103,8 @@ export interface Settings {
   pad: PadBindings;
   /** How gamepad buttons are named. Older stored settings get "auto". */
   padStyle: PadStyleChoice;
+  /** Graphics fidelity. Older settings carry over Visual quality, or Medium. */
+  fidelity: Fidelity;
 }
 export const SETTINGS_KEY = "bell-of-ages-settings-v1";
 export const VOLUME_STEP = 10;
@@ -100,6 +134,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     keys: { ...DEFAULT_KEYS },
     pad: { ...DEFAULT_PAD },
     padStyle: "auto",
+    fidelity: "medium",
   };
 }
 const clamp = (n: number, min: number, max: number) =>
@@ -129,6 +164,7 @@ export function touchSize(n: unknown, fallback = 0) {
 export function parseSettings(
   raw: string | null,
   prefersReducedMotion = false,
+  legacyQuality: string | null = null,
 ): Settings {
   const def = defaultSettings(prefersReducedMotion);
   let s: Record<string, unknown>;
@@ -162,6 +198,7 @@ export function parseSettings(
     keys: parseBindings(s.keys),
     pad: parsePadBindings(s.pad),
     padStyle: parsePadStyle(s.padStyle),
+    fidelity: parseFidelity(s.fidelity, legacyQuality),
   };
 }
 /** Linear gain for a voice on the given bus; 0 means the voice is silent. */

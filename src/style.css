@@ -1614,6 +1614,80 @@ body[data-device="gamepad"] #panel button:focus {
   font-size: 13px;
   color: #f0d79b;
 }
+/* Graphics fidelity: four steps on a track, each a button. */
+.fidelity-row output {
+  font-size: 13px;
+  color: #f0d79b;
+  white-space: nowrap;
+}
+.fidelity {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid #c5c19d23;
+  border-top: 0;
+  background: #c4c89b06;
+  padding: 10px 6px 8px;
+}
+.fidelity-track {
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  top: 21px;
+  height: 2px;
+  background: #d6c39033;
+}
+.fidelity-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--at) / 3 * 100%);
+  background: #e7d3a0;
+  transition: width 0.25s ease;
+}
+.fidelity button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: none;
+  padding: 4px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: #aebbab;
+}
+.fidelity button b {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #d6c39066;
+  background: #1e3731;
+  transition:
+    transform 0.15s ease,
+    background 0.15s,
+    border-color 0.15s;
+}
+.fidelity button.reached b {
+  border-color: #e7d3a0;
+  background: #c9b57c;
+}
+.fidelity button[aria-checked="true"] {
+  color: #f0d79b;
+  font-weight: 600;
+}
+.fidelity button[aria-checked="true"] b {
+  transform: scale(1.35);
+  background: #f2e3b8;
+  box-shadow: 0 0 0 4px #e7d3a026;
+}
+.fidelity button:hover b {
+  transform: scale(1.2);
+  border-color: #f2e3b8;
+}
+.fidelity button:hover {
+  color: #eddfba;
+}
 /* The note under a carving read for the first time. */
 .carving-note {
   display: block;

@@ -1,5 +1,6 @@
 import * as T from "three";
 import { noiseGLSL, visualTime } from "./surfaces";
+import { FIDELITY_NAMES, type Fidelity } from "./settings";
 
 export function skyDome() {
   const m = new T.ShaderMaterial({
@@ -28,63 +29,165 @@ export function skyDome() {
   return sky;
 }
 
-export type QualityMode = "adaptive" | "high" | "performance";
+/** What one Graphics fidelity step draws. */
+export interface FidelityProfile {
+  /** Highest device pixel ratio the 3D view uses. */
+  pixelCap: number;
+  /** Multiplies the 3D resolution (above 1 supersamples, up to the cap). */
+  resolution: number;
+  /** Lowers 3D resolution, then effects, under sustained load. */
+  adaptive: boolean;
+  /** Post-processing at all; off renders straight to the screen. */
+  post: boolean;
+  /** Contact shading: resolution relative to the view, and its samples. */
+  contactScale: number;
+  contactSamples: number;
+  /** Bloom strength on bright light; 0 is off. */
+  bloom: number;
+  /** The colour grade and vignette. */
+  grade: boolean;
+  antialias: "fxaa" | "smaa";
+  /** Depth of field behind the title and story scenes. */
+  depthOfField: boolean;
+  shadowSize: number;
+  /** Shadow filter radius, in shadow-map texels. */
+  shadowRadius: number;
+  /** Seconds between shadow refreshes; 0 refreshes every frame. */
+  shadowInterval: number;
+  /** Texture anisotropy (capped by the device). */
+  anisotropy: number;
+  /** Detail level for grass and foliage distance: 0 to 3. */
+  detail: number;
+  /** Multiplies the sparks of each hit. */
+  sparks: number;
+}
+export const FIDELITY: Record<Fidelity, FidelityProfile> = {
+  // Today's Performance mode.
+  low: {
+    pixelCap: 1,
+    resolution: 0.85,
+    adaptive: false,
+    post: false,
+    contactScale: 0.5,
+    contactSamples: 8,
+    bloom: 0,
+    grade: false,
+    antialias: "fxaa",
+    depthOfField: false,
+    shadowSize: 1024,
+    shadowRadius: 1,
+    shadowInterval: 0.033,
+    anisotropy: 1,
+    detail: 0,
+    sparks: 1,
+  },
+  // Today's Adaptive mode, the default.
+  medium: {
+    pixelCap: 1.5,
+    resolution: 1,
+    adaptive: true,
+    post: true,
+    contactScale: 0.5,
+    contactSamples: 8,
+    bloom: 0,
+    grade: false,
+    antialias: "fxaa",
+    depthOfField: false,
+    shadowSize: 2048,
+    shadowRadius: 1,
+    shadowInterval: 0.033,
+    anisotropy: 1,
+    detail: 1,
+    sparks: 1,
+  },
+  // Today's High detail, with a soft glow and a gentle grade.
+  high: {
+    pixelCap: 1.75,
+    resolution: 1,
+    adaptive: false,
+    post: true,
+    contactScale: 0.5,
+    contactSamples: 8,
+    bloom: 0.45,
+    grade: true,
+    antialias: "fxaa",
+    depthOfField: false,
+    shadowSize: 2048,
+    shadowRadius: 1,
+    shadowInterval: 0.033,
+    anisotropy: 4,
+    detail: 2,
+    sparks: 1,
+  },
+  ultra: {
+    pixelCap: 2,
+    resolution: 1.5,
+    adaptive: false,
+    post: true,
+    contactScale: 1,
+    contactSamples: 16,
+    bloom: 0.6,
+    grade: true,
+    antialias: "smaa",
+    depthOfField: true,
+    shadowSize: 4096,
+    shadowRadius: 2.5,
+    shadowInterval: 0,
+    anisotropy: 8,
+    detail: 3,
+    sparks: 1.6,
+  },
+};
 export class Quality {
-  mode: QualityMode = "adaptive";
+  fidelity: Fidelity = "medium";
   scale = 1;
   private samples: number[] = [];
   private stableWindows = 0;
   private reducedEffects = false;
-  constructor(private renderer: T.WebGLRenderer) {
-    try {
-      const q = localStorage.getItem("bell-visual-quality");
-      if (q === "high" || q === "performance") this.mode = q;
-    } catch {}
-    this.apply();
+  constructor(
+    private renderer: T.WebGLRenderer,
+    fidelity: Fidelity = "medium",
+  ) {
+    this.set(fidelity);
   }
+  get profile() {
+    return FIDELITY[this.fidelity];
+  }
+  /** Post-processing this frame: Medium sheds it under sustained load. */
+  get post() {
+    return this.profile.post && !this.reducedEffects;
+  }
+  /** Grass and foliage detail, 0 to 3; Medium sheds distance under load. */
   get level() {
-    return this.mode === "performance" ||
-      (this.mode === "adaptive" && this.reducedEffects)
-      ? 0
-      : this.mode === "high"
-        ? 2
-        : 1;
+    return this.reducedEffects ? 0 : this.profile.detail;
   }
   get label() {
-    return this.mode === "adaptive"
-      ? "Adaptive"
-      : this.mode === "high"
-        ? "High detail"
-        : "Performance";
+    return FIDELITY_NAMES[this.fidelity];
+  }
+  /** The 3D view's pixel ratio; the interface stays sharp regardless. */
+  get pixelRatio() {
+    const p = this.profile;
+    // Below 1 the cap comes first (Low is 85% of at most 1×); above 1 the
+    // supersampled ratio is capped.
+    const ratio =
+      p.resolution <= 1
+        ? Math.min(devicePixelRatio, p.pixelCap) * p.resolution
+        : Math.min(devicePixelRatio * p.resolution, p.pixelCap);
+    return ratio * this.scale;
   }
   apply() {
-    const cap =
-      this.mode === "high" ? 1.75 : this.mode === "performance" ? 1 : 1.5;
-    this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, cap) *
-        (this.mode === "performance" ? 0.85 : this.scale),
-    );
+    this.renderer.setPixelRatio(this.pixelRatio);
   }
-  cycle() {
-    this.mode =
-      this.mode === "adaptive"
-        ? "high"
-        : this.mode === "high"
-          ? "performance"
-          : "adaptive";
+  set(fidelity: Fidelity) {
+    this.fidelity = fidelity;
     this.scale = 1;
     this.samples = [];
     this.stableWindows = 0;
     this.reducedEffects = false;
     this.apply();
-    try {
-      localStorage.setItem("bell-visual-quality", this.mode);
-    } catch {}
-    return this.label;
   }
   sample(ms: number) {
-    if (this.mode !== "adaptive" || document.hidden || ms > 100 || ms < 2)
-      return;
+    if (!this.profile.adaptive || document.hidden || ms > 100 || ms < 2) return;
     this.samples.push(ms);
     if (this.samples.length < 120) return;
     const sorted = this.samples.sort((a, b) => a - b);

@@ -116,6 +116,8 @@ import {
   touchSize,
   VOLUME_STEP,
   parseSettings,
+  parseFidelity,
+  LEGACY_QUALITY_KEY,
   sensitivity,
   volume,
   type Settings,
@@ -305,6 +307,8 @@ function markMesh(
 }
 /** How far the Ember Vault's stone sinks into its seal once it opens it. */
 const BLOCK_SETTLED = -1.2;
+/** Where the title's view looks: depth of field keeps it sharp (Ultra). */
+const TITLE_FOCUS = new T.Vector3(-4, 2.8, 44);
 export class Game {
   scene = new T.Scene();
   camera = new T.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 650);
@@ -428,6 +432,8 @@ export class Game {
   private environment?: T.WebGLRenderTarget;
   /** The WebGL context is lost and the picture frozen. */
   lostGraphics = false;
+  /** The Graphics fidelity step the renderer was last set up for. */
+  private appliedFidelity?: string;
   private lostTimer = 0;
   constructor() {
     this.ui.inJourney = () => this.started;
@@ -459,10 +465,7 @@ export class Game {
     this.sun.position.set(-45, 70, -20);
     this.sun.target.position.set(0, 0, 35);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(
-      this.quality.level === 0 ? 1024 : 2048,
-      this.quality.level === 0 ? 1024 : 2048,
-    );
+    this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, {
       left: -42,
       right: 42,
@@ -589,6 +592,7 @@ export class Game {
       this.settings = parseSettings(
         localStorage.getItem(SETTINGS_KEY),
         reduced,
+        localStorage.getItem(LEGACY_QUALITY_KEY),
       );
     } catch {
       this.settings = parseSettings(null, reduced);
@@ -597,6 +601,7 @@ export class Game {
   }
   applySettings(store = false) {
     this.sound.configure(this.settings);
+    this.applyFidelity();
     this.distance = this.settings.cameraDistance;
     this.ui.setKeys(
       keyLabels(this.settings.keys, this.keyLayout),
@@ -617,6 +622,45 @@ export class Game {
     } catch {
       // Settings still apply for this session.
     }
+  }
+  /** Applies the Graphics fidelity step when it changes. */
+  applyFidelity(force = false) {
+    const fidelity = this.settings.fidelity;
+    if (!force && fidelity === this.appliedFidelity) return;
+    this.appliedFidelity = fidelity;
+    this.quality.set(fidelity);
+    const p = this.quality.profile;
+    this.worldRenderer.configure(p);
+    if (this.sun.shadow.mapSize.x !== p.shadowSize) {
+      this.sun.shadow.mapSize.set(p.shadowSize, p.shadowSize);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    this.sun.shadow.radius = p.shadowRadius;
+    this.renderer.shadowMap.needsUpdate = true;
+    this.sparks.density = p.sparks;
+    this.filterTextures();
+  }
+  /** Sharper textures at a glancing angle on High and Ultra. */
+  filterTextures() {
+    const level = Math.min(
+      this.quality.profile.anisotropy,
+      this.renderer.capabilities.getMaxAnisotropy(),
+    );
+    const seen = new Set<T.Texture>();
+    this.scene.traverse((object) => {
+      const material = (object as T.Mesh).material;
+      if (!material) return;
+      for (const m of Array.isArray(material) ? material : [material])
+        for (const value of Object.values(m))
+          if (value instanceof T.Texture && !seen.has(value)) {
+            seen.add(value);
+            if (value.anisotropy !== level) {
+              value.anisotropy = level;
+              value.needsUpdate = true;
+            }
+          }
+    });
   }
   /** How to name gamepad buttons: the setting, or the pad last used. */
   padStyle(): PadStyle {
@@ -700,7 +744,8 @@ export class Game {
         CAMERA_FOLLOW_CHOICES[
           (CAMERA_FOLLOW_CHOICES.indexOf(s.cameraFollow) + sign + n) % n
         ];
-    } else if (key === "distance")
+    } else if (key === "fidelity") s.fidelity = parseFidelity(dir, s.fidelity);
+    else if (key === "distance")
       s.cameraDistance = cameraDistance(
         s.cameraDistance + sign * CAMERA_DISTANCE.step,
       );
@@ -1360,7 +1405,8 @@ export class Game {
       // Holding an arrow keeps stepping through a menu.
       const nav = panel && panel !== "flute" ? menuKey(code, e.shiftKey) : null;
       if (e.repeat) {
-        if (nav?.startsWith("focus-")) this.menuInput(nav);
+        if (nav?.startsWith("focus-") || nav?.startsWith("adjust-"))
+          this.menuInput(nav);
         return;
       }
       this.keys.add(code);
@@ -1717,7 +1763,11 @@ export class Game {
     if (Math.abs(move.y) > 0.6 && this.padNav <= 0) {
       actions.push(move.y < 0 ? "focus-prev" : "focus-next");
       this.padNav = 0.22;
-    } else if (Math.abs(move.y) < 0.3) this.padNav = 0;
+    } else if (Math.abs(move.x) > 0.6 && this.padNav <= 0) {
+      actions.push(move.x < 0 ? "adjust-prev" : "adjust-next");
+      this.padNav = 0.22;
+    } else if (Math.abs(move.y) < 0.3 && Math.abs(move.x) < 0.3)
+      this.padNav = 0;
     for (const a of actions) this.menuInput(a);
   }
   /** Pad and keyboard navigation for the title, menus, sheets, and dialogue. */
@@ -1729,16 +1779,41 @@ export class Game {
     const focused = buttons.indexOf(
       document.activeElement as HTMLButtonElement,
     );
+    if (a === "adjust-prev" || a === "adjust-next") {
+      // On a slider, sideways chooses the neighbouring step; elsewhere it
+      // moves the focus, as it always has.
+      const slider = buttons[focused]?.closest("[data-slider]");
+      if (slider) {
+        const steps = buttons.filter((b) => slider.contains(b));
+        const at = steps.indexOf(buttons[focused]);
+        const next = steps[at + (a === "adjust-next" ? 1 : -1)];
+        if (next) {
+          next.focus();
+          next.click();
+        }
+        return;
+      }
+      a = a === "adjust-next" ? "focus-next" : "focus-prev";
+    }
     if (a === "focus-prev" || a === "focus-next") {
       if (!buttons.length) return;
       const step = a === "focus-next" ? 1 : -1;
-      const next =
+      let next =
         focused < 0
           ? step > 0
             ? 0
             : buttons.length - 1
           : (focused + step + buttons.length) % buttons.length;
-      buttons[next].focus();
+      // A slider is one row, like a radio group: moving on leaves it in one
+      // step, and arriving lands on its chosen step.
+      const from = buttons[focused]?.closest("[data-slider]");
+      while (from && from.contains(buttons[next]) && next !== focused)
+        next = (next + step + buttons.length) % buttons.length;
+      const into = buttons[next].closest("[data-slider]");
+      const chosen = into?.querySelector<HTMLButtonElement>(
+        '[aria-checked="true"]',
+      );
+      (chosen ?? buttons[next]).focus();
       return;
     }
     const panel = this.ui.panel;
@@ -1920,14 +1995,10 @@ export class Game {
       this.ui.pause(this.save, this.settings.muted, this.quality.label);
       return;
     }
-    if (a === "quality") {
-      this.quality.cycle();
-      const n = this.quality.level === 0 ? 1024 : 2048;
-      this.sun.shadow.mapSize.set(n, n);
-      this.sun.shadow.map?.dispose();
-      this.sun.shadow.map = null;
-      this.renderer.shadowMap.needsUpdate = true;
-      this.ui.pause(this.save, this.settings.muted, this.quality.label);
+    if (a === "graphics") {
+      // The pause menu's shortcut to the one Graphics fidelity slider.
+      this.ui.settings(this.settings);
+      this.ui.focusFidelity();
       return;
     }
     if (a === "map") {
@@ -3844,20 +3915,33 @@ export class Game {
     }
     visualTime.value = this.elapsed;
     visualEye.value.copy(this.camera.position);
-    grassReach.value =
-      this.quality.level === 0 ? 42 : this.quality.level === 1 ? 58 : 75;
+    grassReach.value = [42, 58, 75, 92][this.quality.level];
     updateNature(this.world, this.camera.position, this.quality.level);
     this.shadowClock += dt;
-    if (this.started && !this.inspectMode && this.shadowClock > 0.033) {
+    if (
+      this.started &&
+      !this.inspectMode &&
+      this.shadowClock >= this.quality.profile.shadowInterval
+    ) {
       this.renderer.shadowMap.needsUpdate = true;
       this.shadowClock = 0;
     }
     this.updateLockMarker();
     this.updateThreats();
     if (this.started) this.updateCompass();
-    this.worldRenderer.render(this.quality.level);
+    this.worldRenderer.render(this.quality.post, this.focusDistance(), dt);
     this.renderTimes.push(performance.now() - renderStart);
     if (this.renderTimes.length > 120) this.renderTimes.shift();
+  }
+  /**
+   * What depth of field keeps sharp (Ultra): the village behind the title, or
+   * Alder during a story scene. 0 is no depth of field.
+   */
+  focusDistance() {
+    if (!this.started) return this.camera.position.distanceTo(TITLE_FOCUS);
+    if (this.ui.panel === "dialogue")
+      return this.camera.position.distanceTo(this.hero.group.position);
+    return 0;
   }
   expose() {
     const api = {
@@ -3931,7 +4015,9 @@ export class Game {
           cpuSubmitMs:
             this.renderTimes.reduce((a, b) => a + b, 0) /
             Math.max(1, this.renderTimes.length),
-          quality: this.quality.mode,
+          quality: this.quality.fidelity,
+          passes: this.quality.post ? this.worldRenderer.passes : null,
+          shadowSize: this.sun.shadow.mapSize.x,
           resolutionScale: this.quality.scale,
           pixelRatio: this.renderer.getPixelRatio(),
           textures: this.renderer.info.memory.textures,

@@ -9,6 +9,8 @@ const position = new T.Vector3();
 const scale = new T.Vector3();
 const rotation = new T.Quaternion();
 const tint = new T.Color();
+const UP = new T.Vector3(0, 1, 0);
+const heading = new T.Vector3();
 
 export class Sparks {
   readonly mesh: T.InstancedMesh;
@@ -20,14 +22,17 @@ export class Sparks {
   private next = 0;
   /** Sparks still fading. */
   alive = 0;
+  /** Multiplies each burst's count (Ultra's denser sparks). */
+  density = 1;
   constructor(readonly capacity = 192) {
-    // Lit like the old per-spark material (emissive at 0.65 of its color),
-    // with both colors taken from each spark's instance color.
+    // Embers: they glow in their own color (bright enough to catch the bloom
+    // on High and Ultra), with both colors taken from each spark's instance
+    // color, and stretch along their flight.
     const material = new T.MeshStandardMaterial({
       color: "#ffffff",
-      roughness: 0.88,
+      roughness: 0.6,
       emissive: "#ffffff",
-      emissiveIntensity: 0.65,
+      emissiveIntensity: 1.25,
     });
     material.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -53,6 +58,7 @@ export class Sparks {
   /** Same spread, lifetime, and size range as the old per-mesh sparks. */
   burst(x: number, y: number, z: number, color: string, count: number) {
     tint.set(color);
+    count = Math.round(count * this.density);
     for (let n = 0; n < count; n++) {
       const i = this.next;
       this.next = (this.next + 1) % this.capacity;
@@ -92,7 +98,16 @@ export class Sparks {
       }
       const s = this.size[i] * Math.max(0, this.life[i] / this.max[i]);
       position.fromArray(this.position, p);
-      matrix.compose(position, rotation, scale.setScalar(s));
+      heading.fromArray(this.velocity, p);
+      const speed = heading.length();
+      if (speed > 1e-4)
+        rotation.setFromUnitVectors(UP, heading.divideScalar(speed));
+      else rotation.identity();
+      matrix.compose(
+        position,
+        rotation,
+        scale.set(s * 0.8, s * (1 + speed * 0.22), s * 0.8),
+      );
       this.mesh.setMatrixAt(i, matrix);
     }
     this.mesh.instanceMatrix.needsUpdate = true;

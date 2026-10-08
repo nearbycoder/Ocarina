@@ -7,7 +7,8 @@
 // legacy names performance, adaptive, and high select the old Visual quality
 // modes, for "before" shots of the unchanged game.
 // BELL_URL picks the server, BELL_OUT the folder, BELL_SUFFIX is added to every
-// file name, and BELL_VIEWPORT (e.g. 1920x1080@1) the window.
+// file name, BELL_VIEWPORT (e.g. 1920x1080@1) the window, and BELL_SCENES
+// (comma-separated) the scenes.
 // Shots freeze the game's clock, so wind, water, and clouds are in the same
 // place in every step. Perf runs with vsync off and records the load average.
 import { chromium } from "playwright";
@@ -23,7 +24,12 @@ const [, W, H, S] = (process.env.BELL_VIEWPORT || "1280x800@1").match(
 const LEGACY = ["performance", "adaptive"];
 const [command = "shots", ...picked] = process.argv.slice(2);
 const STEPS = picked.length ? picked : ["low", "medium", "high", "ultra"];
-const SCENES = ["village", "forest", "coast", "dungeon"];
+const SCENES = process.env.BELL_SCENES?.split(",") || [
+  "village",
+  "forest",
+  "coast",
+  "dungeon",
+];
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -103,6 +109,29 @@ if (command === "shots") {
       console.log(path);
     }
     if (errors.length) console.log(`page errors (${step}):`, errors);
+    await context.close();
+  }
+} else if (command === "settings") {
+  // The settings sheet from the title, focused on the slider, at each size.
+  for (const [w, h] of [
+    [1280, 800],
+    [844, 390],
+  ]) {
+    const context = await browser.newContext({
+      viewport: { width: w, height: h },
+    });
+    const page = await context.newPage();
+    await page.goto(new URL("?review=polish", BASE).href);
+    await page.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+      timeout: 60000,
+    });
+    await page.click('[data-action="settings"]');
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await frames(page, 20);
+    const path = `${OUT}/d-settings-${w}x${h}${SUFFIX}.jpg`;
+    await page.screenshot({ path, type: "jpeg", quality: 88 });
+    console.log(path);
     await context.close();
   }
 } else if (command === "perf") {
