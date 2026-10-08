@@ -4,9 +4,9 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { FXAAShader } from "three/addons/shaders/FXAAShader.js";
-import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
+import type { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import type { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import type { FidelityProfile } from "./atmosphere";
 
@@ -74,10 +74,13 @@ export class WorldRenderer {
   private composer: EffectComposer;
   private contact: ContactPass;
   private bloom: UnrealBloomPass;
-  private focus: BokehPass;
+  // Ultra's passes load the first time Ultra is chosen (SMAA's lookup
+  // textures alone are about 36 KB gzipped); until then FXAA stands in.
+  private focus?: BokehPass;
+  private smaa?: SMAAPass;
+  private ultra?: Promise<void>;
   private grade = new ShaderPass(GradeShader);
   private fxaa = new ShaderPass(FXAAShader);
-  private smaa = new SMAAPass();
   private profile?: FidelityProfile;
   /** Depth of field fades in and out rather than snapping. */
   private blur = 0;
@@ -101,13 +104,6 @@ export class WorldRenderer {
     this.contact.updatePdMaterial({ radius: 4, samples: 8, rings: 2 });
     this.contact.blendIntensity = 0.72;
     this.composer.addPass(this.contact);
-    this.focus = new BokehPass(scene, camera, {
-      focus: 20,
-      aperture: 0,
-      maxblur: 0.006,
-    });
-    this.focus.enabled = false;
-    this.composer.addPass(this.focus);
     // Only light brighter than the lit scenery glows: the sun, lanterns,
     // sparks, and the bell's shine.
     this.bloom = new UnrealBloomPass(new T.Vector2(256, 256), 0, 0.35, 1.05);
@@ -122,8 +118,26 @@ gl_FragColor=vec4(min(texel.rgb*(max(v-luminosityThreshold,0.)/max(v,1e-4)),vec3
     this.composer.addPass(new OutputPass());
     this.composer.addPass(this.grade);
     this.composer.addPass(this.fxaa);
-    this.composer.addPass(this.smaa);
     renderer.info.autoReset = false;
+  }
+  /** Loads SMAA and depth of field, then applies the step again. */
+  private loadUltra() {
+    this.ultra ??= Promise.all([
+      import("three/addons/postprocessing/SMAAPass.js"),
+      import("three/addons/postprocessing/BokehPass.js"),
+    ]).then(([{ SMAAPass }, { BokehPass }]) => {
+      this.focus = new BokehPass(this.scene, this.camera, {
+        focus: 20,
+        aperture: 0,
+        maxblur: 0.006,
+      });
+      this.focus.enabled = false;
+      // After contact shading, before the bloom.
+      this.composer.insertPass(this.focus, 2);
+      this.smaa = new SMAAPass();
+      this.composer.addPass(this.smaa);
+      if (this.profile) this.configure(this.profile);
+    });
   }
   /** Switches the passes a Graphics fidelity step uses. */
   configure(profile: FidelityProfile) {
@@ -137,10 +151,11 @@ gl_FragColor=vec4(min(texel.rgb*(max(v-luminosityThreshold,0.)/max(v,1e-4)),vec3
     this.bloom.enabled = profile.bloom > 0;
     this.bloom.strength = profile.bloom;
     this.grade.enabled = profile.grade;
-    this.fxaa.enabled = profile.antialias === "fxaa";
-    this.smaa.enabled = profile.antialias === "smaa";
+    if (profile.antialias === "smaa" || profile.depthOfField) this.loadUltra();
+    if (this.smaa) this.smaa.enabled = profile.antialias === "smaa";
+    this.fxaa.enabled = !this.smaa?.enabled;
     if (!profile.depthOfField) this.blur = 0;
-    this.focus.enabled = false;
+    if (this.focus) this.focus.enabled = false;
     this.width = 0; // resize every pass on the next frame
   }
   /** Which passes are drawing, for the checks and the perf tools. */
@@ -151,8 +166,8 @@ gl_FragColor=vec4(min(texel.rgb*(max(v-luminosityThreshold,0.)/max(v,1e-4)),vec3
       bloom: this.bloom.enabled,
       grade: this.grade.enabled,
       fxaa: this.fxaa.enabled,
-      smaa: this.smaa.enabled,
-      depthOfField: this.focus.enabled,
+      smaa: !!this.smaa?.enabled,
+      depthOfField: !!this.focus?.enabled,
     };
   }
   /**
@@ -182,12 +197,13 @@ gl_FragColor=vec4(min(texel.rgb*(max(v-luminosityThreshold,0.)/max(v,1e-4)),vec3
         1 / (this.height * ratio),
       );
     }
-    const wanted = this.profile?.depthOfField && focus > 0 ? 1 : 0;
+    const wanted =
+      this.focus && this.profile?.depthOfField && focus > 0 ? 1 : 0;
     this.blur += (wanted - this.blur) * Math.min(1, dt * 5);
     if (wanted && this.blur > 0.99) this.blur = 1;
     if (!wanted && this.blur < 0.01) this.blur = 0;
-    this.focus.enabled = this.blur > 0;
-    if (this.focus.enabled) {
+    if (this.focus) this.focus.enabled = this.blur > 0;
+    if (this.focus?.enabled) {
       const u = this.focus.uniforms as Record<string, T.IUniform>;
       if (focus > 0) u.focus.value = focus;
       u.aperture.value = 0.00045 * this.blur;

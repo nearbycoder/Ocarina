@@ -872,6 +872,12 @@ await run("graphics: fidelity slider", async () => {
       "→ moves the slider to High: bloom and the colour grade",
     );
     await gPage.keyboard.press("ArrowRight");
+    // SMAA and depth of field load the first time Ultra is chosen.
+    await gPage.waitForFunction(
+      () => window.__BELL_OF_AGES__.getState().render.passes?.smaa,
+      null,
+      { timeout: 10000 },
+    );
     await frames();
     st = await state();
     check(
@@ -3145,7 +3151,7 @@ await run("pause: fits", async () => {
     }
     check(
       order.join() ===
-        "close,journal,map,save,export,import,quality,sound,fullscreen,settings,checkpoint,home",
+        "close,journal,map,save,export,import,graphics,sound,fullscreen,settings,checkpoint,home",
       `↓ walks the choices in the same order (${order.join(", ")})`,
     );
     await p.keyboard.press("Escape");
