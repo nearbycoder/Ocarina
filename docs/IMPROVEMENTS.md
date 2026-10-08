@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), [Round 10 scope](#round-10-scope--7-october-2026), [Round 10 results](#round-10-results), [Round 11 scope](#round-11-scope--8-october-2026), and [Round 11 results](#round-11-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), [Round 10 scope](#round-10-scope--7-october-2026), [Round 10 results](#round-10-results), [Round 11 scope](#round-11-scope--8-october-2026), [Round 11 results](#round-11-results), [Round 12 scope](#round-12-scope--8-october-2026), and [Round 12 results](#round-12-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -1224,4 +1224,62 @@ Still deferred, and why:
 - **Real-device checks:** a phone and real controllers are still needed, including how the following camera and the fade feel.
 - **A full playthrough with real input:** the opening now runs on input alone; the sanctuaries' puzzles and fights would need a scripted fighter driven by real input, a larger job.
 - **The map pins and the minimap's ring** still mark a sanctuary's centre, 3 m from its door, a few pixels on either map; the arrow and the count are what lead you there, so I left them.
+
+## Round 12 scope — 8 October 2026
+
+Branch `improvements-12`, from `main` at `805146b` (in sync with `origin/main`). This round's focus, from the owner, is AAA polish: the graphics, the interface, and how it feels, plus a Graphics Fidelity slider. Every item below comes from that focus.
+
+What I saw, at 1280×800 on the review page (`.capture/r12/before/`):
+- **Quality is a three-way cycle in the pause menu**, Adaptive (the default), High detail, and Performance, stored on its own (`bell-visual-quality`) rather than with the other settings, and not in Settings at all, so it can't be changed from the title. Nothing goes beyond today's High: no bloom, no colour grading, FXAA only, 2048 shadows, and half-resolution contact shading.
+- **The sword trail is a flat grey card** and the hit sparks are pale, faceted stones: the two effects you see most in a fight look unfinished next to the scenery.
+- **The world cuts.** Entering or leaving a sanctuary, returning to a checkpoint, the age change, and starting or continuing a journey swap the whole scene in one frame; the loading screen also snaps to the title.
+- **Menus give little feedback.** Buttons change background on hover, but nothing happens when one is pressed, a mouse click leaves no focus ring while a pad's focus ring is a plain outline, keyboard and pad focus moves silently, and sheets appear in one frame.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, healing, enemy numbers, timings, reach, and crystal income stay as they are. Effects are drawn differently; they don't last longer or hide anything.
+- **No new story writing.** Only interface text.
+- **The default stays today's look and frame rate.** Medium is today's Adaptive mode. Older stored quality choices carry over.
+- **No downloaded assets.** Everything new is shader code or generated in code; the web download stays within a few kilobytes of today's.
+- **The tooling keeps working.** The debug API stays compatible, and older saves, journey files, and settings load.
+
+### A. A Graphics Fidelity slider: Low, Medium, High, Ultra
+
+Acceptance criteria
+- Settings gets a **Graphics** section with one **Graphics fidelity** slider of four steps. Each step can be chosen by a click or tap, by ← and → (or Tab and Enter) on the keyboard, and by the D-pad or left stick and the confirm button on a pad. It's saved with the other settings, applies at once, and can be changed from the title. The pause menu's "Visual quality" cycle becomes a shortcut that opens this slider instead of a second control.
+- **Low** is today's Performance mode (no post-processing, 1024 shadows, sparse distant grass). **Medium** is today's Adaptive mode and the default (it still lowers 3D resolution under sustained load). **High** is today's High detail plus a gentle bloom and colour grade. **Ultra** adds, on top of High: SMAA instead of FXAA, supersampled 3D resolution (up to 2×), 4096 shadows with a wider soft filter refreshed every frame, full-resolution contact shading with more samples, anisotropic texture filtering, foliage and grass drawn further, denser hit sparks, and a soft depth of field behind the title screen and story scenes.
+- A stored `bell-visual-quality` choice migrates (performance → Low, adaptive → Medium, high → High); a new player gets Medium.
+
+Verification
+- Unit tests: parsing and migration of the setting, and each step's parameters (pixel ratio, shadow size, effects).
+- A browser check that sets each step with real key presses, a real click, and a synthetic pad, and reads the step back from the renderer (passes, shadow size, pixel ratio) and from storage after a reload.
+- Same-frame screenshots of every step in four scenes and the title (`tools/media/round12.mjs shots`), and real-time frame times for every step in the same scenes with the load average (`tools/media/round12.mjs perf`), in a table in the results.
+
+### B. A sword trail and sparks that look finished
+
+Acceptance criteria
+- The trail fades from the blade's edge to nothing along its length and over its life, in a pale warm white, instead of a flat 30% grey card. Same length and timing.
+- Hit sparks are warm, glowing embers (still the same pool, count, and lifetime at Low to High; a denser burst only on Ultra), and on High and Ultra they catch the bloom.
+
+Verification
+- The existing spark and combat checks still pass (no new geometries per hit). Screenshots of a swing and a hit at Medium and Ultra; a browser assertion that the trail's opacity falls off along its length.
+
+### C. The world fades instead of cutting
+
+Acceptance criteria
+- When the scene changes (entering or leaving a sanctuary, a checkpoint return, a defeat, the age change, a new journey, Continue), the picture comes up from a dark veil over about half a second instead of cutting. The swap itself still happens at once, so input, saves, and the checks' timing are unchanged, and the veil never blocks clicks. With reduced motion the veil is skipped.
+- The loading screen fades into the title.
+
+Verification
+- A browser check: entering and leaving a sanctuary and a checkpoint return raise the veil and it clears within a second; with reduced motion it stays clear. A screenshot mid-fade.
+
+### D. Menus that answer every press
+
+Acceptance criteria
+- Every button on every screen (title, journeys, pause, settings, journal, map, dialogue, flute, the leave question) has the same three states: a hover lift, a pressed state, and a clear gold focus ring for keyboard and pad focus. Moving focus with the keyboard or a pad plays a soft tick on the effects bus (none at 0% effects or muted). Sheets ease in (none under reduced motion).
+- The settings sheet with the new Graphics section fits and scrolls correctly at the window sizes the pause menu's fit check already uses.
+
+Verification
+- A browser check: focus moved by ↓ and by a synthetic pad plays the tick (and not at 0% effects); a pressed button shows its pressed state; every settings row, including the slider's four steps, is reachable by ↓ alone. The existing pause-fit and title-fit groups still pass. Screenshots of the settings sheet at 1280×800 and 844×390.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, the heartbeat's behaviour, Camera follows' default, how faint Alder fades, and the leave question's default (owner decisions); branching dungeons; new skinned art and traversal; full touch remapping; real-device checks; and a full playthrough with real input.
 
