@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), and [Round 9 results](#round-9-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), and [Round 10 scope](#round-10-scope--7-october-2026).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -1040,3 +1040,62 @@ Still deferred, and why:
 - **Real-device checks:** a phone and real controllers are still needed. That includes how the heartbeat feels, and the hearts on a real phone screen.
 - **The nudge when a saved spot is inside a collider:** play can't put Alder there; only test teleports have.
 
+
+## Round 10 scope — 7 October 2026
+
+Branch `improvements-10`, from `main` at `1d725f1` (in sync with `origin/main`). Baseline: 134 / 134 Vitest tests, and all 52 `tests/run-browser-checks.mjs` groups pass on the unchanged tree at a load average of 10 to 22 (log kept in the gitignored `.capture/r10/`).
+
+Rounds 1 to 9 covered every input device, settings, fairness, fight variety, saves, remapping, lock-on, the map, wayfinding, the camera's controls, menus, full screen, resuming, lost graphics, button names, three journeys, mouse look, and the HUD. This time I played the opening and a few field fights in headless Chromium and looked at what the world itself tells the player. I found these:
+
+- **The warning rings fade into pale ground.** The golden ring under a guardian's slam is the game's main promise of fairness ("watch the golden warning rings"), but it's a pale orange drawn at 13% to 57% opacity. On grass it reads clearly. On the Saffron Wastes' sand and Frostveil's snow and sandy paths it is a faint tint (`.capture` shots `ring-saffron`, `ring-frost`, `ring-grass`). The charge lanes, shockwave rings, and volley circles use the same colours and the same kind of opacity.
+- **Foes vanish.** A guardian or a warden whose health reaches zero is hidden on the same frame (`e.mesh.visible = false` in `damageEnemy`). It doesn't fall, so the blow that wins a fight looks like a glitch, and a player can't see which of two guardians they just felled.
+- **The camera never follows.** The view turns only when the player turns it (mouse drag, arrow keys, right stick, a drag on touch, or Q to recentre). On a gamepad or a phone, walking round a bend means steering with one thumb and turning the view with the other, and on touch that thumb is also the one on the action buttons. Most 3D adventures let the camera trail behind as you walk.
+- **Home isn't in Alder Village.** A new journey starts at Alder's door at (−10, 71), 24.2 m from the village's centre, just outside the 24 m circle `regionAt` uses. So the first thing the HUD says is "The Long Meadow", and so does the title's Continue line for a journey saved at home. The cottage at (2, 77) is outside the village too.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, healing, enemy numbers, timings, reach, and crystal income stay as they are. The rings keep their size, timing, and golden colour; they only gain a dark edge so they can be seen on pale ground. Foes are dead from the first frame of their fall, exactly as now.
+- **No new story writing.** Only interface text.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load, and the save format doesn't change.
+
+### A. Warning rings you can see on sand and snow
+
+Acceptance criteria
+- Every ground telegraph (the slam ring, a skirmisher's or warden's charge lane, the shockwave ring, the volley circles, and a warder's circle) gets a dark edge drawn just under it, which fades in and out with it. The gold mark itself keeps its size, colour, and timing.
+- On sand and snow the ring stands out from the ground around it at least as clearly as it does on grass today. On grass it still reads as a golden ring.
+
+Verification
+- A browser check: during a slam wind-up the ring's edge is visible and follows the ring's opacity; when the strike lands, or a guarded blow staggers the attacker, both are gone. The same for a warden's lane, wave, and circles and a warder's circle. It fails on `main` (no edge).
+- Measured contrast: a guardian winds up at a fixed view on grass, in the Saffron Wastes, and in Frostveil Heights. For the pixels the ring changes, compared with the same frame without it, I report the WCAG contrast (median and 90th percentile), before and after. Screenshots before and after in the Saffron Wastes and Frostveil.
+
+### B. Foes fall instead of vanishing
+
+Acceptance criteria
+- A felled guardian tips back and sinks into the ground over about a second, with a burst of dust; a warden falls more slowly. Then it's hidden as today.
+- It is dead from the first frame, exactly as now: it can't attack or be struck, its marks are cleared, lock-on moves on at once, the hall count and the seal update at once, and the save records it at once. A foe that is already down when a chamber restarts, or when a sanctuary is resumed, stays hidden and doesn't fall again.
+
+Verification
+- A browser check in the Rootbound Hollow: a lethal blow through the normal damage code leaves the guardian visible and lower and tilted 0.3 s later, its state "dead" and the count updated at once, and the lock on the next guardian; at 1.5 s it is hidden. A second blow to it does nothing. After a defeat and the return to the hall's checkpoint, the fallen stay hidden. A warden's fall ends hidden too. It fails on `main` (hidden at once).
+- Screenshot of a guardian mid-fall.
+
+### C. A camera that follows as you walk
+
+Acceptance criteria
+- A new setting, **Camera → Camera follows**: *Automatic* (the default: on with a gamepad or touch, off with a keyboard and mouse), *Always*, or *Never*. With keyboard and mouse the default changes nothing.
+- When it's on, walking with a sideways part turns the view as if the camera were on a leash behind Alder: it trails round so the path ahead comes into view. Walking straight ahead or straight at the camera doesn't turn it. It doesn't follow while locked on, while the player is turning the camera (and for about a second after), during a recentre, or in a menu.
+- Older settings load with Automatic.
+
+Verification
+- Unit tests for the follow turn (sideways moves turn the view toward the path; straight ahead and straight back don't; a larger distance turns more slowly) and for the setting (stored, cycled, and defaulted on older settings).
+- A browser check with a synthetic standard gamepad: holding the left stick to the right for two seconds turns the view by a measured amount and Alder walks a curve; with *Never* the same input leaves the view where it was. With the keyboard (D held), Automatic leaves it unchanged and *Always* turns it. The right stick during the walk stops the follow, and it resumes about a second after. Locked on, it doesn't follow. It fails on `main` (no setting, no turn).
+- The existing camera, lock-on, gamepad, and touch groups still pass.
+
+### D. Home is in Alder Village
+
+Acceptance criteria
+- Every cottage, Alder's door, and the villagers stand in Alder Village, so a new journey's HUD and its Continue line say Alder Village. The Bell Sanctuary, the Whisperwood, the coast, and the meadow keep their names where the village doesn't reach.
+
+Verification
+- A unit test: the new-journey position, the five cottages, and the villagers are in Alder Village; the Bell Sanctuary's centre, the meadow between them, and every sanctuary door keep their regions. A browser check: the HUD reads "Alder Village" right after the opening. It fails on `main`.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, and the heartbeat's behaviour (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); real-device checks (a phone and real controllers); and a full playthrough with real input only.
