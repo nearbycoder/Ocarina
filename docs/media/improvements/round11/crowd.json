@@ -1,0 +1,47 @@
+{
+  "village": {
+    "views": 2400,
+    "within1_6": 0.061,
+    "within2_5": 0.095
+  },
+  "kingdom": {
+    "views": 3200,
+    "within1_6": 0.036,
+    "within2_5": 0.05
+  },
+  "root": {
+    "views": 2000,
+    "within1_6": 0.084,
+    "within2_5": 0.137
+  },
+  "ember": {
+    "views": 2000,
+    "within1_6": 0.098,
+    "within2_5": 0.145
+  },
+  "tide": {
+    "views": 2000,
+    "within1_6": 0.09,
+    "within2_5": 0.145
+  },
+  "frost": {
+    "views": 2000,
+    "within1_6": 0.108,
+    "within2_5": 0.163
+  },
+  "sun": {
+    "views": 2000,
+    "within1_6": 0.096,
+    "within2_5": 0.144
+  },
+  "moon": {
+    "views": 2000,
+    "within1_6": 0.072,
+    "within2_5": 0.125
+  },
+  "crown": {
+    "views": 2000,
+    "within1_6": 0.091,
+    "within2_5": 0.144
+  }
+}

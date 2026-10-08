@@ -1,0 +1,52 @@
+{
+ "date": "2026-10-08",
+ "branch": "improvements-11",
+ "base": "24b9560 (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; the save and journey checks use fresh throwaway browser contexts on the normal URL). Controls ran against the unchanged game (main at 24b9560, served from a temporary worktree) with this branch's checks.",
+ "finalChecksOn": "1a41a1b",
+ "unitTests": { "files": 23, "tests": 152, "passed": 152 },
+ "build": "pass",
+ "assetCheck": { "assets": 31, "runtimeBytes": 2442432, "gltfErrors": 0, "gltfWarnings": 0, "contractErrors": 0 },
+ "baseline": "All 56 groups pass on main (24b9560) at a load average of 2.3 to 12.2",
+ "browserGroups": "All 60 groups pass (56 before) in one full run on 1a41a1b at a load average of 22.8 at the start and 24.1 at the end; campaign counter 104; no page errors",
+ "newBrowserGroups": {
+  "wayfindingEveryDoorByTheCompass": 8,
+  "cameraAlderFadesCloseUp": 9,
+  "leavingASanctuary": 10,
+  "openingInputAlone": 6
+ },
+ "items": {
+  "A. The compass leads to a sanctuary's door": {
+   "commits": ["7541222"],
+   "unitTests": 7,
+   "control": "In-page walker stops at (77.3, 59.9) behind the Tidal Archive's door reading '0 paces'",
+   "gameSecondsPerLeg": { "tide": 11.7, "ember": 18.0, "root": 24.4, "bell": 10.3, "moon": 14.8, "frost": 25.8, "sun": 21.2, "crown": 9.6 },
+   "beforeRealTime": {
+    "loadAverage": "29 to 50",
+    "stuckBehindTheDoorAfter120s": ["tide", "root", "moon"],
+    "secondsToTheOtherDoors": { "ember": 18, "frost": 27.5, "sun": 25.5, "crown": 9.8 }
+   }
+  },
+  "B. Alder fades when a wall pushes the camera close": {
+   "commits": ["1f1c47a"],
+   "unitTests": 1,
+   "browserAssertions": 9,
+   "control": "Fails at 'Backed against a cottage: Alder is drawn faded (1.00)'",
+   "opacity": { "cottageWall1.24m": 0.33, "arenaWall0.94m": 0.25 },
+   "screenShareChangedOver40": { "cottage": { "main": 0.361, "branch": 0.065 }, "arena": { "main": 0.356, "branch": 0.0 } },
+   "meanChange": { "cottage": { "main": 37.7, "branch": 11.4 }, "arena": { "main": 26.8, "branch": 5.0 } },
+   "cameraWithin1.6mShareOfViews": { "village": 0.061, "kingdom": 0.036, "root": 0.084, "ember": 0.098, "tide": 0.09, "frost": 0.108, "sun": 0.096, "moon": 0.072, "crown": 0.091 }
+  },
+  "C. The opening, played with input alone": {
+   "commits": ["8e0435f"],
+   "gameSecondsPerLeg": { "Mira": 2.1, "Orchard light": 7.1, "Mira again": 6.2, "Soren": 1.6, "Rowan": 0.8, "The Tidal Archive": 11.5 },
+   "control": "Stops after 300 s at 'The Tidal Archive · 0 paces'"
+  },
+  "D. Leaving a sanctuary asks first when it would undo progress": {
+   "commits": ["641b48f", "0b2afe6", "1a41a1b"],
+   "browserAssertions": 10,
+   "control": "Fails at 'after the puzzle, the way out asks first'"
+  }
+ },
+ "productionSubpath": "Loads from /Ocarina/ with no failed or third-party requests and no console errors; debug API absent; a journey begins and the compass reads 'Mira · 15 paces'"
+}

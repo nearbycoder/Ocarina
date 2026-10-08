@@ -1187,3 +1187,41 @@ Verification
 - A browser check in the Rootbound Hollow: entering and pressing E at the way out leaves at once; after solving the puzzle, E asks, Escape stays with the puzzle still solved, and confirming leaves. It fails on `main`.
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, the heartbeat's behaviour, and Camera follows' default (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); and real-device checks (a phone and real controllers).
+
+## Round 11 results
+
+All four scoped items shipped on `improvements-11`. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round11.json](artifacts/improvements-round11.json).
+
+| Item | Commits | Verified by | Screenshots (`docs/media/improvements/round11/`) |
+| --- | --- | --- | --- |
+| A. The compass leads to a sanctuary's door | `7541222` | 7 unit tests; a browser group that walks by key presses alone to all seven doors and the bell (8 legs) | `a-compass-tide` (and `-before`) |
+| B. Alder fades when a wall pushes the camera close | `1f1c47a` | 1 unit test; 9 browser assertions at a cottage wall and a sanctuary wall; screen coverage measured before and after | `b-fade-village`, `b-fade-hollow` (and `-before`) |
+| C. The opening, played with input alone | `8e0435f` | A browser group: real clicks and key presses from the title through the Tidal Archive's door (6 legs) | none |
+| D. Leaving a sanctuary asks first when it would undo progress | `641b48f`, `0b2afe6` | 10 browser assertions; the sanctuary-visit group now answers the question (`1a41a1b`) | `d-leave` |
+
+Unit tests: 152 / 152 (144 before). All 60 browser-check groups pass (56 before) in one full run on `1a41a1b` at a load average of 22.8 at the start and 24.1 at the end, with no page errors; the campaign counter still reads 104. The build and asset check pass, and the production build works from `/Ocarina/`. Every new check fails on the unchanged game.
+
+What changed for a player:
+- **The compass finds the door.** When it leads to a sanctuary it points at the doorstep, and from beside or behind the arch it points at the arch's nearer corner first, so walking straight at the arrow goes round to the front. The count is the whole way left, and one reads "1 pace". Before, walking at the arrow from the village to the Tidal Archive, from the Ember Vault to the Rootbound Hollow, or from the Bell Sanctuary to the Moonwell Crypt ended behind the door at "0 paces", with nothing to use.
+- **Alder fades when the camera is pushed close.** From 2.2 m in, he's drawn see-through, down to a quarter at 1 m, so a wall behind the camera no longer fills the screen with his back. Only his outer surface shows (no inside of his head or pack), and he's solid again as soon as the camera eases out. Nothing changes at the usual distance.
+- **Leaving asks first.** Once a sanctuary's puzzle is solved, its wall broken, or a guardian or the warden felled, the way out asks "Leave the Rootbound Hollow? What you've opened here closes again: the puzzle resets, and its guardians and warden return." Stay here keeps everything. With nothing opened, it leaves at once as before.
+- **A check that plays like a player.** The opening is now checked from the title with real clicks and key presses only, steering at the arrow as it's drawn on screen.
+
+Honest notes:
+- **The walks, measured.** Before the change, a real-time walker (Playwright's keyboard, steering at the compass, sidestepping when it stopped gaining ground) took 9.8 to 27.5 s to four doors and gave up after 120 s at the other three, stuck behind the door (load average 29 to 50; `.capture/r11/doors-before.log`). With the change, the in-page walker reaches all seven doors and the bell in 9.6 to 25.8 s of game time. Both walkers are simple: they never plan a route, so trees and rocks are handled only by sidestepping. A person would round an arch without help sooner or later; the change removes the confusing "0 paces" behind it.
+- **How often the camera was crowded.** Sampling open spots in eight directions (`tools/media/round11.mjs crowd`), the camera ends within 1.6 m of Alder's head in 7.2 to 10.8% of views in the sanctuaries, 6.1% in Alder Village, and 3.6% across the kingdom. That is unchanged: the camera still moves exactly as before; only how Alder is drawn changed.
+- **The fade, measured.** At a cottage wall (camera 1.24 m away), the share of the screen Alder changes by more than 40 / 255 went from 36.1% to 6.5%, and the mean change over the frame from 37.7 to 11.4. In the Briar Warden's arena by a wall (0.94 m), from 35.6% to 0.0% (mean 26.8 to 5.0). At a quarter opacity he is a faint ghost; whether that's the right amount in a fight is untested by a player. Each of his 12 parts draws a second, depth-only time while he's faded, and not otherwise. I didn't take frame samples.
+- **The before shots** were taken from `main` served from a temporary worktree, where the interface text fell back to a system font; the 3D scene is the same.
+- **The leave question's default** is Leave, as for Return to checkpoint's question, so two deliberate presses still leave. Leaving still resets the sanctuary (round 1's rule); only the question is new.
+- **Input alone, but not everywhere.** The opening and the walks between doors use only key presses (and real clicks for the opening); every other check still stages its scene with the debug tools, and the page's clock is stepped in all of them.
+- **No difficulty change.** No health, damage, healing, timing, reach, enemy, or crystal values changed. **No new story writing:** only interface text (the question, "1 pace"). No save-format or settings change.
+
+Still deferred, and why:
+- **Balance and difficulty, puzzle hints, deleting a journey, the heartbeat's behaviour, and Camera follows' default:** the owner's call.
+- **Branching dungeons:** need a level-design pass and a larger chamber layout.
+- **Skinned characters, new enemy art and death animations, traversal tools:** large jobs.
+- **Full touch remapping:** needs a layout editor.
+- **Real-device checks:** a phone and real controllers are still needed, including how the following camera and the fade feel.
+- **A full playthrough with real input:** the opening now runs on input alone; the sanctuaries' puzzles and fights would need a scripted fighter driven by real input, a larger job.
+- **The map pins and the minimap's ring** still mark a sanctuary's centre, 3 m from its door, a few pixels on either map; the arrow and the count are what lead you there, so I left them.
+
