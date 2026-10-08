@@ -9,6 +9,8 @@ import {
   parseSave,
   sequenceStep,
   objective,
+  regionAt,
+  journeySummary,
 } from "../src/data";
 function newSave() {
   const s = blankSave();
@@ -96,5 +98,47 @@ describe("the two-age campaign", () => {
     s.talked = true;
     s.completed = ["root", "ember", "tide"];
     expect(objective(s).detail).toContain("Bell Sanctuary");
+  });
+});
+
+describe("region names", () => {
+  it("put Alder's home, every cottage, and the villagers in Alder Village", () => {
+    const home = blankSave().position;
+    expect(regionAt(home.x, home.z)).toBe("Alder Village");
+    for (const [x, z] of [
+      [-12, 50],
+      [13, 45],
+      [-14, 66],
+      [14, 64],
+      [2, 77],
+      [3.1, 49],
+      [-5, 57],
+      [10, 54],
+      [0, 47],
+      [-4, 40],
+    ])
+      expect(regionAt(x, z), `${x}, ${z}`).toBe("Alder Village");
+    expect(journeySummary(blankSave())).toContain("Alder Village");
+  });
+  it("leave the other places their names", () => {
+    expect(regionAt(0, 0)).toBe("Bell Sanctuary");
+    expect(regionAt(0, 15)).toBe("Bell Sanctuary");
+    expect(regionAt(18, -26)).toBe("The Long Meadow");
+    expect(regionAt(-25, 30)).toBe("The Long Meadow");
+    expect(regionAt(30, 70)).toBe("The Long Meadow");
+    expect(regionAt(0, 95)).toBe("The Long Meadow");
+    const regions: Record<string, string> = {
+      root: "Whisperwood",
+      ember: "Cinderpeak",
+      tide: "Larkwater Coast",
+      frost: "Frostveil Heights",
+      sun: "Saffron Wastes",
+      moon: "Mourning Fen",
+      crown: "Crownfall",
+    };
+    for (const d of DUNGEONS) {
+      expect(d.region).toBe(regions[d.id]);
+      expect(regionAt(d.x, d.z)).toBe(d.region);
+    }
   });
 });

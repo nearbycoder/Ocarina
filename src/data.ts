@@ -575,7 +575,8 @@ export function regionAt(x: number, z: number): string {
   if (x < -40 && z > 40) return "Mourning Fen";
   if (x < -35) return "Whisperwood";
   if (Math.hypot(x, z) < 22) return "Bell Sanctuary";
-  if (Math.hypot(x, z - 49) < 24) return "Alder Village";
+  // Wide enough for every cottage and Alder's own door at (−10, 71).
+  if (Math.hypot(x, z - 50) < 30) return "Alder Village";
   return "The Long Meadow";
 }
 export const FIREFLIES = [

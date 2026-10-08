@@ -236,5 +236,30 @@ window.wayQA = (() => {
     restore();
     return results.splice(0);
   }
-  return { compass, marker };
+  // A new journey starts at Alder's door (−10, 71): the HUD says he's home.
+  async function home() {
+    const at = { ...api.getState().position };
+    const region = () => document.getElementById("region").textContent;
+    for (const [x, z] of [
+      [-10, 71],
+      [2, 74],
+    ]) {
+      api.debug.teleport(x, z);
+      game.refreshHUD();
+      assert(
+        region() === "Alder Village",
+        `Home: at (${x}, ${z}) the HUD says Alder Village (${region()})`,
+      );
+    }
+    api.debug.teleport(18, -26);
+    game.refreshHUD();
+    assert(
+      region() === "The Long Meadow",
+      `Home: the meadow north of the Bell Sanctuary keeps its name (${region()})`,
+    );
+    api.debug.teleport(at.x, at.z);
+    game.refreshHUD();
+    return results;
+  }
+  return { compass, marker, home };
 })();

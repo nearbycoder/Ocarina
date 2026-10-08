@@ -137,6 +137,20 @@ const quantile = (list, q) =>
     : 1;
 
 const SHOTS = {
+  // A new journey, just after the opening: Alder at his door, in the village.
+  "d-home": async () => {
+    const page = await open();
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__.debug;
+      api.reset();
+      bellQA.close();
+      api.advance(0.2);
+      // The review page's setup left a notice; a new journey has none.
+      document.getElementById("toast").style.display = "none";
+    });
+    await shoot(page, "d-home");
+    await page.close();
+  },
   // Settings → Camera with a gamepad in use: Camera follows, Automatic · on.
   "c-settings": async () => {
     const page = await open();

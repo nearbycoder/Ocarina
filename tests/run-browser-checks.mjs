@@ -95,6 +95,7 @@ await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
 await inPage("map discoveries", async () => (await mapQA.run()).length);
 await inPage("wayfinding: compass", async () => (await wayQA.compass()).length);
+await inPage("hud: home region", async () => (await wayQA.home()).length);
 // The objective's count ("0 / 3") stays on one line of the panel.
 await inPage("objective: counts on one line", async () => {
   await bellQA.start();
