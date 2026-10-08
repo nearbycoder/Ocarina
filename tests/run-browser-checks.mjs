@@ -1020,6 +1020,99 @@ await run("graphics: fidelity slider", async () => {
   return n;
 });
 
+// Scene changes come up from a dark veil over the world (not the interface)
+// instead of cutting, in real time; reduced motion skips it. The loading
+// screen fades into the title.
+await run("transitions: the veil", async () => {
+  const vPage = await open({ viewport: { width: 1280, height: 800 } });
+  let n = 0;
+  const check = (ok, message) => {
+    if (!ok) throw new Error(message);
+    n++;
+  };
+  const veil = () =>
+    vPage.evaluate(() => ({
+      time: window.__BELL_OF_AGES__.getState().render.veil,
+      opacity: Number(document.getElementById("veil").style.opacity || 0),
+      dungeon: window.__BELL_OF_AGES__.getState().dungeon,
+    }));
+  try {
+    const faded = await vPage
+      .waitForFunction(() => !document.getElementById("boot"), null, {
+        timeout: 3000,
+      })
+      .then(() => true)
+      .catch(() => false);
+    check(faded, "The loading screen fades away into the title");
+    await vPage.evaluate(async () => {
+      await bellQA.start();
+      bellQA.close();
+      const game = window.__BELL_OF_AGES__.debug.game();
+      // Play in real time from here: the checks' stepped clock stages views.
+      window.BELL_TEST_MANUAL = false;
+      window.__BELL_OF_AGES__.debug.resume();
+      game.inspectMode = false;
+      window.__BELL_OF_AGES__.debug.enter("root");
+    });
+    let v = await veil();
+    check(
+      v.time > 0.5 && v.opacity > 0.9,
+      `Entering a sanctuary raises the veil (${v.time.toFixed(2)} s, ${v.opacity})`,
+    );
+    check(
+      await vPage.evaluate(() => {
+        const veil = document.getElementById("veil");
+        const ui = document.getElementById("ui");
+        return (
+          getComputedStyle(veil).pointerEvents === "none" &&
+          veil.compareDocumentPosition(ui) & Node.DOCUMENT_POSITION_FOLLOWING
+        );
+      }),
+      "It lets clicks through and sits beneath the interface",
+    );
+    await vPage.waitForTimeout(300);
+    v = await veil();
+    check(
+      v.opacity > 0 && v.opacity < 0.9,
+      `0.3 s later it is lifting (${v.opacity})`,
+    );
+    await vPage.waitForTimeout(800);
+    v = await veil();
+    check(v.time === 0 && v.opacity === 0, "and by a second it has lifted");
+    // The way out, with a real key press: nothing opened, so it leaves.
+    await vPage.evaluate(() => window.__BELL_OF_AGES__.debug.teleport(0, 31));
+    await vPage.waitForTimeout(150);
+    await vPage.keyboard.press("KeyE");
+    await vPage.waitForTimeout(50);
+    v = await veil();
+    check(
+      v.dungeon === null && v.time > 0.4,
+      `Leaving with E raises it too (${JSON.stringify(v)})`,
+    );
+    await vPage.waitForTimeout(1000);
+    await vPage.evaluate(() =>
+      window.__BELL_OF_AGES__.debug.game().checkpoint(),
+    );
+    v = await veil();
+    check(v.time > 0.5, "So does a return to a checkpoint");
+    await vPage.waitForTimeout(1000);
+    await vPage.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.settings.reducedMotion = true;
+      game.applySettings();
+      window.__BELL_OF_AGES__.debug.enter("root");
+    });
+    v = await veil();
+    check(
+      v.time === 0 && v.opacity === 0 && v.dungeon,
+      "With reduced motion the scene changes without the veil",
+    );
+  } finally {
+    await vPage.close();
+  }
+  return n;
+});
+
 // The mouse wheel moves the camera distance setting, and a reload keeps it.
 await run("camera: wheel and reload", async () => {
   const camPage = await open({ viewport: { width: 1280, height: 800 } });

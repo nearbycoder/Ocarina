@@ -151,6 +151,35 @@ if (command === "shots") {
     if (errors.length) console.log(`page errors (${step}):`, errors);
     await context.close();
   }
+} else if (command === "veil") {
+  // Entering the Rootbound Hollow, 0.25 s into the veil lifting (C).
+  const { context, page } = await open(STEPS[0]);
+  await page.addScriptTag({
+    content: readFileSync(
+      new URL("../../tests/browser-checks.js", import.meta.url),
+      "utf8",
+    ),
+  });
+  await page.evaluate(async () => {
+    window.BELL_TEST_MANUAL = true;
+    await bellQA.start();
+    bellQA.close();
+    document.getElementById("toast").style.display = "none";
+    const api = window.__BELL_OF_AGES__,
+      game = api.debug.game();
+    api.debug.resume();
+    game.inspectMode = false;
+    api.debug.enter("root");
+    game.veilTime = 0.4;
+    game.drawVeil();
+    // Hold it there for the picture.
+    game.updateEffects = () => {};
+  });
+  await frames(page, 10);
+  const path = `${OUT}/c-veil${SUFFIX}.jpg`;
+  await page.screenshot({ path, type: "jpeg", quality: 88 });
+  console.log(path);
+  await context.close();
 } else if (command === "settings") {
   // The settings sheet from the title, focused on the slider, at each size.
   for (const [w, h] of [

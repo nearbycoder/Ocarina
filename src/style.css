@@ -1402,9 +1402,36 @@ body[data-device="gamepad"] #panel button:focus {
   pointer-events: auto;
 }
 .world-loading h1 {
-  font-family: Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-weight: 400;
-  font-size: clamp(28px, 4vw, 52px);
+  font-size: clamp(32px, 4.6vw, 60px);
+  margin: 0;
+}
+/* The loading screen fades into the title once the world is ready. */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+#boot:empty {
+  display: none;
+}
+#boot.done {
+  opacity: 0;
+}
+#boot.done .world-loading {
+  pointer-events: none;
+}
+/* A dark veil over the world (not the interface) when the scene changes; the
+   game sets its opacity as it lifts. */
+#veil {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 45%, #13261f 0%, #08120f 100%);
 }
 .world-loading p {
   color: #aab9ac;

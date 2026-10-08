@@ -307,6 +307,9 @@ function markMesh(
 }
 /** How far the Ember Vault's stone sinks into its seal once it opens it. */
 const BLOCK_SETTLED = -1.2;
+/** A scene change's veil: how long it takes to lift, and how long it holds. */
+const VEIL = 0.65;
+const VEIL_HOLD = 0.12;
 /** The sword trail's opacity at its brightest, and its fade once a cut ends. */
 const TRAIL_OPACITY = 0.62;
 const TRAIL_FADE = 0.14;
@@ -439,6 +442,9 @@ export class Game {
   private environment?: T.WebGLRenderTarget;
   /** The WebGL context is lost and the picture frozen. */
   lostGraphics = false;
+  /** Seconds left of the veil lifting after a scene change (see raiseVeil). */
+  veilTime = 0;
+  private veil = document.getElementById("veil");
   /** The Graphics fidelity step the renderer was last set up for. */
   private appliedFidelity?: string;
   private lostTimer = 0;
@@ -1073,6 +1079,9 @@ export class Game {
     transparent: true,
   });
   loadWorld(d?: Dungeon) {
+    // The new scene comes up from a dark veil instead of cutting; staged
+    // inspection views (the media tools) stay clear.
+    if (this.started && !this.inspectMode) this.raiseVeil();
     if (this.world) disposeWorld(this.world);
     this.enemies.forEach((e) => {
       e.mesh.traverse((o) => {
@@ -3545,6 +3554,7 @@ export class Game {
   }
   /** Restores health and returns to a safe place; describes where for the caller. */
   checkpoint() {
+    this.raiseVeil();
     this.save.health = this.save.maxHealth;
     let where: string;
     if (this.world.dungeon) {
@@ -3614,7 +3624,28 @@ export class Game {
   burst(x: number, y: number, z: number, color: string, count: number) {
     this.sparks.burst(x, y, z, color, count);
   }
+  /**
+   * Darkens the world (never the interface) and lets it lift over VEIL
+   * seconds. The scene itself has already changed, so input, saves, and timing
+   * are untouched. Skipped with reduced motion.
+   */
+  raiseVeil() {
+    if (this.settings?.reducedMotion) return;
+    this.veilTime = VEIL;
+    this.drawVeil();
+  }
+  drawVeil() {
+    if (!this.veil) return;
+    // Fully dark for the first moment (new shaders and shadows settle), then
+    // an ease-out.
+    const t = Math.min(1, this.veilTime / (VEIL - VEIL_HOLD));
+    this.veil.style.opacity = this.veilTime > 0 ? (t * t).toFixed(3) : "0";
+  }
   updateEffects(dt: number) {
+    if (this.veilTime > 0) {
+      this.veilTime = Math.max(0, this.veilTime - dt);
+      this.drawVeil();
+    }
     this.sparks.update(dt);
     for (const i of this.world.interactables) {
       if (i.kind === "firefly" || i.kind === "relic") {
@@ -4062,6 +4093,7 @@ export class Game {
             Math.max(1, this.renderTimes.length),
           quality: this.quality.fidelity,
           passes: this.quality.post ? this.worldRenderer.passes : null,
+          veil: this.veilTime,
           shadowSize: this.sun.shadow.mapSize.x,
           resolutionScale: this.quality.scale,
           pixelRatio: this.renderer.getPixelRatio(),
@@ -4085,6 +4117,8 @@ export class Game {
                   this.save.age = "adult";
                 this.replaceHero();
                 this.loadWorld(name === "dungeon" ? DUNGEONS[0] : undefined);
+                this.veilTime = 0;
+                this.drawVeil();
                 this.ui.setPanel(null);
                 const views: Record<
                   string,
