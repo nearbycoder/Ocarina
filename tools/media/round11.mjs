@@ -155,6 +155,21 @@ const SHOTS = {
     await shoot(page, "a-compass-tide");
     await page.close();
   },
+  // The question at the way out once the Rootbound Hollow's puzzle is solved.
+  async leave() {
+    const page = await open();
+    await page.evaluate(async () => {
+      const api = window.__BELL_OF_AGES__.debug,
+        game = api.game();
+      api.enter("root");
+      game.solvePuzzle();
+      game.ui.setPanel(null);
+      await bellQA.interactAt(0, 31);
+      game.renderer.shadowMap.needsUpdate = true;
+    });
+    await shoot(page, "d-leave");
+    await page.close();
+  },
 };
 
 const names = process.argv.slice(2);

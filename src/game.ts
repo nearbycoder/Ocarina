@@ -2233,7 +2233,7 @@ export class Game {
       if (opened) {
         this.ui.dialogue(
           "RETURN TO THE MEADOW",
-          `Leave ${this.world.dungeon!.name}? What you've opened here closes again: the puzzle resets, and its guardians and warden return.`,
+          `Leave ${this.world.dungeon!.name.replace(/^The /, "the ")}? What you've opened here closes again: the puzzle resets, and its guardians and warden return.`,
           "leave-confirm",
           "Leave",
           "Stay here",
