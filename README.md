@@ -17,9 +17,9 @@
 
 ## Trailer
 
-[![Watch the trailer: The Bell of Ages (1080p, 1 min 41 s)](docs/media/trailer-poster.jpg)](docs/media/trailer.mp4)
+[![Watch the trailer: The Bell of Ages (1080p, 1 min 46 s)](docs/media/trailer-poster.jpg)](docs/media/trailer.mp4)
 
-<sub>▶ Click the poster to watch the trailer (`docs/media/trailer.mp4`, 1080p30 H.264). Everything in it is captured from the real game: scripted input drives the normal simulation under a deterministic clock. The sound effects are the game's own, and the score is arranged from its synthesized flute, chime, and ambient voices.</sub>
+<sub>▶ Click the poster to watch the trailer (`docs/media/trailer.mp4`, 1080p30 H.264 and AAC, recorded on 8 October 2026 at the **Ultra** graphics fidelity step). Everything in it is captured from the real game: scripted input drives the normal simulation under a deterministic clock, so every frame is rendered in full however long Ultra takes. The sound effects are the game's own, and the score is arranged from its synthesized flute, chime, and ambient voices. There is no narration.</sub>
 
 ## About
 
@@ -30,6 +30,32 @@ Take up a practice sword and your father's reed flute. Follow the pale paths out
 When three relics rest in the altar, the Bell of Ages offers a crossing that costs seven years of your life. Make a promise to your oldest friend, step through, and return as an adult to a kingdom that did not wait for you.
 
 The Bell of Ages is an **original adventure inspired by classic 3D action-adventure games**. Its world, characters, story, models, and music are all original to this project. It is a compact prototype campaign with a complete beginning, middle, and ending; see [Status](#status-and-known-issues) for what it is and isn't yet.
+
+Since its first release on 4 October 2026, twelve rounds of improvements have brought gamepad and touch play to parity, made keys and buttons remappable, and added accessibility settings, warden signature attacks and new guardian kinds, distinct sanctuary layouts with hidden alcoves, a lock-on you can see and steer, a compass and map markers, three save slots, and a Graphics fidelity slider from Low to Ultra. Each round's plan, results, and measurements are in [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).
+
+## Play it
+
+**Today's version: build it from source.** The only published release, [v0.1.0](https://github.com/nearbycoder/Ocarina/releases/tag/v0.1.0), is the launch build from 4 October 2026. It predates all twelve improvement rounds, so it has none of the features this README describes as added since (among them the Graphics fidelity slider, remapping, three journeys, and the warden signature attacks), and there is no hosted build yet. To play the game as it is today:
+
+```sh
+git clone https://github.com/nearbycoder/Ocarina.git
+cd Ocarina
+npm install
+npm run build && npm run preview   # or: npm run dev
+```
+
+Then open the printed address. The build in `dist/` is plain static files with relative asset URLs, so it can be served by any static file server or web host, at the site root or in a subfolder. Browsers block ES modules from `file://`, so opening `index.html` directly will not work.
+
+**The v0.1.0 download.** To try the launch build instead, download **`the-bell-of-ages-web-v0.1.0.zip`** from the release, unzip it, and serve the folder (`npx serve the-bell-of-ages`, or `python3 -m http.server --directory the-bell-of-ages`).
+
+**Hosted build (not live yet).** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the game, and publishes `dist/` to GitHub Pages. It only runs when started by hand, and it has not been run, so there is no hosted build at the moment. To publish, enable Pages with **GitHub Actions** as the source (Settings → Pages), then run **Deploy web build to GitHub Pages** from the Actions tab. The production build has been checked when served from a `/Ocarina/` subfolder.
+
+### System requirements
+
+- A browser with **WebGL 2**: current Chrome, Edge, Firefox, or Safari. A desktop or laptop is recommended; phone performance hasn't been measured.
+- A keyboard and mouse, a keyboard alone, a standard-layout gamepad, or a touch screen.
+- Graphics: **Low** and **Medium** (the default) are light. On the one machine measured (an AMD Radeon 8060S integrated GPU, at 1280×800), Low to High averaged about 2 to 7 ms a frame and **Ultra** about 15 ms, with slower spikes; Ultra is meant for strong GPUs. See [Status](#status-and-known-issues) for how those numbers were taken.
+- Building from source needs **Node.js 22.12 or newer** (Vite 8's minimum) and npm.
 
 ## How to play
 
@@ -60,7 +86,7 @@ In menus the keyboard moves with <kbd>↑</kbd> <kbd>↓</kbd> (or <kbd>Tab</kbd
 
 ### Sword, shield, and the golden ring
 
-<img src="docs/media/screenshots/04-combat.jpg" alt="Alder slashes a stone guardian in the Whisperwood, leaving a pale sword trail" width="100%">
+<img src="docs/media/screenshots/04-combat.jpg" alt="Alder slashes a stone guardian in the Whisperwood, leaving a warm, fading sword trail and amber sparks" width="100%">
 
 Chain a diagonal cut, a return cut, and a heavier thrust. Damage comes from the blade itself: each swing traces the sword's real path against enemy hit volumes, so a miss is really a miss, and a blade that hits a wall glances off in a shower of sparks. Hits land with a brief hit-stop. Guardians telegraph every attack with a pulsing golden ring, outlined in dark so it reads on pale sand and snow too, and commit to their facing, so a well-timed shield or dodge always has an answer. If one winds up out of view, an orange arrow on the edge of the screen points to it. Guard a blow and the attacker staggers, which gives you a longer opening than a normal recovery. A felled foe topples back and sinks into the ground. Guardians come in three kinds: the classic stone **guardian**; the small, horned **skirmisher**, which closes fast and lunges down a short marked lane; and the tall **warder**, which keeps its distance and lobs a stone at a circle marked where you stand. Face the warder with your shield up, or step out of the circle. The minimap draws guardians as dots, skirmishers as triangles, and warders as diamonds. <kbd>Q</kbd> locks on and keeps a single foe in focus: a gold marker rides over its head (or points from the screen edge when it's out of view), a sideways nudge of the camera switches to the next foe on that side, and when it falls the lock moves to the nearest foe still standing.
 
@@ -110,6 +136,42 @@ Treasure chests hide off the roads; the journal counts them, and the map remembe
 
 The kingdom map marks every region and sanctuary, fades the ones that belong to another age, and rings your next destination. It also remembers what you've found: chests and wandering lights you've come near appear as hollow marks, filled in once you open or catch them, and a ✎ marks each sanctuary whose hidden carving you've read. Click or tap anywhere on it, or choose a place with a gamepad, to set your own marker. Under the region name, the compass always names where the journey goes next (the nearest sanctuary you can enter, the Bell Sanctuary, or the Silent Crown), or your marker if you've set one. Its arrow points the way (to a sanctuary's door, round the arch if you come at it from behind), and destinations beyond the minimap sit on its rim. Progress autosaves to your browser, including the moment you switch away from the tab or app. **Continue** says which journey it resumes (the age, relics, where you are, and time played) and picks up on the exact line of dialogue you left. Up to three journeys share a browser: **Begin a new story** lets you choose an empty place (or replace a journey, after asking), and **Choose a journey** lists all three with that line. Close the game inside a sanctuary and **Continue** returns you to the start of the furthest chamber you reached, with the seals you broke still open and the guardians you defeated still down. To keep a journey safe or move it to another browser, export it as a small file from the pause menu and import it from the title screen; an imported journey takes the first empty place.
 
+### Graphics fidelity: Low to Ultra
+
+<img src="docs/media/improvements/round12/a-fidelity-village.jpg" alt="The same frame of Alder Village at Low, Medium, High, and Ultra" width="100%">
+
+One **Graphics fidelity** slider (Settings → Graphics, or <kbd>Esc</kbd> → Graphics; it can be set from the title too) has four steps. It applies at once and is saved with your other settings. Choose a step with a click or tap, <kbd>←</kbd> <kbd>→</kbd> on the keyboard, or the D-pad or left stick on a pad.
+
+| Step | What it draws |
+| --- | --- |
+| **Low** | For weak graphics: 85% resolution (at most 1×), no post-processing, 1024 shadows, and sparser distant grass. |
+| **Medium** (default) | Contact shadows and FXAA-smoothed edges, 2048 shadows, up to 1.5× resolution. Under sustained load it lowers the 3D resolution (never the text), then drops post-processing and distant foliage, and restores them when frames recover. |
+| **High** | A steady resolution up to 1.75×, full grass to 78 m, a soft bloom on bright light, a gentle colour grade, and 4× texture filtering. |
+| **Ultra** | 1.5× supersampling (capped at 2×), SMAA, 4096 shadows with a softer filter redrawn every frame, full-resolution contact shading with twice the samples, 8× texture filtering, grass to 96 m, denser hit sparks, a stronger bloom, and depth of field behind the title and story scenes. Its SMAA and depth of field download only when Ultra is first chosen. |
+
+A Visual quality choice from a build before the slider carries over (Performance → Low, Adaptive → Medium, High detail → High). Ultra is meant for strong GPUs; see [Status](#status-and-known-issues) for measured frame times. The trailer and the screenshots on this page were captured at Ultra.
+
+### Look and feel
+
+The sword leaves a pale, warm arc that fades toward the hilt and its tail, and coloured hit sparks glow amber (on High and Ultra they catch the bloom). Entering or leaving a sanctuary, returning to a checkpoint, a defeat, the age change, and starting or continuing a journey come up from a dark veil over about two thirds of a second instead of cutting, and the loading screen fades into the title. Every button lights on hover, dips when pressed, and shows the same gold focus ring for the keyboard and a pad; moving the focus plays a soft tick on the effects volume, and menus ease in as they open.
+
+### Accessibility and comfort
+
+Everything below is in **Settings**, which opens from the title as well as the pause menu, and is stored apart from your save.
+
+- **Reduced motion** turns off hit-stop pauses, camera shake, the damage flash, the scene-change veil, and sliding interface. It is on by default when your system asks for reduced motion.
+- **Larger interface text**, and **off-screen attack warnings** (an arrow on the screen edge points to a foe winding up out of view; on by default).
+- **Toggle shield**: one press raises the shield and the next lowers it, instead of holding (a dodge lowers it).
+- **Camera:** speed, inverted vertical look, distance (the mouse wheel and a two-finger pinch move it too), **Captured mouse look** (off by default), and **Camera follows** (the view trails behind you as you walk: Automatic, the default, follows with a gamepad or touch but not a keyboard and mouse; or Always, or Never).
+- **Sound:** master, effects, ambience, and music volume.
+- **Controls:** keyboard bindings for every action except Escape, the camera arrows, and the flute's 1 to 3; gamepad buttons for every play action except Start, which always pauses (menus keep A, B, and the D-pad, and the flute keeps A, X, Y); and button names (Automatic, Xbox, PlayStation, or Nintendo). Where the browser can tell (Chrome and Edge), keys are named as printed on your keyboard, so an AZERTY layout shows ZQSD.
+- **Touch** controls come in a left-handed layout and three sizes, and controller vibration can be turned off.
+- Every menu works with the keyboard alone, and **Full screen** is on the title and in the pause menu wherever the browser allows it.
+
+### Input
+
+Keyboard and mouse, a keyboard alone, standard-layout gamepads, and touch can each play the whole campaign. On-screen hints, prompts, and tutorial lines follow whichever you used last; the full table is under [How to play](#how-to-play). Gamepad and touch support were checked with synthetic input in a headless browser, not on physical controllers, phones, or tablets.
+
 ## Content overview
 
 Spoiler-light.
@@ -125,10 +187,11 @@ Spoiler-light.
 - **7 sanctuaries**, each with a puzzle chamber, a four-guardian hall, and a warden arena. Every hall and arena has its own layout of cover and obstacles, and every hall hides an alcove behind a cracked wall.
 - **16 story scenes**, one meaningful choice, and two variations of the reunion and the ending.
 - **Optional:** 6 treasure chests, 3 wandering lights (heart charm reward), 7 hidden carvings, a sword upgrade, and campfire healing.
-- **Graphics fidelity:** one slider, Low, Medium (the default), High, and Ultra (Settings → Graphics, or <kbd>Esc</kbd> → Graphics). Low skips post-processing for weak hardware; Medium lowers 3D resolution under load; High adds a soft glow on bright light and a gentle colour grade; Ultra adds supersampling, SMAA, finer soft shadows refreshed every frame, full-resolution contact shading, more grass and sparks, and depth of field behind the title and story scenes. A Visual quality choice from an older build carries over.
-- **Settings** (<kbd>Esc</kbd> → Settings): graphics fidelity; master, effects, ambience, and music volume; camera speed, inverted vertical camera, captured mouse look (off by default), camera distance (the mouse wheel and a two-finger pinch move it too), and camera follows (the view trails behind you as you walk: Automatic, the default, follows with a gamepad or touch but not a keyboard and mouse; or Always, or Never); reduced motion (no hit-stop pauses, camera shake, damage flash, or sliding interface; on by default when your system asks for reduced motion); larger interface text; off-screen attack warnings (an arrow on the screen edge points to a foe winding up out of view; on by default); toggle shield (press to raise and lower instead of holding; a dodge lowers it); keyboard bindings for every action except Escape, the camera arrows, and the flute's 1 to 3; and gamepad buttons for every play action except Start, which always pauses (menus keep A, B, and the D-pad, and the flute keeps A, X, Y); and button names (Automatic, Xbox, PlayStation, or Nintendo). Where the browser can tell (Chrome and Edge), keys are named as printed on your keyboard, so an AZERTY layout shows ZQSD. Controller vibration can be turned off, and touch controls come in a left-handed layout and three sizes. Settings are stored apart from your save.
+- **Settings, graphics, accessibility, and input:** see [Features](#graphics-fidelity-low-to-ultra).
 
 ## Screenshots
+
+Captured at the Ultra graphics fidelity step on 8 October 2026 (`node tools/media/screenshots.mjs`).
 
 | | |
 | --- | --- |
@@ -138,24 +201,9 @@ Spoiler-light.
 | [![Star mirrors in the Glass Monastery](docs/media/screenshots/07-mirrors.jpg)](docs/media/screenshots/07-mirrors.jpg) | [![Crownfall in the second age](docs/media/screenshots/08-crownfall.jpg)](docs/media/screenshots/08-crownfall.jpg) |
 | [![Map of the kingdom](docs/media/screenshots/09-map.jpg)](docs/media/screenshots/09-map.jpg) | [![The promise before the crossing](docs/media/screenshots/10-promise.jpg)](docs/media/screenshots/10-promise.jpg) |
 
-## Play it
-
-1. Download **`the-bell-of-ages-web-v0.1.0.zip`** from the [latest release](https://github.com/nearbycoder/Ocarina/releases/latest).
-2. Unzip it and serve the folder with any static file server. Browsers block ES modules from `file://`, so opening `index.html` directly will not work:
-
-   ```sh
-   npx serve the-bell-of-ages        # or: python3 -m http.server --directory the-bell-of-ages
-   ```
-
-3. Open the printed address in a browser with **WebGL 2** (current Chrome, Edge, Firefox, or Safari). A desktop is recommended; phone performance hasn't been measured.
-
-The build is plain static files with relative asset URLs, so it can also be hosted on any web host, at the site root or in a subfolder.
-
-**Hosted build (not live yet).** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the game, and publishes `dist/` to GitHub Pages. It only runs when started by hand, and it has not been run, so there is no hosted build at the moment. To publish, enable Pages with **GitHub Actions** as the source (Settings → Pages), then run **Deploy web build to GitHub Pages** from the Actions tab. The production build has been checked when served from a `/Ocarina/` subfolder.
-
 ## Build from source
 
-Requirements: **Node.js 22+** and npm. You only need [Blender 4.5 LTS](https://www.blender.org/) to regenerate the 3D models; the compressed model pack is already committed.
+Requirements: **Node.js 22.12+** and npm. You only need [Blender 4.5 LTS](https://www.blender.org/) to regenerate the 3D models; the compressed model pack is already committed.
 
 ```sh
 npm install
@@ -191,7 +239,7 @@ node tools/media/trailer.mjs all        # capture beats → render score → ass
 node tools/media/teaser.mjs             # poster frame + docs/media/teaser.gif
 ```
 
-The capture harness runs the game under Playwright's fake clock, so every frame advances the simulation by exactly 1/30 s however long rendering takes. It records the game's own Web Audio output through an `OfflineAudioContext` and stages each beat through the dev-only debug API. Set `BELL_URL` if the dev server isn't on port 5174. ffmpeg and ImageMagick are required.
+The capture harness runs the game under Playwright's fake clock, so every frame advances the simulation by exactly 1/30 s however long rendering takes. That is why it can record at **Ultra** (the default; set `BELL_FIDELITY` to `low`, `medium`, or `high` for another step) without dropping frames, as an offline render would. It records the game's own Web Audio output through an `OfflineAudioContext` and stages each beat through the dev-only debug API, clearing the scene-change veil at its own cuts. `node tools/media/trailer.mjs capture <beat> --preview` writes a contact sheet of one beat to `.capture/preview/`. Set `BELL_URL` if the dev server isn't on port 5174. ffmpeg and ImageMagick are required.
 
 ## Project structure
 
@@ -259,6 +307,8 @@ Design, code, story, Blender models, and audio synthesis: **[nearbycoder](https:
 ## Status and known issues
 
 The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from the opening to the epilogue. It is not a finished commercial game. Honestly:
+
+- **The release is behind the code.** The v0.1.0 download is the launch build of 4 October 2026; the twelve improvement rounds since are on `main` only, and there is no hosted build. Build from source to play today's version (see [Play it](#play-it)).
 
 - **Short dungeons on one spine.** All seven sanctuaries still follow the same three chambers in a straight line: puzzle, guardian hall, then warden arena. Halls and arenas have their own cover, obstacles, and guardian mix, the wardens fight differently, and each hall now hides one optional alcove behind a cracked wall. There are still no keys, shortcuts, or rooms you must choose between. A full playthrough is short.
 - **One enemy model.** All three guardian kinds and all seven wardens use a single Blender model, reshaped with scale, accessories, and tint. Behavior differs (melee, lunge, thrown stone, and the wardens' signature attacks), but none has unique sculpted art or animation, and health and damage stay on one scale.
