@@ -10,6 +10,7 @@ import {
   blockable,
   chargeEnd,
   chooseWardenMove,
+  edgeOpacity,
   laneDistance,
   ringCrossed,
   signatureCooldown,
@@ -115,5 +116,17 @@ describe("guardian kinds", () => {
     const formations = DUNGEONS.map((d) => HALL_KINDS[d.id].join());
     expect(new Set(formations).size).toBe(DUNGEONS.length);
     expect(FIELD_KINDS).toHaveLength(12);
+  });
+});
+
+describe("warning outlines", () => {
+  it("come and go with the mark, stronger but capped", () => {
+    expect(edgeOpacity(0)).toBe(0);
+    expect(edgeOpacity(-0.2)).toBe(0);
+    for (const o of [0.13, 0.2, 0.35])
+      expect(edgeOpacity(o)).toBeGreaterThan(o);
+    expect(edgeOpacity(0.35)).toBeCloseTo(0.63);
+    expect(edgeOpacity(0.75)).toBe(0.8);
+    expect(edgeOpacity(1)).toBe(0.8);
   });
 });

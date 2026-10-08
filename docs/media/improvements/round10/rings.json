@@ -1,0 +1,20 @@
+{
+  "grass": {
+    "pixels": 8557,
+    "median": 1.43,
+    "p90": 2.5,
+    "strong": 3926
+  },
+  "saffron": {
+    "pixels": 6736,
+    "median": 1.13,
+    "p90": 2.55,
+    "strong": 2943
+  },
+  "frost": {
+    "pixels": 5992,
+    "median": 1.29,
+    "p90": 2.42,
+    "strong": 2600
+  }
+}

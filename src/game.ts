@@ -12,6 +12,7 @@ import {
 } from "./combat";
 import { WorldRenderer } from "./rendering";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import {
   DUNGEONS,
   JOURNEYS,
@@ -62,6 +63,7 @@ import {
   blockable,
   chargeEnd,
   chooseWardenMove,
+  edgeOpacity,
   laneDistance,
   ringCrossed,
   signatureCooldown,
@@ -190,14 +192,89 @@ interface Enemy {
   /** Height of the top of the model above its feet, for the lock marker. */
   top: number;
 }
+/** Thin rings, [inner, outer] radius pairs, merged into one flat shape. */
+function bands(pairs: number[][], segments: number, flat = true) {
+  const g = mergeGeometries(
+    pairs.map(([a, b]) => new T.RingGeometry(a, b, segments)),
+  )!;
+  return flat ? g.rotateX(-Math.PI / 2) : g;
+}
+/** A frame around the unit lane: two long sides and two ends. */
+function laneFrame() {
+  const strip = (w: number, d: number, x: number, z: number) =>
+    new T.PlaneGeometry(w, d).rotateX(-Math.PI / 2).translate(x, 0, z);
+  return mergeGeometries([
+    strip(0.12, 1.08, -0.56, 0),
+    strip(0.12, 1.08, 0.56, 0),
+    strip(1, 0.04, 0, -0.52),
+    strip(1, 0.04, 0, 0.52),
+  ])!;
+}
 // Telegraph shapes are shared; each enemy owns only its fading materials.
 const MARK = {
   plane: new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
   ring: new T.RingGeometry(0.9, 1, 56).rotateX(-Math.PI / 2),
   disc: new T.CircleGeometry(1, 40).rotateX(-Math.PI / 2),
   stone: new T.IcosahedronGeometry(0.32, 1),
+  // Dark outlines just outside each golden mark (the slam rings are built
+  // upright, then laid flat by their mesh).
+  planeEdge: laneFrame(),
+  ringEdge: bands(
+    [
+      [0.86, 0.9],
+      [1, 1.04],
+    ],
+    56,
+  ),
+  discEdge: bands([[1, 1.09]], 40),
+  slamEdge: bands(
+    [
+      [1.56, 1.7],
+      [2, 2.14],
+    ],
+    40,
+    false,
+  ),
+  wardenSlamEdge: bands(
+    [
+      [3.44, 3.6],
+      [4, 4.16],
+    ],
+    40,
+    false,
+  ),
 };
-function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
+/** Outlines a golden mark; the outline fades with it (see setMarkOpacity). */
+function markEdge(geometry: T.BufferGeometry, mark: T.Mesh) {
+  const edge = new T.Mesh(
+    geometry,
+    new T.MeshBasicMaterial({
+      color: "#1e1309",
+      transparent: true,
+      opacity: 0,
+      side: T.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  edge.name = "edge";
+  edge.userData.sharedGeometry = true;
+  edge.userData.skipAO = true;
+  edge.renderOrder = 1;
+  mark.add(edge);
+}
+/** Fades a golden mark and its dark outline together. */
+function setMarkOpacity(mark: T.Mesh, opacity: number) {
+  (mark.material as T.MeshBasicMaterial).opacity = opacity;
+  const edge = mark.getObjectByName("edge") as T.Mesh | undefined;
+  if (edge)
+    (edge.material as T.MeshBasicMaterial).opacity = edgeOpacity(opacity);
+}
+function markMesh(
+  geometry: T.BufferGeometry,
+  edge: T.BufferGeometry | null,
+  color: string,
+  parent: T.Group,
+) {
   const m = new T.Mesh(
     geometry,
     new T.MeshBasicMaterial({
@@ -212,6 +289,7 @@ function markMesh(geometry: T.BufferGeometry, color: string, parent: T.Group) {
   m.userData.skipAO = true;
   m.renderOrder = 2;
   m.visible = false;
+  if (edge) markEdge(edge, m);
   parent.add(m);
   return m;
 }
@@ -1086,6 +1164,8 @@ export class Game {
     );
     indicator.rotation.x = -Math.PI / 2;
     indicator.position.y = 0.08;
+    indicator.renderOrder = 2;
+    markEdge(boss ? MARK.wardenSlamEdge : MARK.slamEdge, indicator);
     g.add(indicator);
     batchStatic(g, orb ? [indicator, orb] : [indicator]);
     const top = new T.Box3().setFromObject(g).max.y;
@@ -1096,16 +1176,20 @@ export class Game {
     if (boss) kind = "guardian";
     const lane =
       boss || kind === "skirmisher"
-        ? markMesh(MARK.plane, "#e7c27a", marks)
+        ? markMesh(MARK.plane, MARK.planeEdge, "#e7c27a", marks)
         : null;
-    const wave = boss ? markMesh(MARK.ring, "#f0a35e", marks) : null;
+    const wave = boss
+      ? markMesh(MARK.ring, MARK.ringEdge, "#f0a35e", marks)
+      : null;
     const spots = boss
-      ? [0, 1, 2].map(() => markMesh(MARK.disc, "#e9b26c", marks))
+      ? [0, 1, 2].map(() =>
+          markMesh(MARK.disc, MARK.discEdge, "#e9b26c", marks),
+        )
       : kind === "warder"
-        ? [markMesh(MARK.disc, "#e9b26c", marks)]
+        ? [markMesh(MARK.disc, MARK.discEdge, "#e9b26c", marks)]
         : [];
     const stone =
-      kind === "warder" ? markMesh(MARK.stone, "#cdbb94", marks) : null;
+      kind === "warder" ? markMesh(MARK.stone, null, "#cdbb94", marks) : null;
     const hp = boss
       ? this.save.age === "adult"
         ? 24
@@ -3027,15 +3111,12 @@ export class Game {
     const total = this.windupTime(e),
       pulse = 0.35 + Math.sin(this.elapsed * 16) * 0.22,
       grow = 1 - Math.max(0, e.timer) / total;
-    if (e.move === "slam")
-      (e.indicator.material as T.MeshBasicMaterial).opacity = pulse;
+    if (e.move === "slam") setMarkOpacity(e.indicator, pulse);
     else if (e.move === "charge" && e.lane)
-      (e.lane.material as T.MeshBasicMaterial).opacity = 0.18 + grow * 0.3;
-    else if (e.move === "shockwave" && e.wave)
-      (e.wave.material as T.MeshBasicMaterial).opacity = pulse;
+      setMarkOpacity(e.lane, 0.18 + grow * 0.3);
+    else if (e.move === "shockwave" && e.wave) setMarkOpacity(e.wave, pulse);
     else if (e.move === "volley")
-      for (const spot of e.spots)
-        (spot.material as T.MeshBasicMaterial).opacity = 0.15 + grow * 0.4;
+      for (const spot of e.spots) setMarkOpacity(spot, 0.15 + grow * 0.4);
     e.mesh.rotation.x = -0.16 * grow;
     // A warder's stone arcs toward the circle over the last half second.
     if (e.stone && e.move === "volley") {
@@ -3119,7 +3200,7 @@ export class Game {
         e.waveRadius + (MOVES.shockwave.reach / MOVES.shockwave.travel) * dt,
       );
       e.wave.scale.setScalar(e.waveRadius);
-      (e.wave.material as T.MeshBasicMaterial).opacity = 0.75;
+      setMarkOpacity(e.wave, 0.75);
       if (
         !e.struck &&
         ringCrossed(Math.hypot(p.x - e.x, p.z - e.z), from, e.waveRadius)
@@ -3163,7 +3244,7 @@ export class Game {
     );
   }
   clearMarks(e: Enemy) {
-    (e.indicator.material as T.MeshBasicMaterial).opacity = 0;
+    setMarkOpacity(e.indicator, 0);
     for (const m of e.marks.children) m.visible = false;
   }
   private shake = 0;

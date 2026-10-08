@@ -86,6 +86,10 @@ await inPage(
   async () => (await foeQA.layouts()).length,
 );
 await inPage("alcoves", async () => (await foeQA.alcoves()).length);
+await inPage(
+  "foes: warning outlines",
+  async () => (await foeQA.edges()).length,
+);
 await inPage("lock-on", async () => (await lockQA.run()).length);
 await inPage("threat warnings", async () => (await lockQA.threats()).length);
 await inPage("map discoveries", async () => (await mapQA.run()).length);

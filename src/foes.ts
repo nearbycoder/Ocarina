@@ -224,3 +224,11 @@ export const FIELD_KINDS: FoeKind[] = [
   "warder",
   "guardian",
 ];
+/**
+ * The opacity of a ground warning's dark outline: it comes and goes with the
+ * golden mark but is stronger, so the mark reads on pale sand and snow as
+ * well as on grass.
+ */
+export function edgeOpacity(markOpacity: number) {
+  return Math.min(0.8, Math.max(0, markOpacity) * 1.8);
+}

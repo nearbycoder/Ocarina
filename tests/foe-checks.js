@@ -528,5 +528,105 @@ window.foeQA = (() => {
     game.save.carvings = before;
     return results;
   }
-  return { wardens, kinds, layouts, alcoves, results, arena, attack, hall };
+  // Every ground warning has a dark outline that fades in and out with it.
+  async function edges() {
+    const opacity = (m) => m.material.opacity;
+    const outline = (m) => m.getObjectByName("edge");
+    // An outline is present, at least as strong as its mark, and in step.
+    const lit = (m) => {
+      const o = outline(m);
+      return (
+        m.visible !== false &&
+        opacity(m) > 0.05 &&
+        !!o &&
+        Math.abs(opacity(o) - Math.min(0.8, opacity(m) * 1.8)) < 1e-6
+      );
+    };
+    const dark = (m) =>
+      !m.visible || (opacity(m) === 0 && opacity(outline(m)) === 0);
+    // A guardian's slam (0.8 s): lit halfway through, gone once it lands.
+    const slam = () => {
+      hall("root", 0, 0, -5);
+      api.debug.teleport(0, -3.4);
+      api.debug.face(0);
+      api.debug.advance(0.05);
+    };
+    slam();
+    let g = game.enemies[0];
+    assert(
+      g.kind === "guardian" && g.state === "windup" && g.move === "slam",
+      "Edges: a guardian in reach winds up a slam",
+    );
+    api.debug.advance(0.35);
+    assert(
+      lit(g.indicator),
+      "Edges: the slam ring has a dark outline in step with it",
+    );
+    api.debug.advance(0.7);
+    assert(dark(g.indicator), "Edges: the outline goes when the slam lands");
+    // A guarded slam staggers the guardian and clears both at once.
+    slam();
+    shield(true);
+    g = game.enemies[0];
+    api.debug.advance(0.35);
+    assert(lit(g.indicator), "Edges: lit while the guarded slam winds up");
+    api.debug.advance(0.5);
+    shield(false);
+    assert(
+      foe(0).state === "stagger" && dark(g.indicator),
+      "Edges: a guarded slam staggers and clears the outline",
+    );
+    // A warden's lane, wave, and three circles.
+    arena("crown");
+    const w = game.enemies[4];
+    for (const [move, marks] of [
+      ["charge", () => [w.lane]],
+      ["shockwave", () => [w.wave]],
+      ["volley", () => w.spots],
+    ]) {
+      api.debug.placeEnemy(4, 0, -40);
+      api.debug.teleport(0, -33);
+      game.invulnerable = 0;
+      api.debug.setHealth(12);
+      api.debug.forceMove(4, move);
+      api.debug.advance(0.05 + WINDUP[move] / 2);
+      assert(
+        w.state === "windup" && marks().every(lit),
+        `Edges: the warden's ${move} mark has an outline in step with it`,
+      );
+      api.debug.advance(WINDUP[move] / 2 + STRIKE[move] + 0.6);
+      assert(
+        marks().every(dark),
+        `Edges: the ${move} outline goes with its mark`,
+      );
+    }
+    // A warder's circle.
+    hall("ember", 2, 0, -10);
+    api.debug.teleport(0, -2);
+    api.debug.face(0);
+    api.debug.advance(0.6);
+    const warder = game.enemies[2];
+    assert(
+      warder.move === "volley" && lit(warder.spots[0]),
+      "Edges: a warder's circle has an outline in step with it",
+    );
+    api.debug.advance(1.2);
+    assert(
+      dark(warder.spots[0]),
+      "Edges: the warder's outline goes with its circle",
+    );
+    api.debug.setHealth(12);
+    return results;
+  }
+  return {
+    wardens,
+    kinds,
+    layouts,
+    alcoves,
+    edges,
+    results,
+    arena,
+    attack,
+    hall,
+  };
 })();
