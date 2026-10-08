@@ -7,6 +7,7 @@ import {
   sideTarget,
   FOLLOW_SHARE,
   followTurn,
+  heroOpacity,
 } from "../src/lockon";
 
 describe("lock-on choices", () => {
@@ -151,5 +152,22 @@ describe("following camera", () => {
     expect(Math.abs(followTurn(0.1, 0, 0, 10))).toBeLessThan(
       Math.abs(followTurn(0.1, 0, 0, 5)),
     );
+  });
+});
+
+describe("Alder fades when the camera is pushed close", () => {
+  it("stays solid at the usual distances and fades to a quarter at 1 m", () => {
+    for (const d of [2.2, 3, 4.5, 7.6, 12]) expect(heroOpacity(d)).toBe(1);
+    expect(heroOpacity(1)).toBeCloseTo(0.25);
+    expect(heroOpacity(0.7)).toBeCloseTo(0.25);
+    // Smoothly and steadily in between.
+    let last = heroOpacity(1);
+    for (let d = 1; d <= 2.2; d += 0.05) {
+      const o = heroOpacity(d);
+      expect(o).toBeGreaterThanOrEqual(last);
+      expect(o - last).toBeLessThan(0.06);
+      last = o;
+    }
+    expect(heroOpacity(1.6)).toBeCloseTo(0.625, 2);
   });
 });

@@ -328,5 +328,119 @@ window.cameraQA = (() => {
     }
     return results;
   }
-  return { run, follow };
+  // Alder fades when something behind the camera pulls it in close.
+  const reach = () => game.camera.position.distanceTo(game.cameraFocus());
+  const heroMaterials = () => {
+    const list = [];
+    game.hero.group.traverse(
+      (o) => o.isMesh && !o.userData.depthOnly && list.push(o.material),
+    );
+    return list;
+  };
+  // The direction, at (x, z), that brings the camera closest to Alder.
+  const crowd = (x, z) => {
+    api.debug.teleport(x, z);
+    let best = { yaw: 0, d: Infinity };
+    for (let k = 0; k < 64; k++) {
+      game.yaw = (k / 64) * 2 * Math.PI;
+      const f = game.cameraFocus();
+      const d = game.cameraDestination(f).distanceTo(f);
+      if (d > 0.9 && d < best.d) best = { yaw: game.yaw, d };
+    }
+    game.yaw = best.yaw;
+    game.snapCamera();
+    api.debug.advance(0.1);
+    return best.d;
+  };
+  const faded = (where) => {
+    const d = reach(),
+      ms = heroMaterials();
+    assert(
+      d < 1.5,
+      `${where}: the wall pulls the camera in to ${d.toFixed(2)} m`,
+    );
+    assert(
+      game.hero.group.visible &&
+        ms.every((m) => m.transparent && m.opacity < 0.6) &&
+        game.hero.group.userData.skipAO,
+      `${where}: Alder is drawn faded (${ms[0].opacity.toFixed(2)}), out of the contact shading`,
+    );
+  };
+  const solid = (where) => {
+    const ms = heroMaterials();
+    assert(
+      reach() > 2.2 &&
+        ms.every((m) => !m.transparent && m.opacity === 1) &&
+        !game.hero.group.userData.skipAO,
+      `${where}: with the camera back at ${reach().toFixed(2)} m, Alder is solid again`,
+    );
+  };
+  async function fade() {
+    results.length = 0;
+    const at = { ...api.getState().position };
+    try {
+      game.loadWorld();
+      bellQA.close();
+      api.debug.teleport(0, 57);
+      game.yaw = 0;
+      game.snapCamera();
+      api.debug.advance(0.2);
+      solid("In the open");
+      // Beside the orchard cottage, where the walker met it.
+      crowd(9.5, 61.5);
+      faded("Backed against a cottage");
+      // Only Alder fades: Mira and her materials are untouched.
+      const mira = [];
+      game.world.group.traverse(
+        (o) =>
+          o.isMesh &&
+          /Mira/.test(o.parent?.name + o.name) &&
+          mira.push(o.material),
+      );
+      const mine = new Set(heroMaterials());
+      assert(
+        mira.length > 0 &&
+          mira.every((m) => m.opacity === 1 && !m.transparent && !mine.has(m)),
+        `Mira's ${mira.length} surfaces stay solid and aren't shared with Alder`,
+      );
+      // Turn the camera away from the wall: it eases back out and he's solid.
+      game.yaw += Math.PI;
+      api.debug.advance(1.5);
+      solid("Turned away from the cottage");
+      // A sanctuary chamber, wall behind the camera.
+      api.debug.enter("root");
+      let d = 0;
+      for (const [x, z] of [
+        [-10, 20],
+        [10, 20],
+        [-10, 0],
+        [10, 0],
+        [-8, -30],
+        [8, -30],
+      ]) {
+        if (game.blocked(x, z)) continue;
+        d = crowd(x, z);
+        if (d < 1.4) break;
+      }
+      faded("In the Rootbound Hollow, by a wall");
+      game.yaw += Math.PI;
+      api.debug.advance(1.5);
+      solid("In the Rootbound Hollow, turned away");
+      // A new hero (growing up, or a fresh journey) starts solid.
+      crowd(...[game.hero.group.position.x, game.hero.group.position.z]);
+      game.replaceHero();
+      assert(
+        heroMaterials().every((m) => !m.transparent && m.opacity === 1) &&
+          game.heroFade === 1,
+        "A replaced hero starts solid",
+      );
+    } finally {
+      game.replaceHero();
+      game.loadWorld();
+      api.debug.teleport(at.x, at.z);
+      game.refreshHUD();
+    }
+    return results.splice(0);
+  }
+  return { run, follow, fade };
 })();

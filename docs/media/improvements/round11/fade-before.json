@@ -1,0 +1,12 @@
+{
+  "village": {
+    "cameraReach": 1.24,
+    "covered": 0.361,
+    "meanChange": 37.7
+  },
+  "hollow": {
+    "cameraReach": 0.94,
+    "covered": 0.356,
+    "meanChange": 26.8
+  }
+}

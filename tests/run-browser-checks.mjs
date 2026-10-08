@@ -169,6 +169,10 @@ await inPage(
   async () => (await cameraQA.follow()).length,
 );
 await inPage(
+  "camera: Alder fades close up",
+  async () => (await cameraQA.fade()).length,
+);
+await inPage(
   "gamepad: rumble and pause",
   async () => (await rumbleQA.run()).length,
 );

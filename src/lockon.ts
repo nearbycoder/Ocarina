@@ -116,3 +116,15 @@ export function followTurn(
   const sideways = dx * Math.cos(yaw) - dz * Math.sin(yaw);
   return (-sideways / Math.max(1, distance)) * FOLLOW_SHARE;
 }
+
+/** Below this camera distance (m) from his head, Alder is hidden. */
+export const HERO_HIDDEN = 0.62;
+/**
+ * How opaque Alder is drawn when something behind the camera has pulled it
+ * in to `distance` metres from his head: solid from 2.2 m out, fading to a
+ * quarter at 1 m, so the way ahead shows through him.
+ */
+export function heroOpacity(distance: number) {
+  const t = Math.min(1, Math.max(0, (distance - 1) / 1.2));
+  return 0.25 + 0.75 * t * t * (3 - 2 * t);
+}

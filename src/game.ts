@@ -143,6 +143,8 @@ import { UI } from "./ui";
 import { Sparks } from "./sparks";
 import {
   followTurn,
+  heroOpacity,
+  HERO_HIDDEN,
   nearestTarget,
   screenAnchor,
   shortestTurn,
@@ -332,6 +334,8 @@ export class Game {
   saveTime = 0;
   region = "Alder Village";
   yaw = 0;
+  /** How opaque Alder is drawn; below 1 when the camera is pushed close. */
+  heroFade = 1;
   /** Where the compass points, refreshed with the HUD. */
   destination: Destination | null = null;
   compassAngle = NaN;
@@ -954,11 +958,60 @@ export class Game {
     this.hero.group.traverse((o) => {
       if (o instanceof T.Mesh && !o.userData.sharedGeometry)
         o.geometry.dispose();
+      if (o instanceof T.Mesh && o.userData.ownMaterial)
+        (o.material as T.Material).dispose();
     });
+    this.heroFade = 1;
     this.hero.group.removeFromParent();
     this.hero = character(this.save.age === "adult");
     this.scene.add(this.hero.group);
   }
+  /**
+   * Draws Alder at `opacity`. His materials are shared with the asset
+   * library, so the first fade gives him his own copies; foes and other
+   * characters never fade. Faded, each part first writes its depth unseen,
+   * then its colour, so only his outer surface shows (never the inside of
+   * his head or pack), and he stays out of the contact shading.
+   */
+  fadeHero(opacity: number) {
+    if (
+      Math.abs(opacity - this.heroFade) < 0.01 &&
+      (opacity === 1) === (this.heroFade === 1)
+    )
+      return;
+    const solid = opacity >= 1;
+    const parts: T.Mesh[] = [];
+    this.hero.group.traverse((o) => {
+      if (o instanceof T.Mesh && !o.userData.depthOnly) parts.push(o);
+    });
+    for (const o of parts) {
+      if (Array.isArray(o.material)) continue;
+      if (!o.userData.ownMaterial) {
+        if (solid) continue;
+        o.material = (o.material as T.Material).clone();
+        o.userData.ownMaterial = true;
+        const depth = new T.Mesh(o.geometry, this.depthOnly);
+        depth.userData = { depthOnly: true, sharedGeometry: true };
+        depth.renderOrder = 999;
+        o.add(depth);
+      }
+      const m = o.material as T.Material;
+      if (m.transparent !== !solid) {
+        m.transparent = !solid;
+        m.needsUpdate = true;
+      }
+      m.opacity = solid ? 1 : opacity;
+      o.renderOrder = solid ? 0 : 1000;
+      for (const c of o.children) if (c.userData.depthOnly) c.visible = !solid;
+    }
+    this.hero.group.userData.skipAO = !solid;
+    this.heroFade = opacity;
+  }
+  /** Writes depth only; drawn just before a faded Alder's own surfaces. */
+  private depthOnly = new T.MeshBasicMaterial({
+    colorWrite: false,
+    transparent: true,
+  });
   loadWorld(d?: Dungeon) {
     if (this.world) disposeWorld(this.world);
     this.enemies.forEach((e) => {
@@ -3522,7 +3575,11 @@ export class Game {
       this.camera.position.add(this.shakeOffset);
       this.shake = Math.max(0, this.shake - dt * 2.4);
     }
-    this.hero.group.visible = this.camera.position.distanceTo(focus) > 0.62;
+    // A wall behind the camera pulls it in; then Alder fades so the way
+    // ahead shows through him, and very close he's hidden.
+    const reach = this.camera.position.distanceTo(focus);
+    this.hero.group.visible = reach > HERO_HIDDEN;
+    this.fadeHero(heroOpacity(reach));
     this.sun.position.set(p.x - 45, 70, p.z - 55);
     this.sun.target.position.set(p.x, 0, p.z);
   }
