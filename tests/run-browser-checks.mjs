@@ -209,6 +209,136 @@ await page.close();
 // Captured mouse look (opt-in): real clicks and button presses; the
 // movement itself is synthetic, because headless Chromium's movementX under
 // pointer lock isn't real mouse travel.
+// The opening with input alone: from the title, real clicks on the menu and
+// the story, then real key presses that steer at the compass arrow as drawn
+// on screen, E when its prompt shows at the destination, through the first
+// sanctuary's door. The page's clock is stepped (debug.advance) so the walk
+// is the same under load; nothing else uses the debug tools.
+await run("opening: input alone", async () => {
+  const p = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  p.on("pageerror", (e) => errors.push(e.message));
+  await p.goto(URL);
+  await p.waitForFunction(() => window.__BELL_OF_AGES__?.debug, null, {
+    timeout: 60000,
+  });
+  const step = (s) =>
+    p.evaluate((s) => window.__BELL_OF_AGES__.debug.advance(s), s);
+  // What a player sees: the arrow's turn, the compass line, the prompt.
+  const look = () =>
+    p.evaluate(() => {
+      const arrow = document.getElementById("compass-arrow");
+      const prompt = document.getElementById("prompt");
+      const s = window.__BELL_OF_AGES__.getState();
+      return {
+        angle: arrow.hidden
+          ? null
+          : parseFloat(
+              /rotate\(([-\d.e]+)rad\)/.exec(arrow.style.transform)?.[1],
+            ),
+        compass: document.getElementById("compass-text").textContent,
+        prompt: prompt.hidden ? "" : prompt.textContent,
+        panel: s.panel,
+        dungeon: s.dungeon,
+      };
+    });
+  // Pages through a story scene or a conversation with real clicks.
+  const read = async () => {
+    for (let n = 0; n < 40 && (await look()).panel; n++) {
+      await p
+        .locator(
+          '[data-action="story-next"], [data-action="promise-home"], .dialogue-next',
+        )
+        .first()
+        .click();
+      await step(0.05);
+    }
+  };
+  const legs = [];
+  try {
+    await p.click('[data-action="new"]');
+    await step(0);
+    await read();
+    const held = new Set();
+    const hold = async (codes) => {
+      for (const c of [...held])
+        if (!codes.includes(c)) {
+          await p.keyboard.up(c);
+          held.delete(c);
+        }
+      for (const c of codes)
+        if (!held.has(c)) {
+          await p.keyboard.down(c);
+          held.add(c);
+        }
+    };
+    const keysFor = (a) => {
+      const n = Math.round(
+        Math.atan2(Math.sin(a), Math.cos(a)) / (Math.PI / 4),
+      );
+      const keys = {
+        0: ["KeyW"],
+        1: ["KeyW", "KeyD"],
+        2: ["KeyD"],
+        3: ["KeyS", "KeyD"],
+        4: ["KeyS"],
+      }[Math.abs(n)];
+      return n < 0 ? keys.map((k) => (k === "KeyD" ? "KeyA" : k)) : keys;
+    };
+    let t = 0,
+      legStart = 0,
+      name = "",
+      best = Infinity,
+      since = 0,
+      detour = -1,
+      side = 1;
+    while (t < 300) {
+      const v = await look();
+      if (v.dungeon) {
+        legs.push(
+          `${name} ${(t - legStart).toFixed(1)} s, then in ${v.dungeon}`,
+        );
+        break;
+      }
+      const [here, count] = v.compass.split(" · ");
+      if (here !== name) {
+        if (name) legs.push(`${name} ${(t - legStart).toFixed(1)} s`);
+        [name, legStart, best, since] = [here, t, Infinity, t];
+      }
+      const paces = parseInt(count);
+      if (v.prompt && paces <= 3) {
+        await hold([]);
+        await p.keyboard.press("KeyE");
+        await step(0.1);
+        await read();
+        t += 0.1;
+        continue;
+      }
+      if (v.angle === null)
+        throw new Error(`No arrow to follow (${v.compass})`);
+      if (paces < best - 0.5) [best, since] = [paces, t];
+      if (t - since > 1.5) {
+        detour = t + 1.2;
+        since = detour;
+        side = -side;
+        best = paces;
+      }
+      await hold(keysFor(v.angle + (t < detour ? (side * Math.PI) / 2 : 0)));
+      await step(0.1);
+      t += 0.1;
+    }
+    await hold([]);
+    const end = await look();
+    if (!end.dungeon)
+      throw new Error(
+        `The opening stops after ${t.toFixed(0)} s at "${end.compass}" (${legs.join("; ")})`,
+      );
+    for (const leg of legs) console.log(`  ${leg}`);
+    return legs.length;
+  } finally {
+    await p.close();
+  }
+});
+
 await run("mouse: captured look", async () => {
   let count = 0;
   const check = (ok, message) => {
