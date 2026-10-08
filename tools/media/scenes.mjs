@@ -45,6 +45,10 @@ export function setup(session, options) {
     g.loadWorld();
     if (o.dungeon) api.enter(o.dungeon);
     else api.teleport(s.position.x, s.position.z);
+    // A cut in the trailer is the edit, not a scene change in play: clear the
+    // dark veil the game raises when the world reloads.
+    g.veilTime = 0;
+    g.drawVeil();
     g.yaw = o.yaw ?? 0;
     g.pitch = o.pitch ?? 0.26;
     g.distance = o.distance ?? 7.6;

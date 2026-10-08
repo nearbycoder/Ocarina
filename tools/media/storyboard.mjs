@@ -10,6 +10,11 @@ const up = (t, code) => at(t, (s) => s.key(code, false));
 const tap = (t, code) => at(t, (s) => s.tap(code));
 const act = (t, name) => at(t, (s) => s.action(name));
 const run = (t, fn, arg) => at(t, (s) => s.eval(fn, arg));
+/** Have the warden (enemy 4) begin one of its attacks on its next decision. */
+const warden = (t, move) =>
+  at(t, (s) =>
+    s.eval((m) => window.__BELL_OF_AGES__.debug.forceMove(4, m), move),
+  );
 
 /** Open a sanctuary at a given stage of its trial. */
 function dungeonStage(stage) {
@@ -144,7 +149,7 @@ export const BEATS = [
   },
   {
     id: "explore",
-    seconds: 7.8,
+    seconds: 6.9,
     transition: { type: "fade", duration: 0.5 },
     async setup(s) {
       await setup(s, { ...childReady, x: -2.2, z: 40, yaw: 0, facing: 0 });
@@ -161,7 +166,7 @@ export const BEATS = [
     },
     events: [
       down(0, "KeyW"),
-      at(2.6, async (s) => {
+      at(2.3, async (s) => {
         await setup(s, {
           ...childReady,
           x: -50,
@@ -182,7 +187,7 @@ export const BEATS = [
           },
         });
       }),
-      at(5.2, async (s) => {
+      at(4.6, async (s) => {
         await setup(s, {
           ...childReady,
           x: 96,
@@ -203,12 +208,12 @@ export const BEATS = [
           },
         });
       }),
-      up(7.7, "KeyW"),
+      up(6.8, "KeyW"),
     ],
     captions: [
       {
         at: 0.35,
-        until: 7.6,
+        until: 6.7,
         eyebrow: "Explore",
         title: "Wander a kingdom in two ages",
         sub: "Ten regions — Alder Village, the Whisperwood, Cinderpeak, Larkwater Coast, and the far frozen north.",
@@ -350,7 +355,7 @@ export const BEATS = [
   },
   {
     id: "flute",
-    seconds: 5.8,
+    seconds: 5.4,
     transition: { type: "fade", duration: 0.45 },
     async setup(s) {
       await setup(s, {
@@ -365,7 +370,7 @@ export const BEATS = [
     camera: {
       path: [
         [0, 4.5, 2.6, 20.5, 0, 2.2, 8],
-        [5.8, 2.6, 2.4, 20.8, 0, 2.6, 6],
+        [5.4, 2.6, 2.4, 20.8, 0, 2.6, 6],
       ],
     },
     events: [
@@ -377,7 +382,7 @@ export const BEATS = [
     captions: [
       {
         at: 0.3,
-        until: 5.7,
+        until: 5.3,
         eyebrow: "Play",
         title: "Your father’s reed flute",
         sub: "Three notes. Echo the melodies carved into sanctuary altars to open the way.",
@@ -565,8 +570,8 @@ export const BEATS = [
         await placeEnemy(s, 4, 0, -35.4);
         await s.direct({
           path: [
-            [0, 9.5, 2.6, -28.5, -1.5, 1.8, -34.5],
-            [2.1, 9.0, 2.8, -27.5, -1.8, 1.8, -34.5],
+            [0, 5.2, 2.8, -26.2, -1.2, 1.8, -34.5],
+            [2.1, 4.6, 3.0, -25.6, -1.5, 1.8, -34.5],
           ],
         });
       }),
@@ -607,6 +612,99 @@ export const BEATS = [
         eyebrow: "Conquer",
         title: "Break the seals. Face the wardens.",
         sub: "Clear each guardian chamber, then outlast a sanctuary’s warden in its arena.",
+      },
+    ],
+  },
+  {
+    id: "wardens",
+    seconds: 7.2,
+    transition: { type: "fade", duration: 0.45 },
+    async setup(s) {
+      await setup(s, { ...childReady, dungeon: "root", yaw: 0 });
+      await dungeonStage(2)(s);
+      await placeHero(s, 0.4, -29.6, 0);
+      await placeEnemy(s, 4, 0, -36);
+    },
+    mode: "hudlite",
+    camera: {
+      follow: {
+        with: 4,
+        weight: 0.4,
+        angle: 0.55,
+        spin: 0.05,
+        radius: 10,
+        height: 4.2,
+        look: 1.2,
+        lag: 4,
+      },
+    },
+    events: [
+      warden(0.1, "volley"),
+      down(0.75, "KeyA"),
+      tap(0.8, "Space"),
+      up(1.2, "KeyA"),
+      at(2.4, async (s) => {
+        await setup(s, {
+          ...childReady,
+          completed: ["root", "ember"],
+          dungeon: "tide",
+          yaw: 0,
+        });
+        await dungeonStage(2)(s);
+        await placeHero(s, 0.3, -29.4, 0);
+        await placeEnemy(s, 4, 0, -38);
+        await s.direct({
+          follow: {
+            with: 4,
+            weight: 0.4,
+            angle: -0.75,
+            spin: -0.04,
+            radius: 10.5,
+            height: 4.4,
+            look: 1.2,
+            lag: 4,
+          },
+        });
+      }),
+      warden(2.45, "charge"),
+      down(3.8, "KeyA"),
+      tap(3.85, "Space"),
+      up(4.25, "KeyA"),
+      at(4.8, async (s) => {
+        await setup(s, {
+          ...adultReady,
+          completed: ["root", "ember", "tide", "frost"],
+          dungeon: "sun",
+          yaw: 0,
+        });
+        await dungeonStage(2)(s);
+        await placeHero(s, 0.4, -31, 0);
+        await placeEnemy(s, 4, 0, -38);
+        await s.direct({
+          follow: {
+            with: 4,
+            weight: 0.35,
+            angle: 0.35,
+            spin: 0.04,
+            radius: 10.5,
+            height: 5,
+            look: 1.2,
+            lag: 4,
+          },
+        });
+      }),
+      warden(4.85, "shockwave"),
+      down(5.75, "KeyD"),
+      tap(5.8, "Space"),
+      up(6.3, "KeyD"),
+    ],
+    captions: [
+      {
+        at: 0.3,
+        until: 7.1,
+        eyebrow: "Survive",
+        title: "Every warden fights its own way",
+        sub: "Volleys, charges, and shockwaves, each marked on the ground before it lands.",
       },
     ],
   },
@@ -692,7 +790,7 @@ export const BEATS = [
   },
   {
     id: "adult",
-    seconds: 6.6,
+    seconds: 6.0,
     transition: { type: "fade", duration: 0.45 },
     async setup(s) {
       await setup(s, {
@@ -716,7 +814,7 @@ export const BEATS = [
     },
     events: [
       down(0, "KeyW"),
-      at(2.2, async (s) => {
+      at(2.0, async (s) => {
         await setup(s, {
           ...adultReady,
           completed: ["root", "ember", "tide", "frost"],
@@ -738,7 +836,7 @@ export const BEATS = [
           },
         });
       }),
-      at(4.4, async (s) => {
+      at(4.0, async (s) => {
         await setup(s, {
           ...adultReady,
           completed: ["root", "ember", "tide", "frost", "sun"],
@@ -760,33 +858,33 @@ export const BEATS = [
           },
         });
       }),
-      up(6.5, "KeyW"),
-      up(3.9, "KeyW"),
+      up(5.9, "KeyW"),
+      up(3.7, "KeyW"),
     ],
     captions: [
       {
         from: 0.3,
-        to: 6.5,
+        to: 5.9,
         at: 0.3,
-        until: 2.2,
+        until: 2.0,
         eyebrow: "Return",
         title: "A kingdom grown older",
         sub: "New sanctuaries wake in Frostveil Heights…",
       },
       {
         from: 0.3,
-        to: 6.5,
-        at: 2.2,
-        until: 4.4,
+        to: 5.9,
+        at: 2.0,
+        until: 4.0,
         eyebrow: "Return",
         title: "A kingdom grown older",
         sub: "…across the Saffron Wastes…",
       },
       {
         from: 0.3,
-        to: 6.5,
-        at: 4.4,
-        until: 6.5,
+        to: 5.9,
+        at: 4.0,
+        until: 5.9,
         eyebrow: "Return",
         title: "A kingdom grown older",
         sub: "…and deep in Mourning Fen.",
@@ -795,7 +893,7 @@ export const BEATS = [
   },
   {
     id: "discover",
-    seconds: 6.8,
+    seconds: 7.0,
     transition: { type: "fade", duration: 0.45 },
     async setup(s) {
       await setup(s, {
@@ -803,40 +901,78 @@ export const BEATS = [
         crystals: 52,
         fireflies: ["orchard"],
         x: 31,
-        z: 15.2,
+        z: 15.4,
         facing: 0,
         health: 4,
       });
     },
     mode: "hudlite",
     camera: {
-      path: [
-        [0, 27.9, 2.7, 19.6, 31, 0.9, 13],
-        [1.7, 28.4, 2.6, 19.9, 31, 0.9, 13],
-      ],
+      follow: {
+        angle: 2.35,
+        spin: 0.06,
+        radius: 4.8,
+        height: 1.9,
+        look: 0.7,
+        lag: 6,
+      },
     },
     events: [
       tap(0.4, "KeyE"),
       at(1.7, async (s) => {
         await setup(s, {
           ...childReady,
-          crystals: 75,
+          crystals: 72,
           fireflies: ["orchard"],
           x: -43,
-          z: 24.3,
+          z: 25.6,
           facing: 0,
           health: 6,
         });
         await removeEnemies(s, [0, 1]);
         await s.direct({
+          follow: {
+            angle: 0.75,
+            spin: 0.06,
+            radius: 5.2,
+            height: 1.8,
+            look: 1.0,
+            lag: 6,
+          },
+        });
+        await s.key("KeyW", true);
+      }),
+      up(2.25, "KeyW"),
+      at(3.4, async (s) => {
+        // A guardian hall with its guardians down, two blows already struck
+        // on the cracked wall: the third breaks it open.
+        await setup(s, {
+          ...childReady,
+          completed: ["root"],
+          dungeon: "ember",
+          yaw: 0,
+        });
+        await dungeonStage(1)(s);
+        await s.eval(() => {
+          const g = window.__game;
+          g.enemies
+            .filter((e) => !e.boss)
+            .forEach((e) => {
+              e.state = "dead";
+              e.mesh.visible = false;
+            });
+          g.crackHits = 2;
+        });
+        await placeHero(s, 16.1, -4, -Math.PI / 2);
+        await s.direct({
           path: [
-            [0, -46.6, 2.1, 26.2, -43, 1.6, 22],
-            [1.7, -46.2, 2.0, 26.6, -43, 1.6, 22],
+            [0, 12.4, 2.3, -0.4, 17.6, 1.5, -4.6],
+            [1.8, 12.8, 2.2, -1.0, 17.8, 1.4, -4.4],
           ],
         });
       }),
-      tap(2.05, "KeyE"),
-      at(3.4, async (s) => {
+      tap(3.55, "KeyJ"),
+      at(5.3, async (s) => {
         await setup(s, {
           ...childReady,
           crystals: 75,
@@ -854,31 +990,12 @@ export const BEATS = [
         });
         await s.tap("KeyE");
       }),
-      act(4.15, "upgrade"),
-      at(5.1, async (s) => {
-        await setup(s, {
-          ...childReady,
-          sword: 3,
-          crystals: 15,
-          fireflies: ["orchard", "woods"],
-          x: -4,
-          z: 42.2,
-          facing: 0,
-          health: 2,
-        });
-        await s.direct({
-          path: [
-            [0, -1.2, 2.2, 45.5, -4, 0.8, 40],
-            [1.7, -1.6, 2.1, 45.2, -4, 0.8, 40],
-          ],
-        });
-      }),
-      tap(5.4, "KeyE"),
+      act(6.05, "upgrade"),
     ],
     captions: [
       {
         from: 0.3,
-        to: 6.7,
+        to: 6.9,
         at: 0.3,
         until: 1.7,
         align: "top-right",
@@ -888,7 +1005,7 @@ export const BEATS = [
       },
       {
         from: 0.3,
-        to: 6.7,
+        to: 6.9,
         at: 1.7,
         until: 3.4,
         align: "top-right",
@@ -898,23 +1015,23 @@ export const BEATS = [
       },
       {
         from: 0.3,
-        to: 6.7,
+        to: 6.9,
         at: 3.4,
-        until: 5.1,
+        until: 5.3,
+        align: "top-right",
+        eyebrow: "Discover",
+        title: "Off the beaten path",
+        sub: "A cracked wall in every guardian hall",
+      },
+      {
+        from: 0.3,
+        to: 6.9,
+        at: 5.3,
+        until: 6.9,
         align: "top-right",
         eyebrow: "Discover",
         title: "Off the beaten path",
         sub: "A star-forged blade from Soren’s forge",
-      },
-      {
-        from: 0.3,
-        to: 6.7,
-        at: 5.1,
-        until: 6.7,
-        align: "top-right",
-        eyebrow: "Discover",
-        title: "Off the beaten path",
-        sub: "Rest at the village campfire",
       },
     ],
   },
@@ -951,16 +1068,29 @@ export const BEATS = [
       at(3.9, async (s) => {
         await s.action("close");
         await s.action("pause");
+        await s.action("graphics");
       }),
     ],
     captions: [
       {
+        from: 0.3,
+        to: 5.5,
         at: 0.3,
+        until: 3.9,
+        align: "left-mid",
+        eyebrow: "Remember",
+        title: "Every word, kept",
+        sub: "A map that remembers what you’ve found, and a journal of every conversation.",
+      },
+      {
+        from: 0.3,
+        to: 5.5,
+        at: 3.9,
         until: 5.5,
         align: "left-mid",
         eyebrow: "Remember",
         title: "Every word, kept",
-        sub: "A kingdom map, a journal of every conversation, autosave, and adaptive visual quality.",
+        sub: "Settings for comfort, camera, and every control, and one Graphics fidelity slider from Low to Ultra.",
       },
     ],
   },
@@ -1166,7 +1296,7 @@ export const BEATS = [
         until: 7.4,
         eyebrow: "SOME PROMISES OUTLIVE A LIFETIME",
         title: "Explore. Remember. Become.",
-        sub: "Plays in any WebGL 2 browser · keyboard, mouse & touch",
+        sub: "Plays in a WebGL 2 browser · keyboard, mouse, gamepad & touch",
         url: "github.com/nearbycoder/Ocarina",
       },
     ],

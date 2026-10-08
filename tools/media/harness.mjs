@@ -15,6 +15,10 @@ export const WIDTH = 1920;
 export const HEIGHT = 1080;
 export const SAMPLE_RATE = 48000;
 export const BASE_URL = process.env.BELL_URL || "http://127.0.0.1:5174/";
+// Graphics fidelity for captures (low, medium, high, or ultra). Every frame
+// is rendered under the fake clock however long it takes, so Ultra holds its
+// frame rate here the way an offline render does.
+export const FIDELITY = process.env.BELL_FIDELITY || "ultra";
 
 const GPU_ARGS = [
   "--use-angle=vulkan",
@@ -32,7 +36,7 @@ export async function launch() {
 }
 
 // Runs inside the page before any game code.
-function pageInit({ seed, sampleRate }) {
+function pageInit({ seed, sampleRate, fidelity }) {
   let a = seed >>> 0;
   Math.random = () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -41,7 +45,10 @@ function pageInit({ seed, sampleRate }) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   try {
-    localStorage.setItem("bell-visual-quality", "high");
+    localStorage.setItem(
+      "bell-of-ages-settings-v1",
+      JSON.stringify({ fidelity }),
+    );
   } catch {}
 
   // Audio: the game's Sound class schedules against ctx.currentTime. Present
@@ -73,6 +80,9 @@ function pageInit({ seed, sampleRate }) {
       return "running";
     }
     resume() {
+      return Promise.resolve();
+    }
+    suspend() {
       return Promise.resolve();
     }
     createOscillator() {
@@ -182,10 +192,10 @@ function pageInit({ seed, sampleRate }) {
       // The trailer score replaces the sparse in-game ambient tones.
       game.sound.ambient = () => {};
       const render = game.worldRenderer.render.bind(game.worldRenderer);
-      game.worldRenderer.render = (level) => {
+      game.worldRenderer.render = (...args) => {
         const now = performance.now() / 1000;
         if (director) director(game, now - shotOrigin, now - directorOrigin);
-        render(level);
+        render(...args);
       };
       const style = document.createElement("style");
       style.textContent = CAPTURE_CSS;
@@ -329,7 +339,11 @@ export class Session {
     page.on("console", (m) => {
       if (m.type() === "error") console.error("[console]", m.text());
     });
-    await page.addInitScript(pageInit, { seed, sampleRate: SAMPLE_RATE });
+    await page.addInitScript(pageInit, {
+      seed,
+      sampleRate: SAMPLE_RATE,
+      fidelity: FIDELITY,
+    });
     await page.clock.install({ time: new Date("2026-10-04T08:00:00Z") });
     await page.goto(`${BASE_URL}?${query}`);
     // Stop natural time flow: from here on, only runFor() advances the page.
@@ -346,6 +360,14 @@ export class Session {
     if (!ready) throw new Error("Game did not become ready");
     await page.evaluate(() => document.fonts.ready.then(() => 0));
     await page.evaluate(() => window.__capture.ready());
+    // Ultra's SMAA and depth of field load on demand; wait for them.
+    const fidelity = await page.evaluate(async () => {
+      const game = window.__game;
+      await game.worldRenderer.ultra;
+      return game.quality.fidelity;
+    });
+    if (fidelity !== FIDELITY)
+      throw new Error(`Capturing at ${fidelity}, not ${FIDELITY}`);
     const session = new Session(page, await context.newCDPSession(page));
     await session.advance(1);
     return session;
