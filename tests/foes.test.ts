@@ -11,6 +11,9 @@ import {
   chargeEnd,
   chooseWardenMove,
   edgeOpacity,
+  fallPose,
+  FALL_TIME,
+  TOPPLE,
   laneDistance,
   ringCrossed,
   signatureCooldown,
@@ -128,5 +131,27 @@ describe("warning outlines", () => {
     expect(edgeOpacity(0.35)).toBeCloseTo(0.63);
     expect(edgeOpacity(0.75)).toBe(0.8);
     expect(edgeOpacity(1)).toBe(0.8);
+  });
+});
+
+describe("a felled foe's fall", () => {
+  it("tips back, lands, sinks, and is gone at the end", () => {
+    const d = FALL_TIME.guardian;
+    const start = fallPose(0, d);
+    expect(start).toEqual({ tilt: -0, sink: 0, landed: false, gone: false });
+    const mid = fallPose(d * TOPPLE * 0.5, d);
+    expect(mid.tilt).toBeLessThan(0);
+    expect(mid.tilt).toBeGreaterThan(-1.35 / 2);
+    expect(mid.sink).toBe(0);
+    const landed = fallPose(d * TOPPLE, d);
+    expect(landed.landed).toBe(true);
+    expect(landed.tilt).toBeCloseTo(-1.35);
+    expect(fallPose(d * 0.8, d).sink).toBeGreaterThan(0.5);
+    expect(fallPose(d * 0.8, d).gone).toBe(false);
+    expect(fallPose(d, d)).toMatchObject({ sink: 1, gone: true });
+  });
+  it("takes longer for a warden", () => {
+    expect(FALL_TIME.warden).toBeGreaterThan(FALL_TIME.guardian);
+    expect(fallPose(FALL_TIME.guardian, FALL_TIME.warden).gone).toBe(false);
   });
 });

@@ -618,7 +618,85 @@ window.foeQA = (() => {
     api.debug.setHealth(12);
     return results;
   }
+  // Felled foes topple and sink away, but are down from the first frame.
+  async function falls() {
+    api.debug.enter("root");
+    bellQA.close();
+    game.puzzleSolved = true;
+    game.world.gates[0].visible = false;
+    api.debug.damageEnemy(2, 100);
+    api.debug.damageEnemy(3, 100);
+    api.debug.placeEnemy(0, -1.5, -8);
+    api.debug.placeEnemy(1, 1.5, -8);
+    api.debug.teleport(0, -4);
+    api.debug.face(0);
+    api.debug.advance(2);
+    assert(
+      game.enemies.slice(2, 4).every((e) => !e.mesh.visible && !(e.fall >= 0)),
+      "Falls: two guardians felled two seconds ago are hidden",
+    );
+    const [a, b] = game.enemies;
+    game.target = a;
+    const crystals = api.getState().crystals;
+    api.debug.damageEnemy(0, 100);
+    const detail = () => document.getElementById("quest-detail").textContent;
+    assert(
+      a.state === "dead" && a.mesh.visible && game.target === b,
+      "Falls: a felled guardian is dead at once, still in view, and the lock moves on",
+    );
+    assert(
+      /3\s\/\s4\sfallen/.test(detail()),
+      `Falls: the hall counts it at once (${detail()})`,
+    );
+    const ground = game.ground(a.x, a.z);
+    api.debug.advance(0.3);
+    assert(
+      a.mesh.visible && a.mesh.rotation.x < -0.3,
+      `Falls: 0.3 s later it is tipping back (${a.mesh.rotation.x.toFixed(2)} rad)`,
+    );
+    api.debug.advance(0.4);
+    assert(
+      a.mesh.visible && a.mesh.position.y < ground - 0.3,
+      `Falls: 0.7 s later it is sinking (${(a.mesh.position.y - ground).toFixed(2)} m)`,
+    );
+    api.debug.damageEnemy(0, 1);
+    assert(
+      api.getState().crystals === crystals + 3 && a.state === "dead",
+      "Falls: a blow to a falling guardian does nothing",
+    );
+    api.debug.advance(0.5);
+    assert(!a.mesh.visible && a.fall < 0, "Falls: by 1.2 s it is gone");
+    // Felled just before a defeat: gone when the hall starts over.
+    api.debug.damageEnemy(1, 100);
+    api.debug.advance(0.2);
+    game.checkpoint();
+    bellQA.close();
+    assert(
+      game.enemies
+        .filter((e) => !e.boss)
+        .every((e) => e.state === "dead" && !e.mesh.visible && e.fall < 0),
+      "Falls: a guardian still falling at a defeat is gone after it, and none falls again",
+    );
+    // A warden falls more slowly; the relic is there at once.
+    arena("root");
+    api.debug.advance(2);
+    const w = game.enemies[4];
+    api.debug.damageEnemy(4, 100);
+    assert(
+      w.state === "dead" &&
+        game.bossDead &&
+        game.world.interactables.find((i) => i.kind === "relic").mesh.visible,
+      "Falls: a felled warden is dead at once and its relic appears",
+    );
+    api.debug.advance(1.2);
+    assert(w.mesh.visible, "Falls: a warden is still falling after 1.2 s");
+    api.debug.advance(0.6);
+    assert(!w.mesh.visible, "Falls: by 1.8 s the warden is gone");
+    api.debug.setHealth(12);
+    return results;
+  }
   return {
+    falls,
     wardens,
     kinds,
     layouts,

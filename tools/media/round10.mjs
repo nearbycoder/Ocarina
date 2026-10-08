@@ -137,6 +137,30 @@ const quantile = (list, q) =>
     : 1;
 
 const SHOTS = {
+  // A guardian in the Rootbound Hollow's hall, felled 0.35 s ago, toppling.
+  "b-fall": async () => {
+    const page = await open();
+    await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__.debug,
+        game = api.game();
+      api.enter("root");
+      bellQA.close();
+      game.puzzleSolved = true;
+      game.world.gates[0].visible = false;
+      for (const i of [1, 2, 3]) api.damageEnemy(i, 100);
+      api.advance(2);
+      api.placeEnemy(0, 0.6, -7.5);
+      api.teleport(0, -3.2);
+      api.face(0);
+      game.yaw = 0.35;
+      game.pitch = 0.2;
+      game.snapCamera();
+      api.damageEnemy(0, 100);
+      api.advance(0.35);
+    });
+    await shoot(page, "b-fall");
+    await page.close();
+  },
   // The ring's contrast on grass, sand, and snow (rings.json), with shots.
   rings: async () => {
     const page = await open();

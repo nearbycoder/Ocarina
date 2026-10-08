@@ -64,6 +64,8 @@ import {
   chargeEnd,
   chooseWardenMove,
   edgeOpacity,
+  fallPose,
+  FALL_TIME,
   laneDistance,
   ringCrossed,
   signatureCooldown,
@@ -165,6 +167,8 @@ interface Enemy {
   timer: number;
   speed: number;
   hitFlash: number;
+  /** Seconds since it was felled while it topples and sinks; -1 otherwise. */
+  fall: number;
   indicator: T.Mesh;
   phase: number;
   facing: number;
@@ -1208,6 +1212,7 @@ export class Game {
       timer: Math.random(),
       speed: boss ? 2.1 : KINDS[kind].speed,
       hitFlash: 0,
+      fall: -1,
       indicator,
       phase: 0,
       facing: 0,
@@ -2585,7 +2590,13 @@ export class Game {
     );
     if (e.hp <= 0) {
       e.state = "dead";
-      e.mesh.visible = false;
+      // It topples and sinks away (updateFalls), but is down from now on.
+      e.fall = 0;
+      e.hitFlash = 0;
+      e.mesh.scale.setScalar(1);
+      e.mesh.rotation.order = "YXZ";
+      e.mesh.rotation.set(0, e.facing, 0);
+      this.clearMarks(e);
       this.save.crystals += e.boss ? 15 : 3;
       this.sound.pickup();
       this.save.health = Math.min(
@@ -3338,7 +3349,14 @@ export class Game {
   restartChamber() {
     const spot = chamberStart(this.puzzleSolved, this.arenaClear);
     for (const e of this.enemies) {
-      if (e.state === "dead") continue;
+      if (e.state === "dead") {
+        // One still falling is simply gone when the chamber starts over.
+        if (e.fall >= 0) {
+          e.fall = -1;
+          e.mesh.visible = false;
+        }
+        continue;
+      }
       e.hp = e.maxHp;
       e.x = e.homeX;
       e.z = e.homeZ;
@@ -3381,6 +3399,26 @@ export class Game {
     }
     this.world.particles.rotation.y = Math.sin(this.elapsed * 0.025) * 0.025;
     this.world.particles.position.y = Math.sin(this.elapsed * 0.4) * 0.3;
+  }
+  /** Felled foes tip back, raise dust as they land, sink, and are hidden. */
+  updateFalls(dt: number) {
+    for (const e of this.enemies) {
+      if (e.fall < 0) continue;
+      const duration = e.boss ? FALL_TIME.warden : FALL_TIME.guardian;
+      const before = fallPose(e.fall, duration);
+      e.fall += dt;
+      const pose = fallPose(e.fall, duration);
+      const ground = this.ground(e.x, e.z);
+      if (pose.landed && !before.landed)
+        this.burst(e.x, ground + 0.3, e.z, "#cdbd96", e.boss ? 24 : 10);
+      if (pose.gone) {
+        e.fall = -1;
+        e.mesh.visible = false;
+        continue;
+      }
+      e.mesh.rotation.x = pose.tilt;
+      e.mesh.position.y = ground - pose.sink * e.top * 1.1;
+    }
   }
   cameraFocus() {
     const p = this.hero.group.position;
@@ -3635,6 +3673,7 @@ export class Game {
     else {
       this.updatePlayer(dt);
       if (this.save.story.prologue >= 5) this.updateEnemies(dt);
+      this.updateFalls(dt);
     }
     this.updateCamera(dt);
   }

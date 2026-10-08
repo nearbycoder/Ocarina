@@ -232,3 +232,22 @@ export const FIELD_KINDS: FoeKind[] = [
 export function edgeOpacity(markOpacity: number) {
   return Math.min(0.8, Math.max(0, markOpacity) * 1.8);
 }
+/** Seconds a felled guardian or warden takes to topple and sink away. */
+export const FALL_TIME = { guardian: 1, warden: 1.6 };
+/** The share of the fall spent toppling; the rest is sinking. */
+export const TOPPLE = 0.45;
+/**
+ * A felled foe's pose `elapsed` seconds into a fall of `duration`: it tips
+ * back (`tilt`, radians, gathering speed like a falling statue), lands, then
+ * sinks (`sink`, a share of its height) and is `gone` at the end.
+ */
+export function fallPose(elapsed: number, duration: number) {
+  const t = Math.max(0, elapsed / duration);
+  const topple = Math.min(1, t / TOPPLE);
+  return {
+    tilt: -1.35 * topple * topple,
+    sink: Math.min(1, Math.max(0, (t - TOPPLE) / (1 - TOPPLE))),
+    landed: t >= TOPPLE,
+    gone: t >= 1,
+  };
+}
