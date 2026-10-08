@@ -1,0 +1,288 @@
+{
+ "tool": "node tools/perf/sample.mjs <step> (BELL_PERF_QUALITY=<step>), 1280x800@1, vsync off, real time: village walk, Whisperwood, a guardian-hall fight with sword hits; shadows refresh live",
+ "gpu": "AMD Radeon 8060S, headless Chromium, ANGLE Vulkan",
+ "results": [
+  {
+   "run": "first",
+   "step": "high",
+   "scene": "village",
+   "meanMs": 6.29,
+   "p95Ms": 10.3,
+   "p99Ms": 31.4,
+   "drawCalls": 381,
+   "cpuSubmitMs": 4.69,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "high",
+   "scene": "whisperwood",
+   "meanMs": 3.33,
+   "p95Ms": 5.4,
+   "p99Ms": 11,
+   "drawCalls": 169,
+   "cpuSubmitMs": 3.43,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "high",
+   "scene": "hall fight",
+   "meanMs": 2.5,
+   "p95Ms": 4.3,
+   "p99Ms": 8,
+   "drawCalls": 223,
+   "cpuSubmitMs": 1.91,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "high",
+   "loadAverageBefore": [
+    26.52,
+    26.94,
+    26.36
+   ],
+   "loadAverageAfter": [
+    25.91,
+    26.8,
+    26.33
+   ]
+  },
+  {
+   "run": "first",
+   "step": "low",
+   "scene": "village",
+   "meanMs": 3.59,
+   "p95Ms": 5.5,
+   "p99Ms": 7.8,
+   "drawCalls": 203,
+   "cpuSubmitMs": 4,
+   "pixelRatio": 0.85
+  },
+  {
+   "run": "first",
+   "step": "low",
+   "scene": "whisperwood",
+   "meanMs": 2.26,
+   "p95Ms": 4.3,
+   "p99Ms": 11.1,
+   "drawCalls": 87,
+   "cpuSubmitMs": 1.69,
+   "pixelRatio": 0.85
+  },
+  {
+   "run": "first",
+   "step": "low",
+   "scene": "hall fight",
+   "meanMs": 2.44,
+   "p95Ms": 4.9,
+   "p99Ms": 16,
+   "drawCalls": 115,
+   "cpuSubmitMs": 1.04,
+   "pixelRatio": 0.85
+  },
+  {
+   "run": "first",
+   "step": "low",
+   "loadAverageBefore": [
+    22.93,
+    26.55,
+    26.2
+   ],
+   "loadAverageAfter": [
+    23.18,
+    26.2,
+    26.09
+   ]
+  },
+  {
+   "run": "first",
+   "step": "medium",
+   "scene": "village",
+   "meanMs": 10.26,
+   "p95Ms": 28.9,
+   "p99Ms": 57,
+   "drawCalls": 375,
+   "cpuSubmitMs": 5.15,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "medium",
+   "scene": "whisperwood",
+   "meanMs": 3.86,
+   "p95Ms": 7.5,
+   "p99Ms": 23.4,
+   "drawCalls": 154,
+   "cpuSubmitMs": 3.18,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "medium",
+   "scene": "hall fight",
+   "meanMs": 2.69,
+   "p95Ms": 4.9,
+   "p99Ms": 14.1,
+   "drawCalls": 214,
+   "cpuSubmitMs": 2.21,
+   "pixelRatio": 1
+  },
+  {
+   "run": "first",
+   "step": "medium",
+   "loadAverageBefore": [
+    24.69,
+    26.47,
+    26.18
+   ],
+   "loadAverageAfter": [
+    27.35,
+    27.11,
+    26.41
+   ]
+  },
+  {
+   "run": "first",
+   "step": "ultra",
+   "scene": "village",
+   "meanMs": 15.12,
+   "p95Ms": 32.2,
+   "p99Ms": 38.2,
+   "drawCalls": 478,
+   "cpuSubmitMs": 15.2,
+   "pixelRatio": 1.5
+  },
+  {
+   "run": "first",
+   "step": "ultra",
+   "scene": "whisperwood",
+   "meanMs": 15.47,
+   "p95Ms": 32.9,
+   "p99Ms": 51,
+   "drawCalls": 273,
+   "cpuSubmitMs": 14.41,
+   "pixelRatio": 1.5
+  },
+  {
+   "run": "first",
+   "step": "ultra",
+   "scene": "hall fight",
+   "meanMs": 15.11,
+   "p95Ms": 41.4,
+   "p99Ms": 100.9,
+   "drawCalls": 346,
+   "cpuSubmitMs": 13.23,
+   "pixelRatio": 1.5
+  },
+  {
+   "run": "first",
+   "step": "ultra",
+   "loadAverageBefore": [
+    30.55,
+    27.73,
+    26.64
+   ],
+   "loadAverageAfter": [
+    39.69,
+    30.11,
+    27.46
+   ]
+  },
+  {
+   "run": "second",
+   "step": "high",
+   "scene": "village",
+   "meanMs": 6.94,
+   "p95Ms": 12.3,
+   "p99Ms": 30.5,
+   "drawCalls": 384,
+   "cpuSubmitMs": 11.77,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "high",
+   "scene": "whisperwood",
+   "meanMs": 7.19,
+   "p95Ms": 14.8,
+   "p99Ms": 33.5,
+   "drawCalls": 180,
+   "cpuSubmitMs": 5.09,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "high",
+   "scene": "hall fight",
+   "meanMs": 3.45,
+   "p95Ms": 7.8,
+   "p99Ms": 13,
+   "drawCalls": 225,
+   "cpuSubmitMs": 2.35,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "high",
+   "loadAverageBefore": [
+    23.7,
+    29.89,
+    28.75
+   ],
+   "loadAverageAfter": [
+    28.4,
+    30.5,
+    28.99
+   ]
+  },
+  {
+   "run": "second",
+   "step": "medium",
+   "scene": "village",
+   "meanMs": 4.3,
+   "p95Ms": 5.9,
+   "p99Ms": 7.2,
+   "drawCalls": 363,
+   "cpuSubmitMs": 4.55,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "medium",
+   "scene": "whisperwood",
+   "meanMs": 3.19,
+   "p95Ms": 5.7,
+   "p99Ms": 9.9,
+   "drawCalls": 152,
+   "cpuSubmitMs": 2.89,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "medium",
+   "scene": "hall fight",
+   "meanMs": 3.2,
+   "p95Ms": 7.8,
+   "p99Ms": 20.5,
+   "drawCalls": 215,
+   "cpuSubmitMs": 2.28,
+   "pixelRatio": 1
+  },
+  {
+   "run": "second",
+   "step": "medium",
+   "loadAverageBefore": [
+    24,
+    30.71,
+    28.96
+   ],
+   "loadAverageAfter": [
+    24.03,
+    30.06,
+    28.8
+   ]
+  }
+ ]
+}

@@ -1,0 +1,214 @@
+{
+  "viewport": "1920x1080@1",
+  "gpu": "AMD Radeon 8060S (headless Chromium, ANGLE Vulkan)",
+  "cores": 32,
+  "loadAtEnd": 23.3,
+  "results": [
+    {
+      "step": "low",
+      "scene": "village",
+      "frames": 1173,
+      "mean": 4.26,
+      "p95": 9,
+      "calls": 209,
+      "pixelRatio": 0.85,
+      "load": 22.9
+    },
+    {
+      "step": "low",
+      "scene": "forest",
+      "frames": 1882,
+      "mean": 2.66,
+      "p95": 6.9,
+      "calls": 72,
+      "pixelRatio": 0.85,
+      "load": 22.9
+    },
+    {
+      "step": "low",
+      "scene": "coast",
+      "frames": 2162,
+      "mean": 2.31,
+      "p95": 6.9,
+      "calls": 34,
+      "pixelRatio": 0.85,
+      "load": 22.9
+    },
+    {
+      "step": "low",
+      "scene": "dungeon",
+      "frames": 2108,
+      "mean": 2.37,
+      "p95": 6.5,
+      "calls": 172,
+      "pixelRatio": 0.85,
+      "load": 22.9
+    },
+    {
+      "step": "medium",
+      "scene": "village",
+      "frames": 1146,
+      "mean": 4.36,
+      "p95": 6.4,
+      "calls": 376,
+      "pixelRatio": 1,
+      "load": 24.7
+    },
+    {
+      "step": "medium",
+      "scene": "forest",
+      "frames": 1236,
+      "mean": 4.05,
+      "p95": 10.1,
+      "calls": 121,
+      "pixelRatio": 1,
+      "load": 24.7
+    },
+    {
+      "step": "medium",
+      "scene": "coast",
+      "frames": 653,
+      "mean": 7.66,
+      "p95": 27.1,
+      "calls": 68,
+      "pixelRatio": 1,
+      "load": 24.7
+    },
+    {
+      "step": "medium",
+      "scene": "dungeon",
+      "frames": 54,
+      "mean": 92.77,
+      "p95": 442.5,
+      "calls": 331,
+      "pixelRatio": 1,
+      "load": 24.7
+    },
+    {
+      "step": "high",
+      "scene": "village",
+      "frames": 847,
+      "mean": 5.91,
+      "p95": 12,
+      "calls": 392,
+      "pixelRatio": 1,
+      "load": 33.5
+    },
+    {
+      "step": "high",
+      "scene": "forest",
+      "frames": 1039,
+      "mean": 4.82,
+      "p95": 13.1,
+      "calls": 138,
+      "pixelRatio": 1,
+      "load": 33.5
+    },
+    {
+      "step": "high",
+      "scene": "coast",
+      "frames": 1234,
+      "mean": 4.06,
+      "p95": 10.6,
+      "calls": 82,
+      "pixelRatio": 1,
+      "load": 33.5
+    },
+    {
+      "step": "high",
+      "scene": "dungeon",
+      "frames": 942,
+      "mean": 5.31,
+      "p95": 13.6,
+      "calls": 345,
+      "pixelRatio": 1,
+      "load": 33.5
+    },
+    {
+      "step": "ultra",
+      "scene": "village",
+      "frames": 289,
+      "mean": 17.34,
+      "p95": 47.5,
+      "calls": 396,
+      "pixelRatio": 1.5,
+      "load": 26.9
+    },
+    {
+      "step": "ultra",
+      "scene": "forest",
+      "frames": 329,
+      "mean": 15.26,
+      "p95": 22.8,
+      "calls": 142,
+      "pixelRatio": 1.5,
+      "load": 26.9
+    },
+    {
+      "step": "ultra",
+      "scene": "coast",
+      "frames": 296,
+      "mean": 16.9,
+      "p95": 30.3,
+      "calls": 84,
+      "pixelRatio": 1.5,
+      "load": 26.9
+    },
+    {
+      "step": "ultra",
+      "scene": "dungeon",
+      "frames": 254,
+      "mean": 19.75,
+      "p95": 55.4,
+      "calls": 347,
+      "pixelRatio": 1.5,
+      "load": 26.9
+    }
+  ],
+  "mediumRerun": {
+    "note": "The first Medium run's dungeon view stalled (92.8 ms mean, p95 442.5); Medium alone, run again straight after:",
+    "loadAtEnd": 24.1,
+    "results": [
+      {
+        "step": "medium",
+        "scene": "village",
+        "frames": 987,
+        "mean": 5.07,
+        "p95": 11.2,
+        "calls": 376,
+        "pixelRatio": 1,
+        "load": 24.6
+      },
+      {
+        "step": "medium",
+        "scene": "forest",
+        "frames": 1116,
+        "mean": 4.48,
+        "p95": 12.5,
+        "calls": 121,
+        "pixelRatio": 1,
+        "load": 24.6
+      },
+      {
+        "step": "medium",
+        "scene": "coast",
+        "frames": 1310,
+        "mean": 3.82,
+        "p95": 10.4,
+        "calls": 68,
+        "pixelRatio": 1,
+        "load": 24.6
+      },
+      {
+        "step": "medium",
+        "scene": "dungeon",
+        "frames": 1067,
+        "mean": 4.69,
+        "p95": 12.9,
+        "calls": 331,
+        "pixelRatio": 1,
+        "load": 24.6
+      }
+    ]
+  }
+}

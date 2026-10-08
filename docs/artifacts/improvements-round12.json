@@ -1,0 +1,102 @@
+{
+ "date": "2026-10-08",
+ "branch": "improvements-12",
+ "base": "805146b (main, equal to origin/main)",
+ "runner": "node tests/run-browser-checks.mjs (headless Chromium, Vulkan ANGLE, dev server, /?review=polish; new groups use their own pages or throwaway contexts). Controls ran against the unchanged game (main at 805146b, served from a temporary worktree on port 5175) with this branch's checks.",
+ "finalChecksOn": "a66d66e",
+ "unitTests": {
+  "files": 23,
+  "tests": 155,
+  "passed": 155
+ },
+ "build": "pass",
+ "assetCheck": {
+  "assets": 31,
+  "runtimeBytes": 2442432,
+  "gltfErrors": 0,
+  "gltfWarnings": 0,
+  "contractErrors": 0
+ },
+ "bundle": {
+  "eagerGzipKB": {
+   "before": 250.5,
+   "after": 256.0
+  },
+  "ultraLazyGzipKB": 39.9
+ },
+ "baseline": "59 of 60 groups pass on main (805146b) from a worktree at a load average of 12.1 to 23.1; touch: phone landscape layout fails there (fallback system font in the worktree), twice; it passes on this branch's server",
+ "browserGroups": "All 65 groups pass (60 before) in one full run on a66d66e at a load average of 28.1 at the start and 27.3 at the end; campaign counter 104; no page errors (.capture/r12/final-browser.log)",
+ "newBrowserGroups": {
+  "graphicsFidelitySlider": 19,
+  "polishSwordTrail": 6,
+  "transitionsTheVeil": 8,
+  "menusFeedback": 9,
+  "settingsFit": 18
+ },
+ "changedChecks": {
+  "pauseFits": "expects the graphics shortcut where quality was"
+ },
+ "controls": {
+  "graphicsFidelitySlider": "A new player gets Medium (adaptive)",
+  "polishSwordTrail": "TypeError reading the trail's colour attribute",
+  "transitionsTheVeil": "no #veil element",
+  "menusFeedback": "The pause sheet eases in ({wrap: 'panel-wrap pause', sheet: 'none'})",
+  "settingsFit": "1280x720: no slider (51 stops)"
+ },
+ "items": {
+  "A. Graphics Fidelity slider": {
+   "commits": [
+    "918046c",
+    "a66d66e"
+   ],
+   "screenshots": [
+    "a-fidelity-title",
+    "a-fidelity-village",
+    "a-fidelity-forest",
+    "a-fidelity-coast",
+    "a-fidelity-dungeon",
+    "a-fidelity-village-detail",
+    "a-fidelity-dungeon-detail"
+   ],
+   "frameTimes": [
+    "media/improvements/round12/fidelity-perf.json",
+    "media/improvements/round12/fidelity-perf-1080p.json",
+    "media/improvements/round12/fidelity-live.json"
+   ],
+   "defaultLookMAE": {
+    "mediumVsAdaptive": "0.15-0.46%",
+    "lowVsPerformance": "0.10-0.37%",
+    "highVsOldHigh": "1.4-2.2%"
+   }
+  },
+  "B. Sword trail and sparks": {
+   "commits": [
+    "918046c",
+    "2892ed8"
+   ],
+   "screenshots": [
+    "b-swing-medium",
+    "b-swing-ultra",
+    "b-swing-adaptive-before"
+   ]
+  },
+  "C. The veil": {
+   "commits": [
+    "e81e88b"
+   ],
+   "screenshots": [
+    "c-veil"
+   ]
+  },
+  "D. Menus that answer": {
+   "commits": [
+    "f78412c"
+   ],
+   "screenshots": [
+    "d-settings-1280x800",
+    "d-settings-844x390"
+   ]
+  }
+ },
+ "subpath": "Production build from /Ocarina/: no failed requests, no console errors, no debug API; Settings shows Medium; Ultra fetches its SMAA chunk from /Ocarina/assets/; a journey begins with real input"
+}

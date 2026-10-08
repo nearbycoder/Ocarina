@@ -1283,3 +1283,52 @@ Verification
 
 If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, the heartbeat's behaviour, Camera follows' default, how faint Alder fades, and the leave question's default (owner decisions); branching dungeons; new skinned art and traversal; full touch remapping; real-device checks; and a full playthrough with real input.
 
+## Round 12 results
+
+All four scoped items shipped on `improvements-12`. Verification is recorded in [VALIDATION.md](VALIDATION.md) and [improvements-round12.json](artifacts/improvements-round12.json); screenshots and frame times are in [`docs/media/improvements/round12/`](media/improvements/round12/).
+
+| Item | Commits | Verified by | Screenshots |
+| --- | --- | --- | --- |
+| A. A Graphics Fidelity slider: Low, Medium, High, Ultra | `918046c`, `a66d66e` | 3 new unit tests (the quality suite rewritten for the steps); a 19-assertion browser group with real keys, real clicks, a synthetic pad, a reload, and an older build's stored choice; same-frame shots and frame times for every step | `a-fidelity-{title,village,forest,coast,dungeon}`, `a-fidelity-village-detail`, `a-fidelity-dungeon-detail`, `d-settings-*` |
+| B. A sword trail and sparks that look finished | `918046c` (sparks), `2892ed8` (trail) | 6 browser assertions; the spark pool's 50-hit check still adds no geometries | `b-swing-medium`, `b-swing-ultra` (and `b-swing-adaptive-before`) |
+| C. The world fades instead of cutting | `e81e88b` | An 8-assertion browser group in real time, with a real E press | `c-veil` |
+| D. Menus that answer every press | `f78412c` | A 9-assertion feedback group and an 18-assertion fit group (nine window sizes) with real keys and mouse | `d-settings-1280x800`, `d-settings-844x390` |
+
+Unit tests: 155 / 155 (152 before). All 65 browser-check groups pass (60 before) in one full run on `a66d66e` at a load average of 28.1 at the start and 27.3 at the end, with no page errors; the campaign counter still reads 104. The build and asset check pass (the asset pack is unchanged), and the production build works from `/Ocarina/`, including Ultra's lazily loaded passes. Every new check fails on the unchanged game.
+
+What changed for a player:
+- **One Graphics fidelity slider.** Settings has a Graphics section first, with four steps on a track; Escape → Graphics jumps straight to it, and it can be changed from the title. Click or tap a step; on a keyboard ← and → move it (↑, ↓, and Tab treat the slider as one row and land on the chosen step, like a radio group); on a pad the D-pad or the left stick moves sideways and A chooses. Medium is the default and is exactly today's Adaptive mode. A Visual quality choice from an older build carries over (Performance → Low, Adaptive → Medium, High detail → High).
+- **Ultra pushes past today's High.** Supersampled 3D resolution (1.5×, capped at 2×), SMAA, 4096 shadows with a wider soft filter refreshed every frame instead of at 30 Hz, full-resolution contact shading with twice the samples, 8× anisotropic filtering, grass drawn to 96 m instead of 78 m and full foliage detail to 135 m, 1.6× hit sparks, a bloom on light brighter than the lit scenery, a colour grade, and depth of field behind the title and story scenes. High gets the bloom and grade. SMAA and depth of field are downloaded only when Ultra is first chosen.
+- **A finished blade.** The sword's trail is a pale warm arc that fades toward the hilt and its tail and then fades out, instead of a flat grey card that vanished with the cut. Coloured hit sparks glow amber and stretch along their flight; grey dust stays dust.
+- **No more hard cuts.** Entering or leaving a sanctuary, checkpoints, defeats, the age change, and starting or continuing a journey come up from a dark veil over 0.65 s; the interface stays crisp on top. The loading screen fades into the title.
+- **Menus answer.** Every button lights on hover, dips when pressed, and shows the same gold focus ring with a soft halo for the keyboard and pad. Moving the focus ticks softly (on the effects bus). Sheets ease in when they open.
+
+### The fidelity steps, measured
+
+Same-frame screenshots of all four steps (the game's clock held, so wind, water, and clouds match) in five views are in `a-fidelity-*.jpg`. Frame times are headless Chromium on the AMD Radeon 8060S iGPU, vsync off, on the shared 32-core machine; the load average is given for each, and it was never quiet, so differences under about 2 ms are noise.
+
+| Step | What it changes | Staged views, 1280×800 (mean, range of 4 views) | Real-time play, 1280×800 (mean, range of 3 scenes) | Staged views, 1920×1080 |
+| --- | --- | --- | --- | --- |
+| Low | Today's Performance: 0.85× resolution (at most 1×), no post-processing, 1024 shadows, grass to 44 m at 42% | 1.7–2.5 ms (load 29) | 2.3–3.6 ms, p95 4.3–5.5 (load 23) | 2.3–4.3 ms (load 23) |
+| Medium (default) | Today's Adaptive: up to 1.5×, lowered under load; half-resolution contact shading, FXAA; 2048 shadows at 30 Hz; grass to 64 m at 76% | 2.0–4.4 ms (load 29) | 3.2–4.3 ms, p95 5.7–7.8 (load 24) | 3.8–5.1 ms (load 25; a first run stalled once in the dungeon view, 93 ms mean, and didn't repeat) |
+| High | Today's High detail (up to 1.75×, fixed, full grass to 78 m), plus bloom, the colour grade, and 4× anisotropy | 2.0–4.7 ms (load 28) | 2.5–7.2 ms, p95 4.3–14.8 (two runs, load 24–28) | 4.1–5.9 ms (load 34) |
+| Ultra | 1.5× supersampling (up to 2×), SMAA, 4096 soft shadows every frame, full-resolution contact shading (16 samples), stronger bloom, the grade, 8× anisotropy, grass to 96 m, far foliage from 135 m, 1.6× sparks, depth of field in the title and story scenes | 8.9–13.3 ms, p95 up to 30 (load 25) | 15.1–15.5 ms, p95 32–41 (load 31–40) | 15.3–19.8 ms, p95 23–55 (load 27) |
+
+(`fidelity-perf.json`, `fidelity-perf-1080p.json`, and `fidelity-live.json`.) The staged views don't redraw shadows; the real-time runs (`tools/perf/sample.mjs`: a village walk, the Whisperwood, and a guardian-hall fight with sword hits) do. Compared with the same frames from `main`, Medium's pictures differ from Adaptive's by a mean absolute error of 0.15–0.46% across the five views and Low's from Performance's by 0.10–0.37% (JPEG noise and the new sparks); High's differ by 1.4–2.2%, which is the bloom and grade.
+
+Honest notes:
+- **Ultra is expensive, and that's the point of the step.** At 1280×800 it held about 65 frames a second on average in real-time play here, but with slow frames (p95 32–41 ms) at a load average of 31 to 40; how much of that is the machine and how much the 4096 shadows redrawn every frame isn't separable here. It is never chosen for you. Low stays as light as today's Performance mode.
+- **The look is judged from screenshots, not by a player.** The bloom threshold, the grade's strength, the vignette, and the depth of field's amount were tuned by eye on these views. The sanctuary brazier was the hardest case (a plain bloom whited out its corner); the bloom now passes only the light above its threshold, capped.
+- **Depth of field** uses three's Bokeh pass, which renders a depth pass of the scene, so it costs a second scene draw while the title or a story scene is showing (Ultra only).
+- **The veil follows game time** and is raised by the scene change itself, so it can't delay input or saves. It isn't drawn in the debug tools' staged views (the media tools and many checks stage scenes that way); the veil group plays in real time.
+- **Keyboard behaviour on the slider** differs slightly from the plan: ↑, ↓, and Tab leave the slider in one step instead of visiting each step, the standard radio-group pattern; ← and → (and the pad's sideways) move it. Off the slider, ← and → still move the focus as before.
+- **The baseline's one failure.** On the unchanged game served from a temporary worktree, 59 of 60 groups passed; **touch: phone landscape layout** failed twice because the worktree serves a fallback system font (wider text), as round 11 noted. It passes on this branch's own server.
+- **No difficulty change.** No health, damage, healing, timing, reach, enemy, or crystal values changed; the trail and sparks are drawn differently but last as long. **No new story writing:** only interface text (the Graphics section and its notes). The save format didn't change; the settings gain one field, and older settings load.
+- **Download size.** The eager JavaScript grows by about 5.5 KB gzipped (bloom, the grade, the slider, the veil); Ultra fetches about 40 KB more the first time it's chosen. No new textures or models.
+
+Still deferred, and why:
+- **Balance and difficulty, puzzle hints, deleting a journey, the heartbeat's behaviour, Camera follows' default, how faint Alder fades, and the leave question's default:** the owner's call.
+- **Whether Ultra's per-frame 4096 shadows are worth their cost** on a weaker GPU: needs a quiet machine and other hardware.
+- **Branching dungeons, skinned characters and new enemy art, traversal tools, full touch remapping:** large jobs.
+- **Real-device checks:** a phone and real controllers, now including how the slider and the focus tick feel.
+- **A full playthrough with real input.**

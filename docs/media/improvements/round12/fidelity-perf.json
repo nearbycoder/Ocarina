@@ -1,0 +1,168 @@
+{
+  "viewport": "1280x800@1",
+  "gpu": "AMD Radeon 8060S (headless Chromium, ANGLE Vulkan)",
+  "cores": 32,
+  "loadAtEnd": 24.1,
+  "results": [
+    {
+      "step": "low",
+      "scene": "village",
+      "frames": 2014,
+      "mean": 2.48,
+      "p95": 3.9,
+      "calls": 195,
+      "pixelRatio": 0.85,
+      "load": 29.4
+    },
+    {
+      "step": "low",
+      "scene": "forest",
+      "frames": 2875,
+      "mean": 1.74,
+      "p95": 4.4,
+      "calls": 67,
+      "pixelRatio": 0.85,
+      "load": 29.4
+    },
+    {
+      "step": "low",
+      "scene": "coast",
+      "frames": 2915,
+      "mean": 1.72,
+      "p95": 4.7,
+      "calls": 34,
+      "pixelRatio": 0.85,
+      "load": 29.4
+    },
+    {
+      "step": "low",
+      "scene": "dungeon",
+      "frames": 2277,
+      "mean": 2.2,
+      "p95": 4.9,
+      "calls": 167,
+      "pixelRatio": 0.85,
+      "load": 29.4
+    },
+    {
+      "step": "medium",
+      "scene": "village",
+      "frames": 1139,
+      "mean": 4.39,
+      "p95": 6.4,
+      "calls": 354,
+      "pixelRatio": 1,
+      "load": 28.6
+    },
+    {
+      "step": "medium",
+      "scene": "forest",
+      "frames": 2066,
+      "mean": 2.42,
+      "p95": 3.9,
+      "calls": 115,
+      "pixelRatio": 1,
+      "load": 28.6
+    },
+    {
+      "step": "medium",
+      "scene": "coast",
+      "frames": 2526,
+      "mean": 1.98,
+      "p95": 4.4,
+      "calls": 68,
+      "pixelRatio": 1,
+      "load": 28.6
+    },
+    {
+      "step": "medium",
+      "scene": "dungeon",
+      "frames": 1802,
+      "mean": 2.78,
+      "p95": 5.5,
+      "calls": 321,
+      "pixelRatio": 1,
+      "load": 28.6
+    },
+    {
+      "step": "high",
+      "scene": "village",
+      "frames": 1065,
+      "mean": 4.7,
+      "p95": 6.7,
+      "calls": 370,
+      "pixelRatio": 1,
+      "load": 27.5
+    },
+    {
+      "step": "high",
+      "scene": "forest",
+      "frames": 1928,
+      "mean": 2.59,
+      "p95": 3.9,
+      "calls": 131,
+      "pixelRatio": 1,
+      "load": 27.5
+    },
+    {
+      "step": "high",
+      "scene": "coast",
+      "frames": 2475,
+      "mean": 2.02,
+      "p95": 4,
+      "calls": 82,
+      "pixelRatio": 1,
+      "load": 27.5
+    },
+    {
+      "step": "high",
+      "scene": "dungeon",
+      "frames": 1898,
+      "mean": 2.64,
+      "p95": 4.1,
+      "calls": 335,
+      "pixelRatio": 1,
+      "load": 27.5
+    },
+    {
+      "step": "ultra",
+      "scene": "village",
+      "frames": 427,
+      "mean": 11.77,
+      "p95": 30.2,
+      "calls": 374,
+      "pixelRatio": 1.5,
+      "load": 25.1
+    },
+    {
+      "step": "ultra",
+      "scene": "forest",
+      "frames": 564,
+      "mean": 8.88,
+      "p95": 15.5,
+      "calls": 135,
+      "pixelRatio": 1.5,
+      "load": 25.1
+    },
+    {
+      "step": "ultra",
+      "scene": "coast",
+      "frames": 564,
+      "mean": 8.87,
+      "p95": 15.4,
+      "calls": 84,
+      "pixelRatio": 1.5,
+      "load": 25.1
+    },
+    {
+      "step": "ultra",
+      "scene": "dungeon",
+      "frames": 376,
+      "mean": 13.31,
+      "p95": 26.9,
+      "calls": 337,
+      "pixelRatio": 1.5,
+      "load": 25.1
+    }
+  ]
+}
