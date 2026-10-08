@@ -175,5 +175,158 @@ window.cameraQA = (() => {
     }
     return results.splice(0);
   }
-  return { run };
+  // Camera follows: with a gamepad (Automatic) the view trails behind a
+  // sideways walk; with a keyboard only when set to Always; never while the
+  // player turns it, or while locked on.
+  async function follow() {
+    const pad = {
+      id: "Synthetic standard gamepad",
+      index: 0,
+      connected: true,
+      mapping: "standard",
+      axes: [0, 0, 0, 0],
+      buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+    };
+    const original = Object.getOwnPropertyDescriptor(navigator, "getGamepads");
+    Object.defineProperty(navigator, "getGamepads", {
+      configurable: true,
+      value: () => [pad],
+    });
+    const step = (seconds) => {
+      for (let t = 0; t < seconds - 1e-9; t += 1 / 60) {
+        game.pollGamepad(1 / 60);
+        api.debug.advance(1 / 60);
+      }
+    };
+    const choice = game.settings.cameraFollow;
+    // Open meadow north of the Bell Sanctuary: nothing within 10 m.
+    const open = () => {
+      game.loadWorld();
+      bellQA.close();
+      api.debug.teleport(18, -26);
+      api.debug.face(0);
+      game.yaw = 0;
+      game.target = null;
+      game.cameraIdle = 5;
+      game.snapCamera();
+    };
+    const moved = (from) => {
+      const p = api.getState().position;
+      return Math.hypot(p.x - from.x, p.z - from.z);
+    };
+    try {
+      assert(
+        game.settings.cameraFollow === "auto",
+        "Camera follows: Automatic by default",
+      );
+      open();
+      let from = { ...api.getState().position };
+      pad.axes = [1, 0, 0, 0];
+      step(0.25);
+      const early = game.hero.group.rotation.y;
+      step(1.75);
+      pad.axes = [0, 0, 0, 0];
+      step(0.1);
+      const swung = game.yaw;
+      const heading = turn(game.hero.group.rotation.y, early);
+      assert(
+        game.ui.device === "gamepad" && swung < -0.6 && moved(from) > 6,
+        `Camera follows: two seconds of left stick right turn the view (${swung.toFixed(2)} rad over ${moved(from).toFixed(1)} m)`,
+      );
+      assert(
+        heading < -0.4,
+        `Camera follows: and Alder walks a curve (${heading.toFixed(2)} rad)`,
+      );
+      game.ui.settings(game.settings);
+      const row = [
+        ...document.querySelectorAll(".settings-sheet .setting-row"),
+      ].find((r) => r.textContent.startsWith("Camera follows"));
+      assert(
+        row && /Automatic · on/.test(row.textContent),
+        "Camera follows: the settings row says Automatic is on for a gamepad",
+      );
+      document.querySelector('[data-action="set-cameraFollow-down"]').click();
+      assert(
+        game.settings.cameraFollow === "off" &&
+          /Never/.test(
+            row.isConnected
+              ? row.textContent
+              : document.querySelector(".settings-sheet").textContent,
+          ),
+        "Camera follows: one step down from Automatic is Never",
+      );
+      api.debug.action("close");
+      open();
+      pad.axes = [1, 0, 0, 0];
+      step(2);
+      pad.axes = [0, 0, 0, 0];
+      step(0.1);
+      assert(
+        game.yaw === 0,
+        `Camera follows: with Never the same walk leaves the view (${game.yaw.toFixed(3)} rad)`,
+      );
+      // The keyboard: Automatic stays put, Always follows.
+      game.settings.cameraFollow = "auto";
+      for (const [setting, expectTurn] of [
+        ["auto", false],
+        ["on", true],
+      ]) {
+        game.settings.cameraFollow = setting;
+        open();
+        window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }));
+        api.debug.advance(2);
+        window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }));
+        api.debug.advance(0.1);
+        assert(
+          game.ui.device === "keyboard" &&
+            (expectTurn ? game.yaw < -0.6 : game.yaw === 0),
+          `Camera follows: D held with the keyboard, ${setting === "auto" ? "Automatic leaves the view" : "Always turns it"} (${game.yaw.toFixed(2)} rad)`,
+        );
+      }
+      // Turning the camera pauses the follow for 0.8 s.
+      game.settings.cameraFollow = "auto";
+      open();
+      pad.axes = [1, 0, 0.7, 0];
+      step(0.3);
+      let before = game.yaw;
+      pad.axes = [1, 0, 0, 0];
+      step(0.6);
+      assert(
+        game.yaw === before,
+        `Camera follows: it waits while the player has just turned the view (${(game.yaw - before).toFixed(3)} rad)`,
+      );
+      before = game.yaw;
+      from = { ...api.getState().position };
+      step(1);
+      assert(
+        game.yaw < before - 0.2,
+        `Camera follows: then it resumes (${(game.yaw - before).toFixed(2)} rad, ${moved(from).toFixed(1)} m, idle ${game.cameraIdle.toFixed(2)})`,
+      );
+      pad.axes = [0, 0, 0, 0];
+      step(0.1);
+      // Locked on, the lock steers the view and the follow stays out of it.
+      game.cameraIdle = 5;
+      before = game.yaw;
+      game.target = { x: 0, z: 0, state: "idle" };
+      game.followCamera(0.1, 0, 1 / 60);
+      const locked = game.yaw;
+      game.target = null;
+      game.followCamera(0.1, 0, 1 / 60);
+      assert(
+        locked === before && game.yaw < before,
+        "Camera follows: not while locked on",
+      );
+    } finally {
+      pad.axes = [0, 0, 0, 0];
+      if (original) Object.defineProperty(navigator, "getGamepads", original);
+      else delete navigator.getGamepads;
+      game.settings.cameraFollow = choice;
+      game.target = null;
+      game.setDevice("keyboard");
+      game.loadWorld();
+      bellQA.close();
+    }
+    return results;
+  }
+  return { run, follow };
 })();

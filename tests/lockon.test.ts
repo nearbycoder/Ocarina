@@ -5,6 +5,8 @@ import {
   screenAnchor,
   shortestTurn,
   sideTarget,
+  FOLLOW_SHARE,
+  followTurn,
 } from "../src/lockon";
 
 describe("lock-on choices", () => {
@@ -124,5 +126,30 @@ describe("turning the camera", () => {
     // Three full turns of the camera change nothing.
     expect(shortestTurn(6 * Math.PI + 0.5, 0.2)).toBeCloseTo(-0.3);
     expect(Math.abs(shortestTurn(0, Math.PI))).toBeCloseTo(Math.PI);
+  });
+});
+
+describe("following camera", () => {
+  it("swings toward a sideways walk, as on a leash", () => {
+    // Camera behind Alder (yaw 0); he walks 0.1 m to the right (+x).
+    const turn = followTurn(0.1, 0, 0, 7);
+    expect(turn).toBeCloseTo((-0.1 / 7) * FOLLOW_SHARE);
+    // Turning by that much moves the camera toward his new heading (−π/2).
+    expect(turn).toBeLessThan(0);
+    expect(followTurn(-0.1, 0, 0, 7)).toBeCloseTo(-turn);
+  });
+  it("doesn't turn for straight ahead or straight back", () => {
+    for (const yaw of [0, 1, -2.5]) {
+      // Ahead is away from the camera: (−sin yaw, −cos yaw).
+      const ax = -Math.sin(yaw) * 0.1,
+        az = -Math.cos(yaw) * 0.1;
+      expect(followTurn(ax, az, yaw, 7)).toBeCloseTo(0);
+      expect(followTurn(-ax, -az, yaw, 7)).toBeCloseTo(0);
+    }
+  });
+  it("turns more slowly from further away", () => {
+    expect(Math.abs(followTurn(0.1, 0, 0, 10))).toBeLessThan(
+      Math.abs(followTurn(0.1, 0, 0, 5)),
+    );
   });
 });

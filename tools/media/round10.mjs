@@ -137,6 +137,20 @@ const quantile = (list, q) =>
     : 1;
 
 const SHOTS = {
+  // Settings → Camera with a gamepad in use: Camera follows, Automatic · on.
+  "c-settings": async () => {
+    const page = await open();
+    await page.evaluate(() => {
+      const game = window.__BELL_OF_AGES__.debug.game();
+      game.setDevice("gamepad");
+      game.ui.settings(game.settings);
+      [...document.querySelectorAll(".settings-sheet .setting-row")]
+        .find((r) => r.textContent.startsWith("Camera speed"))
+        .scrollIntoView({ block: "start" });
+    });
+    await shoot(page, "c-settings");
+    await page.close();
+  },
   // A guardian in the Rootbound Hollow's hall, felled 0.35 s ago, toppling.
   "b-fall": async () => {
     const page = await open();

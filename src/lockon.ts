@@ -97,3 +97,22 @@ export function screenAnchor(
 export function shortestTurn(from: number, to: number) {
   return Math.atan2(Math.sin(to - from), Math.cos(to - from));
 }
+
+/** The share of a leash camera's swing the following camera makes. */
+export const FOLLOW_SHARE = 0.6;
+/**
+ * How far the following camera turns when Alder moves by (dx, dz) with the
+ * camera at `yaw`, `distance` metres behind (horizontally): as if the camera
+ * stood still and kept him on a leash, it swings with his sideways movement
+ * only, so walking straight ahead or straight back doesn't turn it.
+ */
+export function followTurn(
+  dx: number,
+  dz: number,
+  yaw: number,
+  distance: number,
+) {
+  // The camera's right, in the ground plane, at this yaw.
+  const sideways = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+  return (-sideways / Math.max(1, distance)) * FOLLOW_SHARE;
+}

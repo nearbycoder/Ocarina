@@ -158,6 +158,10 @@ await inPage(
   async () => (await cameraQA.run()).length,
 );
 await inPage(
+  "camera: follows as you walk",
+  async () => (await cameraQA.follow()).length,
+);
+await inPage(
   "gamepad: rumble and pause",
   async () => (await rumbleQA.run()).length,
 );

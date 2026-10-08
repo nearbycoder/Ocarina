@@ -109,7 +109,9 @@ import {
   SETTINGS_KEY,
   SENSITIVITY_STEP,
   CAMERA_DISTANCE,
+  CAMERA_FOLLOW_CHOICES,
   cameraDistance,
+  cameraFollows,
   touchSize,
   VOLUME_STEP,
   parseSettings,
@@ -139,6 +141,7 @@ import { updateNature } from "./nature";
 import { UI } from "./ui";
 import { Sparks } from "./sparks";
 import {
+  followTurn,
   nearestTarget,
   screenAnchor,
   shortestTurn,
@@ -340,6 +343,8 @@ export class Game {
   private rumbleUntil = 0;
   /** The camera is swinging back behind Alder. */
   recentering = false;
+  /** Seconds since the player last turned the camera themselves. */
+  cameraIdle = 0;
   /** Two fingers are on the scene. */
   pinching = false;
   distance = 7.6;
@@ -683,6 +688,12 @@ export class Game {
       s.padStyle =
         PAD_STYLE_CHOICES[
           (PAD_STYLE_CHOICES.indexOf(s.padStyle) + sign + n) % n
+        ];
+    } else if (key === "cameraFollow") {
+      const n = CAMERA_FOLLOW_CHOICES.length;
+      s.cameraFollow =
+        CAMERA_FOLLOW_CHOICES[
+          (CAMERA_FOLLOW_CHOICES.indexOf(s.cameraFollow) + sign + n) % n
         ];
     } else if (key === "distance")
       s.cameraDistance = cameraDistance(
@@ -2758,9 +2769,32 @@ export class Game {
       this.recentering = false;
     } else this.recentering = true;
   }
+  /**
+   * With Camera follows on, the view trails behind Alder as he walks, unless
+   * he's locked on, the player is turning it (or did within the last 0.8 s),
+   * or it's recentring.
+   */
+  followCamera(dx: number, dz: number, dt: number) {
+    this.cameraIdle += dt;
+    if (
+      !cameraFollows(this.settings.cameraFollow, this.ui.device) ||
+      this.target ||
+      this.dragging ||
+      this.recentering ||
+      this.cameraIdle < 0.8
+    )
+      return;
+    this.yaw += followTurn(
+      dx,
+      dz,
+      this.yaw,
+      Math.cos(this.pitch) * this.distance,
+    );
+  }
   /** Turns the camera: positive x orbits right, positive y raises the view. */
   turnCamera(x: number, y: number) {
     if (x) this.recentering = false;
+    if (x || y) this.cameraIdle = 0;
     const k = this.settings.sensitivity;
     this.yaw -= x * k;
     this.pitch = T.MathUtils.clamp(
@@ -2896,6 +2930,7 @@ export class Game {
     }
     this.updateBlock(dt, m);
     const traveled = Math.hypot(p.x - oldX, p.z - oldZ);
+    this.followCamera(p.x - oldX, p.z - oldZ, dt);
     p.y =
       this.ground(p.x, p.z) +
       (this.dodgeTime > 0

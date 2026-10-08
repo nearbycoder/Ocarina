@@ -8,8 +8,29 @@ import {
   parsePadStyle,
   type KeyBindings,
   type PadBindings,
+  type Device,
   type PadStyleChoice,
 } from "./input";
+/** Whether the camera trails behind Alder as he walks. */
+export const CAMERA_FOLLOW_CHOICES = ["auto", "on", "off"] as const;
+export type CameraFollow = (typeof CAMERA_FOLLOW_CHOICES)[number];
+export const CAMERA_FOLLOW_NAMES: Record<CameraFollow, string> = {
+  auto: "Automatic",
+  on: "Always",
+  off: "Never",
+};
+export function parseCameraFollow(raw: unknown): CameraFollow {
+  return CAMERA_FOLLOW_CHOICES.includes(raw as CameraFollow)
+    ? (raw as CameraFollow)
+    : "auto";
+}
+/**
+ * Whether the camera follows with this choice and device: Automatic follows
+ * with a gamepad or touch, where turning the view takes a second thumb.
+ */
+export function cameraFollows(choice: CameraFollow, device: Device) {
+  return choice === "on" || (choice === "auto" && device !== "keyboard");
+}
 export interface Settings {
   version: 1;
   /** Percent, 0–100 in steps of 10. */
@@ -29,6 +50,8 @@ export interface Settings {
   mouseLook: boolean;
   /** How far the camera follows behind, in metres. */
   cameraDistance: number;
+  /** Camera follows as you walk. Older stored settings get "auto". */
+  cameraFollow: CameraFollow;
   /** Removes hit-stop pauses, the damage flash, and interface motion. */
   reducedMotion: boolean;
   largeText: boolean;
@@ -66,6 +89,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     invertY: false,
     mouseLook: false,
     cameraDistance: CAMERA_DISTANCE.normal,
+    cameraFollow: "auto",
     reducedMotion: prefersReducedMotion,
     largeText: false,
     threatArrows: true,
@@ -127,6 +151,7 @@ export function parseSettings(
     invertY: flag("invertY"),
     mouseLook: flag("mouseLook"),
     cameraDistance: cameraDistance(s.cameraDistance, def.cameraDistance),
+    cameraFollow: parseCameraFollow(s.cameraFollow),
     reducedMotion: flag("reducedMotion"),
     largeText: flag("largeText"),
     threatArrows: flag("threatArrows"),

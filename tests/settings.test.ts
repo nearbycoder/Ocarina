@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   CAMERA_DISTANCE,
+  CAMERA_FOLLOW_CHOICES,
+  cameraFollows,
   TOUCH_SIZES,
   busGain,
   cameraDistance,
@@ -87,5 +89,28 @@ describe("player settings", () => {
     expect(parseSettings('{"master":40}').mouseLook).toBe(false);
     expect(parseSettings('{"mouseLook":true}').mouseLook).toBe(true);
     expect(parseSettings('{"mouseLook":"yes"}').mouseLook).toBe(false);
+  });
+});
+
+describe("camera follows", () => {
+  it("defaults to Automatic, also for older stored settings", () => {
+    expect(defaultSettings().cameraFollow).toBe("auto");
+    expect(parseSettings('{"master":50}').cameraFollow).toBe("auto");
+    expect(parseSettings('{"cameraFollow":"sideways"}').cameraFollow).toBe(
+      "auto",
+    );
+    for (const choice of CAMERA_FOLLOW_CHOICES)
+      expect(
+        parseSettings(JSON.stringify({ cameraFollow: choice })).cameraFollow,
+      ).toBe(choice);
+  });
+  it("Automatic follows with a gamepad or touch, not a keyboard", () => {
+    expect(cameraFollows("auto", "keyboard")).toBe(false);
+    expect(cameraFollows("auto", "gamepad")).toBe(true);
+    expect(cameraFollows("auto", "touch")).toBe(true);
+    for (const device of ["keyboard", "gamepad", "touch"] as const) {
+      expect(cameraFollows("on", device)).toBe(true);
+      expect(cameraFollows("off", device)).toBe(false);
+    }
   });
 });
