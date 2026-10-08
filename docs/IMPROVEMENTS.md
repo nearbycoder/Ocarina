@@ -1,6 +1,6 @@
 # Improvement plan — 6 October 2026
 
-This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), [Round 10 scope](#round-10-scope--7-october-2026), and [Round 10 results](#round-10-results).
+This document plans the next round of work on v0.1.0. It ranks candidate improvements by what they would do for a real player and proposes a scope for the round. That round is now done; see [Round outcome](#round-outcome). Rounds 2 to 7 follow it: [Round 2 scope](#round-2-scope--6-october-2026), [Round 3 scope](#round-3-scope--6-october-2026), [Round 3 results](#round-3-results), [Round 4 scope](#round-4-scope--6-october-2026), [Round 4 results](#round-4-results), [Round 5 scope](#round-5-scope--6-october-2026), [Round 5 results](#round-5-results), [Round 6 scope](#round-6-scope--7-october-2026), [Round 6 results](#round-6-results), [Round 7 scope](#round-7-scope--7-october-2026), [Round 7 results](#round-7-results), [Round 8 scope](#round-8-scope--7-october-2026), [Round 8 results](#round-8-results), [Round 9 scope](#round-9-scope--7-october-2026), [Round 9 results](#round-9-results), [Round 10 scope](#round-10-scope--7-october-2026), [Round 10 results](#round-10-results), [Round 11 scope](#round-11-scope--8-october-2026), and [Round 11 results](#round-11-results).
 
 ## Baseline (branch `improvements`, from `main` at 546eafc)
 
@@ -1136,3 +1136,54 @@ Still deferred, and why:
 - **Real-device checks:** a phone and real controllers are still needed, now including how the following camera feels.
 - **A full playthrough with real input only:** every check still stages scenes with the debug API; a scripted run from the title to the ending, walking every route, would be the next step toward measured completion times.
 - **The nudge when a saved spot is inside a collider:** play can't put Alder there; only test teleports have.
+
+## Round 11 scope — 8 October 2026
+
+Branch `improvements-11`, from `main` at `24b9560` (in sync with `origin/main`). Baseline: 144 / 144 Vitest tests, and all 56 `tests/run-browser-checks.mjs` groups pass on the unchanged tree at a load average of 2.3 at the start and 12.2 at the end (logs in the gitignored `.capture/r11/`).
+
+Every earlier round staged its scenes with the debug tools. This time I played with key presses only: a scripted walker on a review page clicked through the title and the opening, then held W, A, S, and D toward wherever the compass pointed, sidestepping when it stopped making progress. I found these:
+
+- **The compass leads to the back of three sanctuaries.** It points at the middle of a sanctuary's arch, but the door can only be used from the front, 3 m south of it. Walking straight at the arrow from the village to the Tidal Archive, from the Ember Vault to the Rootbound Hollow, and from the Bell Sanctuary to the Moonwell Crypt ends behind the door, where the compass reads "0 paces" and nothing can be used (two minutes each, walker stuck; `.capture/r11/doors/`). The other four doors were reached in 10 to 26 seconds. The compass also says "1 paces".
+- **Walls push the camera into Alder's back.** When a wall, a cottage, or a tree is behind the camera, it is pulled in toward Alder's head, and from 0.62 m (where he's hidden) to about 2 m his back and head fill most of the screen, so the way ahead can't be seen. Sampling every open spot of each chamber in eight directions, the camera ends up within 1.6 m of his head in 7 to 11% of views in the sanctuaries, 6% in Alder Village, and 4% across the kingdom.
+- **One press of the Use button leaves a sanctuary and undoes its progress.** The way out sits beside the entrance with no confirmation, and its prompt is up the moment you arrive. Leaving closes a solved puzzle and broken seals again (as designed, round 1), but the game doesn't say so, while Return to checkpoint asks first.
+
+Ground rules (unchanged):
+- **No difficulty numbers change.** Health, damage, healing, enemy numbers, timings, reach, and crystal income stay as they are. Leaving a sanctuary still resets it; only a question is added.
+- **No new story writing.** Only interface text.
+- **Puzzle hints untouched.**
+- **The tooling keeps working.** The debug API stays compatible. Older saves, journey files, and settings load, and the save format doesn't change.
+
+### A. The compass leads to a sanctuary's door
+
+Acceptance criteria
+- When the compass (or a marker set on a sanctuary from the map) leads to a sanctuary, it points to the doorstep in front of the arch, and the paces count to the doorstep. From behind or beside the arch, it first points to the arch's nearer front corner, then to the doorstep, so walking straight at the arrow goes round the arch to the door.
+- The map's pins, the minimap ring, and everything else stay where they are. A count of one reads "1 pace".
+
+Verification
+- Unit tests: from in front, from each side, and from behind every arch, the target and the paces; other destinations unchanged; "1 pace".
+- A browser check that walks with key presses only, steering toward the arrow, from the village and from each door in turn to all seven sanctuary doors, and reaches each door's "Enter" prompt. It fails on `main` at the Tidal Archive.
+
+### B. Alder fades when a wall pushes the camera close
+
+Acceptance criteria
+- When something behind the camera pulls it within about 2 m of Alder's head, Alder fades smoothly (to about a quarter at 1 m), so the way ahead shows through him; he is hidden below 0.62 m as now, and solid again once the camera eases back. Other characters and foes never fade, and at the normal camera distance nothing changes.
+
+Verification
+- A unit test for the fade curve. A browser check: backed against a cottage wall, the camera sits within 1.5 m and Alder's materials are mostly transparent while Mira's are unchanged; stepping into the open makes him solid again; in a sanctuary chamber with a wall behind the camera, the same. It fails on `main`.
+- Measured: how much of the screen Alder covers at two crowded spots, before and after (each frame compared with the same frame without him). Screenshots before and after.
+
+### C. The opening, played with input alone
+
+Acceptance criteria and verification
+- A new browser group plays the opening from the title on a review page with real Playwright clicks and key presses only: it clicks Begin your journey, pages through the scenes, and walks by the compass to Mira, the orchard light, back to Mira, Soren, and Elder Rowan, pressing E at each, then walks to the nearest sanctuary and enters it. No teleports or debug calls drive it; the page's own clock is stepped so it is the same under load. It reports how long each leg took in game time. With A, every leg arrives; on `main` the last leg stops behind the Tidal Archive.
+
+### D. Leaving a sanctuary asks first when it would undo progress
+
+Acceptance criteria
+- Using the way out of a sanctuary after solving its puzzle or felling a guardian asks first: "Leave? The puzzle and seals here will close again." Cancel stays. With nothing opened yet it leaves at once, as now; after the relic it can't happen (the relic already returns you to the meadow).
+- Keyboard, gamepad, and touch can answer it, like Return to checkpoint's question.
+
+Verification
+- A browser check in the Rootbound Hollow: entering and pressing E at the way out leaves at once; after solving the puzzle, E asks, Escape stays with the puzzle still solved, and confirming leaves. It fails on `main`.
+
+If an item turns out bigger or riskier than planned, I'll finish the others first and report it rather than half-land it. Still deferred: balance changes, puzzle hints, deleting a journey, the heartbeat's behaviour, and Camera follows' default (owner decisions); branching dungeons (a level-design pass); new skinned art and traversal (large jobs); full touch remapping (a layout editor); and real-device checks (a phone and real controllers).
