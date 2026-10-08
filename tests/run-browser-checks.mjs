@@ -1946,7 +1946,15 @@ await run("saves: sanctuary visit", async () => {
     await page.keyboard.press("e");
     await hold(page);
     s = await state(page);
-    check(!s.dungeon, "E at the exit returns to the meadow");
+    // The warden is down, so the way out asks before closing the sanctuary.
+    check(
+      s.dungeon === "ember" && s.panel === "dialogue",
+      "E at the exit asks before leaving what's been opened",
+    );
+    await page.keyboard.press("Enter");
+    await hold(page);
+    s = await state(page);
+    check(!s.dungeon, "Enter on Leave returns to the meadow");
     page = await reopen(page);
     save = await stored(page);
     await resume(page);

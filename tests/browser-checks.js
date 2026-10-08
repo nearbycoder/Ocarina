@@ -384,7 +384,8 @@ window.bellQA = (() => {
     document.querySelector('[data-action="leave-confirm"]').click();
     assert(api.getState().dungeon === null, "Leaving: a click on Leave leaves");
     close();
-    return results.slice(before);
+    // Kept out of the campaign's running count.
+    return results.splice(before);
   }
   return {
     start,

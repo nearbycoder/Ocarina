@@ -8,6 +8,9 @@
 // `fade` writes fade<suffix>.json: at two spots where a wall pulls the camera
 // in, the share of the screen Alder changes by more than 40 / 255 against the
 // same frame without him, and the mean change over the whole frame.
+// `crowd` writes crowd.json: for open spots sampled across the village, the
+// kingdom, and every sanctuary, in eight directions each, how often the
+// camera ends up within 1.6 m (and 2.5 m) of Alder's head.
 import { chromium } from "playwright";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
@@ -153,6 +156,74 @@ const SHOTS = {
       game.renderer.shadowMap.needsUpdate = true;
     });
     await shoot(page, "a-compass-tide");
+    await page.close();
+  },
+  async crowd() {
+    const page = await open();
+    const results = await page.evaluate(() => {
+      const api = window.__BELL_OF_AGES__.debug,
+        game = api.game();
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const out = {};
+      const sample = (name, x0, x1, z0, z1, spots) => {
+        const d = [];
+        for (
+          let tries = 0;
+          d.length < spots * 8 && tries < spots * 50;
+          tries++
+        ) {
+          const x = x0 + rnd() * (x1 - x0),
+            z = z0 + rnd() * (z1 - z0);
+          if (game.blocked(x, z)) continue;
+          api.teleport(x, z);
+          for (let k = 0; k < 8; k++) {
+            game.yaw = (k * Math.PI) / 4;
+            const f = game.cameraFocus();
+            d.push(game.cameraDestination(f).distanceTo(f));
+          }
+        }
+        const share = (m) =>
+          +(d.filter((v) => v < m).length / d.length).toFixed(3);
+        out[name] = {
+          views: d.length,
+          within1_6: share(1.6),
+          within2_5: share(2.5),
+        };
+      };
+      game.loadWorld();
+      sample("village", -30, 30, 35, 80, 300);
+      sample("kingdom", -130, 130, -130, 130, 400);
+      for (const id of [
+        "root",
+        "ember",
+        "tide",
+        "frost",
+        "sun",
+        "moon",
+        "crown",
+      ]) {
+        api.enter(id);
+        const xs = game.world.colliders.map((c) => c.x),
+          zs = game.world.colliders.map((c) => c.z);
+        sample(
+          id,
+          Math.min(...xs),
+          Math.max(...xs),
+          Math.min(...zs),
+          Math.max(...zs),
+          250,
+        );
+      }
+      game.loadWorld();
+      return out;
+    });
+    for (const [k, v] of Object.entries(results))
+      console.log(k, JSON.stringify(v));
+    writeFileSync(
+      `${OUT}/crowd${SUFFIX}.json`,
+      JSON.stringify(results, null, 2) + "\n",
+    );
     await page.close();
   },
   // The question at the way out once the Rootbound Hollow's puzzle is solved.
