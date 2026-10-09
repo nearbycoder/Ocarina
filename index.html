@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="theme-color" content="#172e2a" />
+    <meta
+      name="description"
+      content="An original 3D adventure through a kingdom in two ages. Explore the wilds, solve ancient dungeons, and awaken the Bell of Ages."
+    />
+    <title>The Bell of Ages</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23172e2a'/%3E%3Cpath d='M17 43h30L42 34V24a10 10 0 0 0-20 0v10z' fill='%23e5c88b'/%3E%3Ccircle cx='32' cy='49' r='4' fill='%23e5c88b'/%3E%3C/svg%3E"
+    />
+    <script type="module" crossorigin src="./assets/index-BAst7YEg.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/three.core-DasCGBBz.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-CUOgpB0z.css">
+  </head>
+  <body>
+    <canvas id="world" aria-label="The Bell of Ages 3D game world"></canvas>
+    <div id="veil" aria-hidden="true"></div>
+    <div id="ui"></div>
+    <div id="boot"></div>
+    <noscript>
+      <p
+        style="
+          position: fixed;
+          inset: 0;
+          margin: 0;
+          display: grid;
+          place-items: center;
+          padding: 24px;
+          background: #182b29;
+          color: #e7ddc8;
+          font:
+            16px/1.5 system-ui,
+            sans-serif;
+          text-align: center;
+        "
+      >
+        The Bell of Ages needs JavaScript. Turn it on for this page and reload.
+      </p>
+    </noscript>
+    <script>
+      // If the game's script never starts (an old browser, or a file that
+      // failed to download), say so instead of leaving a blank page.
+      addEventListener("load", () => {
+        if (window.__BELL_BOOTED__) return;
+        const boot = document.getElementById("boot");
+        boot.setAttribute("role", "alert");
+        boot.style.cssText =
+          "display:grid;place-items:center;padding:24px;background:#182b29;color:#e7ddc8;font:16px/1.5 system-ui,sans-serif;text-align:center;pointer-events:auto";
+        boot.innerHTML =
+          '<div><h1 style="font-weight:400">The world could not awaken.</h1><p>The game could not start in this browser. Check your connection, or try a current Chrome, Edge, Firefox, or Safari.</p><button onclick="location.reload()" style="font:inherit;padding:10px 26px;border:1px solid #c1a66b;border-radius:4px;background:transparent;color:#e7ddc8;cursor:pointer">Try again</button></div>';
+      });
+    </script>
+  </body>
+</html>

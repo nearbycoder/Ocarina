@@ -1,0 +1,162 @@
+{
+  "assets": [
+    {
+      "name": "Cottage_Slate",
+      "triangles": 24466,
+      "meshParts": 1
+    },
+    {
+      "name": "Cottage_Terracotta",
+      "triangles": 29250,
+      "meshParts": 1
+    },
+    {
+      "name": "Well",
+      "triangles": 5820,
+      "meshParts": 1
+    },
+    {
+      "name": "Barrel",
+      "triangles": 544,
+      "meshParts": 1
+    },
+    {
+      "name": "Crate",
+      "triangles": 1540,
+      "meshParts": 1
+    },
+    {
+      "name": "Chest",
+      "triangles": 2024,
+      "meshParts": 1
+    },
+    {
+      "name": "Fence",
+      "triangles": 308,
+      "meshParts": 1
+    },
+    {
+      "name": "Cart",
+      "triangles": 4004,
+      "meshParts": 1
+    },
+    {
+      "name": "Signpost",
+      "triangles": 264,
+      "meshParts": 1
+    },
+    {
+      "name": "Portal",
+      "triangles": 2016,
+      "meshParts": 1
+    },
+    {
+      "name": "Dungeon_Pier",
+      "triangles": 816,
+      "meshParts": 1
+    },
+    {
+      "name": "Bell_Sanctuary",
+      "triangles": 6740,
+      "meshParts": 1
+    },
+    {
+      "name": "Watchtower",
+      "triangles": 25208,
+      "meshParts": 1
+    },
+    {
+      "name": "Rock_0",
+      "triangles": 106,
+      "meshParts": 1
+    },
+    {
+      "name": "Rock_1",
+      "triangles": 106,
+      "meshParts": 1
+    },
+    {
+      "name": "Rock_2",
+      "triangles": 106,
+      "meshParts": 1
+    },
+    {
+      "name": "Alder_Trunk",
+      "triangles": 908,
+      "meshParts": 1
+    },
+    {
+      "name": "Hero_Child",
+      "triangles": 7487,
+      "meshParts": 9
+    },
+    {
+      "name": "Hero_Adult",
+      "triangles": 7487,
+      "meshParts": 9
+    },
+    {
+      "name": "Rowan",
+      "triangles": 7881,
+      "meshParts": 9
+    },
+    {
+      "name": "Mira",
+      "triangles": 8481,
+      "meshParts": 9
+    },
+    {
+      "name": "Smith",
+      "triangles": 7063,
+      "meshParts": 9
+    },
+    {
+      "name": "Warden",
+      "triangles": 708,
+      "meshParts": 1
+    },
+    {
+      "name": "Alder_Leaves",
+      "triangles": 384,
+      "meshParts": 1
+    },
+    {
+      "name": "Alder_Leaves_Far",
+      "triangles": 112,
+      "meshParts": 1
+    },
+    {
+      "name": "Cobble_Patch",
+      "triangles": 1848,
+      "meshParts": 1
+    },
+    {
+      "name": "Caldera",
+      "triangles": 896,
+      "meshParts": 1
+    },
+    {
+      "name": "Mountain_Ridge",
+      "triangles": 912,
+      "meshParts": 1
+    },
+    {
+      "name": "Cliff",
+      "triangles": 462,
+      "meshParts": 1
+    },
+    {
+      "name": "Observatory",
+      "triangles": 7668,
+      "meshParts": 1
+    },
+    {
+      "name": "Dungeon_Wall",
+      "triangles": 2772,
+      "meshParts": 1
+    }
+  ],
+  "totalTriangles": 158387,
+  "atlasResolution": 1024,
+  "source": "art/blender/alder-library.blend"
+}
