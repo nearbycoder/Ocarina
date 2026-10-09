@@ -2014,6 +2014,10 @@ body.large-text .sheet {
   :where(body[data-device="touch"], body.coarse-screen) .vitals {
     top: 14px;
   }
+  /* The pause button rises with them, a full 44 pt clear of the objective. */
+  :where(body[data-device="touch"], body.coarse-screen) .menu-button {
+    top: 14px;
+  }
   /* Notices, prompts, and the warden's bar keep to the middle column,
      between the vitals and the objective and above the controls. */
   :where(body[data-device="touch"], body.coarse-screen) #toast {
