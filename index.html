@@ -19,6 +19,39 @@
     <div id="veil" aria-hidden="true"></div>
     <div id="ui"></div>
     <div id="boot"></div>
+    <noscript>
+      <p
+        style="
+          position: fixed;
+          inset: 0;
+          margin: 0;
+          display: grid;
+          place-items: center;
+          padding: 24px;
+          background: #182b29;
+          color: #e7ddc8;
+          font:
+            16px/1.5 system-ui,
+            sans-serif;
+          text-align: center;
+        "
+      >
+        The Bell of Ages needs JavaScript. Turn it on for this page and reload.
+      </p>
+    </noscript>
+    <script>
+      // If the game's script never starts (an old browser, or a file that
+      // failed to download), say so instead of leaving a blank page.
+      addEventListener("load", () => {
+        if (window.__BELL_BOOTED__) return;
+        const boot = document.getElementById("boot");
+        boot.setAttribute("role", "alert");
+        boot.style.cssText =
+          "display:grid;place-items:center;padding:24px;background:#182b29;color:#e7ddc8;font:16px/1.5 system-ui,sans-serif;text-align:center;pointer-events:auto";
+        boot.innerHTML =
+          '<div><h1 style="font-weight:400">The world could not awaken.</h1><p>The game could not start in this browser. Check your connection, or try a current Chrome, Edge, Firefox, or Safari.</p><button onclick="location.reload()" style="font:inherit;padding:10px 26px;border:1px solid #c1a66b;border-radius:4px;background:transparent;color:#e7ddc8;cursor:pointer">Try again</button></div>';
+      });
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

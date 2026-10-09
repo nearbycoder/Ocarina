@@ -13,6 +13,10 @@
 [![Art: Blender 4.5](https://img.shields.io/badge/art-Blender%204.5%20LTS-e87d0d?logo=blender&logoColor=white)](docs/BLENDER.md)
 [![Release](https://img.shields.io/github/v/release/nearbycoder/Ocarina?label=release&color=2f5d50)](https://github.com/nearbycoder/Ocarina/releases)
 
+### [▶ Play in your browser](https://nearbycoder.github.io/Ocarina/)
+
+**https://nearbycoder.github.io/Ocarina/**: no install, and nothing to download beyond about 8 MB of game files. It needs a browser with WebGL 2 and works best on a desktop or laptop; see [the browser build](#the-browser-build) for what was tested.
+
 </div>
 
 ## Trailer
@@ -35,7 +39,9 @@ Since its first release on 4 October 2026, twelve rounds of improvements have br
 
 ## Play it
 
-**Today's version: build it from source.** The only published release, [v0.1.0](https://github.com/nearbycoder/Ocarina/releases/tag/v0.1.0), is the launch build from 4 October 2026. It predates all twelve improvement rounds, so it has none of the features this README describes as added since (among them the Graphics fidelity slider, remapping, three journeys, and the warden signature attacks), and there is no hosted build yet. To play the game as it is today:
+**In your browser:** open **[nearbycoder.github.io/Ocarina](https://nearbycoder.github.io/Ocarina/)**. It is the same production build as `npm run build`, so it has every feature below; see [the browser build](#the-browser-build) for the details.
+
+**From source.** The only published release, [v0.1.0](https://github.com/nearbycoder/Ocarina/releases/tag/v0.1.0), is the launch build from 4 October 2026. It predates all twelve improvement rounds, so it has none of the features this README describes as added since (among them the Graphics fidelity slider, remapping, three journeys, and the warden signature attacks). To run the game as it is today on your own machine:
 
 ```sh
 git clone https://github.com/nearbycoder/Ocarina.git
@@ -48,7 +54,18 @@ Then open the printed address. The build in `dist/` is plain static files with r
 
 **The v0.1.0 download.** To try the launch build instead, download **`the-bell-of-ages-web-v0.1.0.zip`** from the release, unzip it, and serve the folder (`npx serve the-bell-of-ages`, or `python3 -m http.server --directory the-bell-of-ages`).
 
-**Hosted build (not live yet).** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the game, and publishes `dist/` to GitHub Pages. It only runs when started by hand, and it has not been run, so there is no hosted build at the moment. To publish, enable Pages with **GitHub Actions** as the source (Settings → Pages), then run **Deploy web build to GitHub Pages** from the Actions tab. The production build has been checked when served from a `/Ocarina/` subfolder.
+### The browser build
+
+The site at `https://nearbycoder.github.io/Ocarina/` is GitHub Pages serving the `gh-pages` branch, which holds the output of `scripts/build-pages.sh`: the normal production build, plain static files with relative URLs, and no server code or special headers.
+
+- **Download:** about 8 MB in all (the site is 8.7 MB; its largest file is a 2.9 MB surface texture). About 3.3 MB arrives before the title appears (the code, the fonts, and the 2.3 MB model pack, with a progress bar); the two surface textures finish behind the title. GitHub Pages compresses the code further in transit.
+- **Tested** on 8 October 2026, served from a local `/Ocarina/` folder, in headless **Chromium 151** and headless **Firefox 157** on Linux (AMD Radeon 8060S). In both, the page reached the title with no console errors in 2 to 3 seconds, a setting change (Graphics fidelity) and a saved journey survived a reload, keyboard play worked, and sound waited for the first click. Safari, Edge, phones, and tablets weren't tested, and headless browsers don't show how it feels to play.
+- **If something is missing,** the page says so: without WebGL 2 it asks you to turn on graphics acceleration, and if the game's files fail to load it offers to try again.
+- **What's different from running it yourself:** nothing in the game. The fidelity step starts at **Medium**, as everywhere. Saves and settings stay in this browser for this site, so a journey played on `localhost` doesn't appear here (and the other way round); **Export journey file** and **Import a journey file** move one across. There is no Quit button in any build; close the tab.
+
+To check a served copy: `node tools/check-pages.mjs <url>` exits 0 only when the game reaches its title with no errors; add `--play` for the reload, sound, and play checks, and `--browser firefox` to use an installed Firefox.
+
+**Publishing with Actions instead.** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) can also run the tests and publish `dist/` to Pages. It only runs when started by hand, it has not been run, and it needs Pages set to **GitHub Actions** as the source rather than the `gh-pages` branch.
 
 ### System requirements
 
@@ -211,6 +228,8 @@ npm run dev        # http://localhost:5174 (dev build with debug helpers)
 npm test           # 155 Vitest tests: progression, region names, story, saves, hearts, sanctuary visits, journey files, checkpoints, settings, key and pad bindings, rumble, input, lock-on, the following camera, Alder's fade, wayfinding and sanctuary doors, map finds, foes, warning outlines, falling foes, layouts, alcoves, audio, sparks, assets, collision, combat, graphics fidelity
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
+scripts/build-pages.sh                  # the GitHub Pages site, into pages-dist/
+node tools/check-pages.mjs <url> --play # check a served copy (see "The browser build")
 ```
 
 If you reach the dev server through another hostname, list it in `BELL_ALLOWED_HOSTS` (comma-separated).
@@ -269,12 +288,13 @@ src/
   settings.ts       validated player settings (volume, camera, comfort)
   ui.ts             HUD, dialogue, map, journal, menus, settings
 tests/              Vitest suites + in-browser check scripts
-scripts/            Blender asset build, compression, validation
+scripts/            Blender asset build, compression, validation; build-pages.sh
 art/blender/        editable .blend source library
 public/             compressed model pack + two painted textures
 tools/media/        screenshot + trailer capture, score, assembly
 tools/perf/         real-time frame sampler
 tools/balance/      scripted-fighter measurements of every hall and arena
+tools/check-pages.mjs  check a served web build (title, reloads, sound, play)
 docs/               design notes, validation records, media
 ```
 
@@ -308,7 +328,7 @@ Design, code, story, Blender models, and audio synthesis: **[nearbycoder](https:
 
 The Bell of Ages is a **playable prototype** (v0.1.0) with a complete story from the opening to the epilogue. It is not a finished commercial game. Honestly:
 
-- **The release is behind the code.** The v0.1.0 download is the launch build of 4 October 2026; the twelve improvement rounds since are on `main` only, and there is no hosted build. Build from source to play today's version (see [Play it](#play-it)).
+- **The release is behind the code.** The v0.1.0 download is the launch build of 4 October 2026; the twelve improvement rounds since are on `main` and in the [browser build](#the-browser-build), not in a release download (see [Play it](#play-it)).
 
 - **Short dungeons on one spine.** All seven sanctuaries still follow the same three chambers in a straight line: puzzle, guardian hall, then warden arena. Halls and arenas have their own cover, obstacles, and guardian mix, the wardens fight differently, and each hall now hides one optional alcove behind a cracked wall. There are still no keys, shortcuts, or rooms you must choose between. A full playthrough is short.
 - **One enemy model.** All three guardian kinds and all seven wardens use a single Blender model, reshaped with scale, accessories, and tint. Behavior differs (melee, lunge, thrown stone, and the wardens' signature attacks), but none has unique sculpted art or animation, and health and damage stay on one scale.

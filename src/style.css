@@ -1432,6 +1432,27 @@ body.touch-left .touch-actions {
 .world-loading p {
   color: #aab9ac;
   font-size: 14px;
+  max-width: 40em;
+  padding: 0 24px;
+  text-align: center;
+  line-height: 1.6;
+}
+/* "Try again" on the loading screen when the world cannot start. */
+.world-loading button {
+  font:
+    500 14px "DM Sans",
+    system-ui,
+    sans-serif;
+  padding: 10px 26px;
+  border: 1px solid #c1a66b99;
+  border-radius: 4px;
+  background: transparent;
+  color: #e7ddc8;
+  cursor: pointer;
+}
+.world-loading button:hover {
+  border-color: #c1a66b;
+  background: #c1a66b1f;
 }
 .loading-track {
   width: 220px;

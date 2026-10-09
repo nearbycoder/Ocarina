@@ -42,3 +42,6 @@ desktop.ini
 .vscode/
 *.swp
 *~
+
+# GitHub Pages site (rebuild with scripts/build-pages.sh)
+pages-dist/
