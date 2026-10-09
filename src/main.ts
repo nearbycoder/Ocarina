@@ -19,6 +19,14 @@ for (const gesture of ["gesturestart", "gesturechange"])
     passive: false,
   });
 
+// A touch screen lays the HUD out for a phone or tablet even while a
+// keyboard or pad is in use; the touch controls themselves follow the input.
+const coarse = matchMedia("(pointer: coarse)");
+const markScreen = () =>
+  document.body.classList.toggle("coarse-screen", coarse.matches);
+markScreen();
+coarse.addEventListener?.("change", markScreen);
+
 // The loading screen sits above the game, so it can fade into the title.
 const boot = document.getElementById("boot")!;
 (window as { __BELL_BOOTED__?: boolean }).__BELL_BOOTED__ = true;

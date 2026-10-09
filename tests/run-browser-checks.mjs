@@ -1716,6 +1716,9 @@ const hudOverlaps = (p) =>
     // region, a compass naming a sanctuary far away, the longest objective
     // (the Glass Monastery's hint), prompt, and warden name, and a long toast.
     const game = window.__BELL_OF_AGES__.debug.game();
+    // The touch layout: the scripted helpers press keys, which put the
+    // touch controls away until the next touch.
+    game.setDevice("touch");
     const ui = game.ui;
     const age = game.save.age;
     game.save.age = "adult";
@@ -1833,6 +1836,21 @@ await run("touch: phone portrait", async () => {
   await phone.evaluate(async () => {
     await bellQA.start();
     bellQA.close();
+  });
+  // The helper presses keys, which put the touch controls away; a drag on
+  // the scene brings them back, as the next touch on a phone would.
+  check(
+    !(await phone.isVisible("#touch-stick")),
+    "A key press puts the touch controls away",
+  );
+  await touch("touchStart", 195, 300);
+  await touch("touchMove", 215, 300);
+  await touch("touchEnd");
+  check(
+    await phone.isVisible("#touch-stick"),
+    "The next touch brings the touch controls back",
+  );
+  await phone.evaluate(() => {
     const api = window.__BELL_OF_AGES__;
     api.debug.teleport(-8, 66);
     api.debug.game().yaw = 0;

@@ -1267,10 +1267,12 @@ body.touch-left .touch-actions {
 body:where([data-device="touch"]).touch-left .bottom-left {
   bottom: calc(58px + 138px * var(--ts));
 }
-:where(body[data-device="touch"]) .quest {
+/* Phone and tablet layout, whatever the input: the screen, not the device
+   in use, decides these. Rules for the touch pad itself follow the device. */
+:where(body[data-device="touch"], body.coarse-screen) .quest {
   max-width: 220px;
 }
-:where(body[data-device="touch"]) .menu-button {
+:where(body[data-device="touch"], body.coarse-screen) .menu-button {
   z-index: 2;
 }
 /* A tap on the minimap opens the kingdom map; its label is a full target. */
@@ -1963,10 +1965,12 @@ body.large-text .sheet {
     white-space: normal;
     line-height: 1.4;
   }
-  :where(body[data-device="touch"]) #hud.warden-fight .quest {
+  :where(body[data-device="touch"], body.coarse-screen)
+    #hud.warden-fight
+    .quest {
     display: none;
   }
-  :where(body[data-device="touch"]) #boss {
+  :where(body[data-device="touch"], body.coarse-screen) #boss {
     top: 146px;
     bottom: auto;
     left: 18px;
@@ -1977,7 +1981,7 @@ body.large-text .sheet {
 }
 @media (max-height: 500px) {
   /* The vitals' backing stays clear of the region name in the middle. */
-  :where(body[data-device="touch"]) .vitals {
+  :where(body[data-device="touch"], body.coarse-screen) .vitals {
     padding-right: 12px;
   }
   /* Phone landscape: a compact minimap between the vitals and the stick. */
@@ -1985,11 +1989,11 @@ body.large-text .sheet {
   body:where([data-device="touch"]).touch-left .bottom-left {
     bottom: calc(56px + 116px * var(--ts));
   }
-  :where(body[data-device="touch"]) #minimap {
+  :where(body[data-device="touch"], body.coarse-screen) #minimap {
     width: 76px;
     height: 76px;
   }
-  :where(body[data-device="touch"]) .map-label {
+  :where(body[data-device="touch"], body.coarse-screen) .map-label {
     display: none;
   }
   /* Larger controls sit lower, clear of the objective panel. */
@@ -2007,27 +2011,27 @@ body.large-text .sheet {
   :where(body[data-device="touch"]) #touch .touch-actions button {
     height: max(44px, calc(42px * var(--ts)));
   }
-  :where(body[data-device="touch"]) .vitals {
+  :where(body[data-device="touch"], body.coarse-screen) .vitals {
     top: 14px;
   }
   /* Notices, prompts, and the warden's bar keep to the middle column,
      between the vitals and the objective and above the controls. */
-  :where(body[data-device="touch"]) #toast {
+  :where(body[data-device="touch"], body.coarse-screen) #toast {
     top: 92px;
     max-width: 320px;
   }
-  :where(body[data-device="touch"]) #prompt {
+  :where(body[data-device="touch"], body.coarse-screen) #prompt {
     max-width: 300px;
     white-space: normal;
   }
-  :where(body[data-device="touch"]) #boss {
+  :where(body[data-device="touch"], body.coarse-screen) #boss {
     width: 260px;
   }
   /* The objective stays clear of a thumbstick on the right. */
-  :where(body[data-device="touch"]) .quest {
+  :where(body[data-device="touch"], body.coarse-screen) .quest {
     top: 70px;
   }
-  :where(body[data-device="touch"]) .quest small {
+  :where(body[data-device="touch"], body.coarse-screen) .quest small {
     display: none;
   }
 }
