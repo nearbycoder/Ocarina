@@ -57,11 +57,28 @@ const LEGACY_QUALITY: Record<string, Fidelity> = {
   high: "high",
 };
 /**
- * A stored step, or the old Visual quality choice carried over, or Medium.
+ * A stored step, or the old Visual quality choice carried over, or the
+ * device's default (Medium).
  */
-export function parseFidelity(raw: unknown, legacy?: unknown): Fidelity {
+export function parseFidelity(
+  raw: unknown,
+  legacy?: unknown,
+  fallback: Fidelity = "medium",
+): Fidelity {
   if (FIDELITY_STEPS.includes(raw as Fidelity)) return raw as Fidelity;
-  return (typeof legacy === "string" && LEGACY_QUALITY[legacy]) || "medium";
+  return (typeof legacy === "string" && LEGACY_QUALITY[legacy]) || fallback;
+}
+/**
+ * The step a device starts on before the player chooses one: Low on a phone
+ * (touch first, with a short side under 600 CSS pixels), where memory and
+ * heat are tight; Medium everywhere else, tablets included.
+ */
+export function deviceFidelity(touchFirst: boolean, shortSide: number) {
+  return touchFirst && shortSide > 0 && shortSide < 600 ? "low" : "medium";
+}
+/** One step lighter, after a visit ended without the page closing. */
+export function lighterFidelity(f: Fidelity): Fidelity {
+  return FIDELITY_STEPS[Math.max(0, FIDELITY_STEPS.indexOf(f) - 1)];
 }
 export interface Settings {
   version: 1;
@@ -165,6 +182,7 @@ export function parseSettings(
   raw: string | null,
   prefersReducedMotion = false,
   legacyQuality: string | null = null,
+  fidelity: Fidelity = "medium",
 ): Settings {
   const def = defaultSettings(prefersReducedMotion);
   let s: Record<string, unknown>;
@@ -198,7 +216,7 @@ export function parseSettings(
     keys: parseBindings(s.keys),
     pad: parsePadBindings(s.pad),
     padStyle: parsePadStyle(s.padStyle),
-    fidelity: parseFidelity(s.fidelity, legacyQuality),
+    fidelity: parseFidelity(s.fidelity, legacyQuality, fidelity),
   };
 }
 /** Linear gain for a voice on the given bus; 0 means the voice is silent. */

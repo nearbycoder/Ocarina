@@ -12,6 +12,13 @@ import "@fontsource/dm-sans/latin-700.css";
 import "./style.css";
 import { loadAssets } from "./assets";
 
+// Safari ignores user-scalable=no; its pinch gestures are stopped here, and
+// the stylesheet's touch-action stops double-tap zoom.
+for (const gesture of ["gesturestart", "gesturechange"])
+  document.addEventListener(gesture, (e) => e.preventDefault(), {
+    passive: false,
+  });
+
 // The loading screen sits above the game, so it can fade into the title.
 const boot = document.getElementById("boot")!;
 (window as { __BELL_BOOTED__?: boolean }).__BELL_BOOTED__ = true;

@@ -1,4 +1,10 @@
 :root {
+  /* The notch, the rounded corners, and the home indicator (needs
+     viewport-fit=cover); 0 everywhere else. */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
   font-family: "DM Sans", sans-serif;
   color: #f2edda;
   font-synthesis: none;
@@ -8,9 +14,22 @@
 * {
   box-sizing: border-box;
 }
+html,
+body {
+  /* A game, not a page: no scrolling past the edge, no pinch or double-tap
+     zoom, no text selection or long-press callouts. Sheets still scroll. */
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   margin: 0;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 button {
   font: inherit;
@@ -36,6 +55,11 @@ button {
   position: fixed;
   inset: 0;
   pointer-events: none;
+}
+/* The HUD keeps clear of the notch and the home indicator. */
+#hud {
+  position: absolute;
+  inset: var(--sat) var(--sar) var(--sab) var(--sal);
 }
 button,
 .sheet,
@@ -76,6 +100,7 @@ h2 {
 .panel-wrap {
   position: absolute;
   inset: 0;
+  padding: var(--sat) var(--sar) var(--sab) var(--sal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,6 +114,10 @@ h2 {
 /* Full sheets (pause, settings, journal, map, flute) sit above passing toasts. */
 .panel-wrap:not(.dialogue):not(.title) {
   z-index: 6;
+}
+/* The title's pieces are placed absolutely; margins keep them in the safe area. */
+.panel-wrap.title > * {
+  margin: var(--sat) var(--sar) var(--sab) var(--sal);
 }
 .panel-wrap.title {
   backdrop-filter: none;
@@ -401,6 +430,8 @@ h1 em {
   position: absolute;
   right: 31px;
   top: 28px;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid #d9d8b14d;
   background: #233e3444;
   padding: 8px 12px;
@@ -543,7 +574,7 @@ kbd {
 /* While the device has taken the graphics away; above every sheet. */
 #graphics-notice {
   position: absolute;
-  top: 24px;
+  top: calc(24px + var(--sat));
   left: 50%;
   transform: translateX(-50%);
   z-index: 8;
@@ -614,7 +645,8 @@ kbd {
 /* The lock marker rides over the locked foe; off screen it becomes an arrow
    on the edge pointing toward it. game.ts sets the position and --angle. */
 #target-dot {
-  position: absolute;
+  /* Placed in viewport pixels, so not by the inset HUD. */
+  position: fixed;
   top: 0;
   left: 0;
   width: 0;
@@ -649,7 +681,7 @@ kbd {
 }
 /* Off-screen attack warnings: a warm arrow on the edge toward the attacker. */
 #threats i {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 0;
@@ -683,7 +715,9 @@ kbd {
   border: 1px solid #d6c39055;
   box-shadow: 0 30px 100px #09221d66;
   padding: 45px 48px;
-  max-height: 91vh;
+  max-height: min(91vh, 100%);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   overflow: auto;
   width: min(92vw, 520px);
 }
@@ -1148,9 +1182,9 @@ body[data-touch-size="2"] {
 #touch {
   display: none;
   position: absolute;
-  bottom: 28px;
-  left: 22px;
-  right: 22px;
+  bottom: calc(28px + var(--sab));
+  left: calc(22px + var(--sal));
+  right: calc(22px + var(--sar));
   justify-content: space-between;
   align-items: flex-end;
   pointer-events: none;
@@ -1160,8 +1194,8 @@ body[data-touch-size="2"] {
   pointer-events: auto;
 }
 body:not([data-touch-size="0"]) #touch {
-  left: 14px;
-  right: 14px;
+  left: calc(14px + var(--sal));
+  right: calc(14px + var(--sar));
 }
 /* Left-handed: the thumbstick on the right, the buttons (Sword nearest the
    thumb) on the left. */
@@ -1220,26 +1254,38 @@ body.touch-left .touch-actions {
   background: #e9d6a5c4;
   color: #233a30;
 }
-@media (pointer: coarse) {
-  #touch:not([hidden]) {
-    display: flex;
-  }
-  .controls {
-    display: none;
-  }
-  /* The minimap clears whichever touch control sits below it. */
-  .bottom-left {
-    bottom: calc(54px + 132px * var(--ts));
-  }
-  body.touch-left .bottom-left {
-    bottom: calc(58px + 138px * var(--ts));
-  }
-  .quest {
-    max-width: 220px;
-  }
-  .menu-button {
-    z-index: 2;
-  }
+:where(body[data-device="touch"]) #touch:not([hidden]) {
+  display: flex;
+}
+:where(body[data-device="touch"]) .controls {
+  display: none;
+}
+/* The minimap clears whichever touch control sits below it. */
+:where(body[data-device="touch"]) .bottom-left {
+  bottom: calc(54px + 132px * var(--ts));
+}
+body:where([data-device="touch"]).touch-left .bottom-left {
+  bottom: calc(58px + 138px * var(--ts));
+}
+:where(body[data-device="touch"]) .quest {
+  max-width: 220px;
+}
+:where(body[data-device="touch"]) .menu-button {
+  z-index: 2;
+}
+/* A tap on the minimap opens the kingdom map; its label is a full target. */
+:where(body[data-device="touch"]) #minimap {
+  pointer-events: auto;
+  cursor: pointer;
+}
+:where(body[data-device="touch"]) .map-label {
+  min-height: 44px;
+  margin-top: 0;
+}
+/* Every choice on a sheet is a full fingertip target. */
+:where(body[data-device="touch"]) #panel button {
+  min-width: 44px;
+  min-height: 44px;
 }
 @media (max-width: 800px) {
   .title-content {
@@ -1904,11 +1950,11 @@ body.large-text .sheet {
     top: 41%;
   }
 }
-@media (pointer: coarse) and (max-width: 520px) {
+@media (max-width: 520px) {
   /* A phone held upright: the prompt sits on the right above the controls,
      clear of the minimap, and the warden's bar takes the objective's place
      during its fight. */
-  #prompt {
+  :where(body[data-device="touch"]) #prompt {
     left: auto;
     right: 18px;
     bottom: calc(62px + 132px * var(--ts));
@@ -1917,10 +1963,10 @@ body.large-text .sheet {
     white-space: normal;
     line-height: 1.4;
   }
-  #hud.warden-fight .quest {
+  :where(body[data-device="touch"]) #hud.warden-fight .quest {
     display: none;
   }
-  #boss {
+  :where(body[data-device="touch"]) #boss {
     top: 146px;
     bottom: auto;
     left: 18px;
@@ -1929,58 +1975,59 @@ body.large-text .sheet {
     transform: none;
   }
 }
-@media (pointer: coarse) and (max-height: 500px) {
+@media (max-height: 500px) {
   /* The vitals' backing stays clear of the region name in the middle. */
-  .vitals {
+  :where(body[data-device="touch"]) .vitals {
     padding-right: 12px;
   }
   /* Phone landscape: a compact minimap between the vitals and the stick. */
-  .bottom-left,
-  body.touch-left .bottom-left {
+  :where(body[data-device="touch"]) .bottom-left,
+  body:where([data-device="touch"]).touch-left .bottom-left {
     bottom: calc(56px + 116px * var(--ts));
   }
-  #minimap {
+  :where(body[data-device="touch"]) #minimap {
     width: 76px;
     height: 76px;
   }
-  .map-label {
+  :where(body[data-device="touch"]) .map-label {
     display: none;
   }
   /* Larger controls sit lower, clear of the objective panel. */
-  body:not([data-touch-size="0"]) #touch {
-    bottom: 16px;
+  body:where([data-device="touch"]):not([data-touch-size="0"]) #touch {
+    bottom: calc(16px + var(--sab));
   }
-  .touch-stick {
+  :where(body[data-device="touch"]) .touch-stick {
     width: calc(116px * var(--ts));
     height: calc(116px * var(--ts));
   }
-  .touch-actions {
+  :where(body[data-device="touch"]) .touch-actions {
     grid-template-columns: repeat(3, calc(62px * var(--ts)));
   }
-  #touch .touch-actions button {
-    height: calc(42px * var(--ts));
+  /* Never under 44 pt, Apple's smallest comfortable target. */
+  :where(body[data-device="touch"]) #touch .touch-actions button {
+    height: max(44px, calc(42px * var(--ts)));
   }
-  .vitals {
+  :where(body[data-device="touch"]) .vitals {
     top: 14px;
   }
   /* Notices, prompts, and the warden's bar keep to the middle column,
      between the vitals and the objective and above the controls. */
-  #toast {
+  :where(body[data-device="touch"]) #toast {
     top: 92px;
     max-width: 320px;
   }
-  #prompt {
+  :where(body[data-device="touch"]) #prompt {
     max-width: 300px;
     white-space: normal;
   }
-  #boss {
+  :where(body[data-device="touch"]) #boss {
     width: 260px;
   }
   /* The objective stays clear of a thumbstick on the right. */
-  .quest {
+  :where(body[data-device="touch"]) .quest {
     top: 70px;
   }
-  .quest small {
+  :where(body[data-device="touch"]) .quest small {
     display: none;
   }
 }

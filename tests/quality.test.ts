@@ -23,6 +23,18 @@ describe("rendering budget", () => {
     quality.set("ultra");
     expect(setPixelRatio).toHaveBeenLastCalledWith(2);
   });
+  it("keeps Medium lighter on a touch device, and High and Ultra as chosen", () => {
+    const quality = new Quality(renderer());
+    quality.touchCap = 1.25;
+    quality.apply();
+    expect(setPixelRatio).toHaveBeenLastCalledWith(1.25);
+    quality.set("high");
+    expect(setPixelRatio).toHaveBeenLastCalledWith(1.75);
+    quality.set("ultra");
+    expect(setPixelRatio).toHaveBeenLastCalledWith(2);
+    quality.set("low");
+    expect(setPixelRatio).toHaveBeenLastCalledWith(0.85);
+  });
   it("supersamples Ultra on a standard display, and keeps Low's old ratio", () => {
     vi.stubGlobal("devicePixelRatio", 1);
     const quality = new Quality(renderer(), "ultra");

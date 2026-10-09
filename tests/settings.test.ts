@@ -7,6 +7,8 @@ import {
   busGain,
   cameraDistance,
   defaultSettings,
+  deviceFidelity,
+  lighterFidelity,
   parseSettings,
   sensitivity,
   volume,
@@ -112,5 +114,29 @@ describe("camera follows", () => {
       expect(cameraFollows("on", device)).toBe(true);
       expect(cameraFollows("off", device)).toBe(false);
     }
+  });
+});
+
+describe("graphics on phones", () => {
+  it("starts phones on Low and tablets and computers on Medium", () => {
+    expect(deviceFidelity(true, 393)).toBe("low");
+    expect(deviceFidelity(true, 412)).toBe("low");
+    expect(deviceFidelity(true, 834)).toBe("medium");
+    expect(deviceFidelity(false, 393)).toBe("medium");
+    expect(deviceFidelity(false, 1080)).toBe("medium");
+    expect(deviceFidelity(true, 0)).toBe("medium");
+  });
+  it("uses the device's step only until the player chooses one", () => {
+    expect(parseSettings(null, false, null, "low").fidelity).toBe("low");
+    expect(
+      parseSettings('{"fidelity":"high"}', false, null, "low").fidelity,
+    ).toBe("high");
+    expect(parseSettings(null, false, "high", "low").fidelity).toBe("high");
+    expect(parseSettings(null).fidelity).toBe("medium");
+  });
+  it("steps down one level after a visit that closed unexpectedly", () => {
+    expect(lighterFidelity("ultra")).toBe("high");
+    expect(lighterFidelity("medium")).toBe("low");
+    expect(lighterFidelity("low")).toBe("low");
   });
 });

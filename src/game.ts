@@ -116,6 +116,8 @@ import {
   touchSize,
   VOLUME_STEP,
   parseSettings,
+  deviceFidelity,
+  lighterFidelity,
   parseFidelity,
   LEGACY_QUALITY_KEY,
   sensitivity,
@@ -315,6 +317,13 @@ const TRAIL_OPACITY = 0.62;
 const TRAIL_FADE = 0.14;
 /** Where the title's view looks: depth of field keeps it sharp (Ultra). */
 const TITLE_FOCUS = new T.Vector3(-4, 2.8, 44);
+/** A phone or tablet with no mouse or trackpad: touch controls from the start. */
+function touchFirst() {
+  return (
+    matchMedia("(pointer: coarse)").matches &&
+    !matchMedia("(any-pointer: fine)").matches
+  );
+}
 export class Game {
   scene = new T.Scene();
   camera = new T.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 650);
@@ -458,6 +467,7 @@ export class Game {
     });
     this.renderer.setSize(innerWidth, innerHeight);
     this.quality = new Quality(this.renderer);
+    if (touchFirst()) this.quality.touchCap = 1.25;
     this.worldRenderer = new WorldRenderer(
       this.renderer,
       this.scene,
@@ -524,7 +534,8 @@ export class Game {
     this.camera.position.set(34, 22, 84);
     this.camera.lookAt(-4, 2.8, 44);
     this.loadSettings();
-    if (matchMedia("(pointer: coarse)").matches) this.setDevice("touch");
+    if (touchFirst()) this.setDevice("touch");
+    this.watchForCrash();
     this.showTitle();
     this.ui.onAction = (a) => {
       if (this.started) this.sound.ui();
@@ -609,16 +620,60 @@ export class Game {
   }
   loadSettings() {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Phones start on Low until the player chooses a step.
+    const fidelity = deviceFidelity(
+      touchFirst(),
+      Math.min(screen.width, screen.height),
+    );
     try {
       this.settings = parseSettings(
         localStorage.getItem(SETTINGS_KEY),
         reduced,
         localStorage.getItem(LEGACY_QUALITY_KEY),
+        fidelity,
       );
     } catch {
-      this.settings = parseSettings(null, reduced);
+      this.settings = parseSettings(null, reduced, null, fidelity);
     }
     this.applySettings();
+  }
+  /**
+   * A phone closes a tab that runs out of memory and reloads it when the
+   * player comes back, and the page never hears `pagehide`. A mark kept in
+   * this tab while the game is on screen tells the reload apart: then the
+   * graphics drop a step (and stay there), and the title says why.
+   */
+  watchForCrash() {
+    if (this.review) return;
+    const KEY = "bell-of-ages-on-screen";
+    const mark = (on: boolean) => {
+      try {
+        if (on) sessionStorage.setItem(KEY, "1");
+        else sessionStorage.removeItem(KEY);
+      } catch {
+        // No session storage: nothing to compare against next time.
+      }
+    };
+    let crashed = false;
+    try {
+      crashed = sessionStorage.getItem(KEY) === "1";
+    } catch {
+      // As above.
+    }
+    mark(!document.hidden);
+    document.addEventListener("visibilitychange", () => mark(!document.hidden));
+    window.addEventListener("pagehide", () => mark(false));
+    window.addEventListener("pageshow", () => mark(!document.hidden));
+    if (!crashed) return;
+    const lighter = lighterFidelity(this.settings.fidelity);
+    if (lighter !== this.settings.fidelity) {
+      this.settings.fidelity = lighter;
+      this.applySettings(true);
+    }
+    this.ui.toast(
+      `The last visit closed unexpectedly, perhaps short of memory. Graphics are now ${this.quality.label}; Settings can change them. Your journey continues from its last save.`,
+      10000,
+    );
   }
   applySettings(store = false) {
     this.sound.configure(this.settings);
@@ -1395,6 +1450,10 @@ export class Game {
     // A phone may stop the sound while the game is away; the first key,
     // click, tap, or gamepad button afterwards starts it again.
     window.addEventListener("pointerdown", () => this.sound.wake(), true);
+    // iOS lets sound start only when a touch ends (or clicks), not as it
+    // begins, so wake it there too.
+    for (const event of ["touchend", "click"])
+      window.addEventListener(event, () => this.sound.wake(), true);
     window.addEventListener("keydown", (e) => {
       this.sound.wake();
       const code = normalizeCode(e.code),
@@ -1501,6 +1560,19 @@ export class Game {
       "pointerdown",
       (e) => this.setDevice(e.pointerType === "mouse" ? "keyboard" : "touch"),
       { capture: true },
+    );
+    // A mouse or trackpad that moves puts the touch controls away too.
+    window.addEventListener(
+      "pointermove",
+      (e) => {
+        if (
+          e.pointerType === "mouse" &&
+          this.ui.device === "touch" &&
+          (e.movementX || e.movementY)
+        )
+          this.setDevice("keyboard");
+      },
+      { capture: true, passive: true },
     );
     const canvas = this.renderer.domElement;
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());

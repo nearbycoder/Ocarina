@@ -98,7 +98,7 @@ export class UI {
  <div class="location"><span class="location-line"></span><span id="region">Alder Village</span><span class="location-line"></span><small id="compass"><i id="compass-arrow" aria-hidden="true" hidden></i><span id="compass-text">N</span></small></div>
  <button class="menu-button" data-action="pause" aria-label="Pause game">Ⅱ <span>ESC</span></button>
  <div class="quest"><span class="quest-mark">◇</span><div><small>THE JOURNEY</small><h3 id="quest-title"></h3><p id="quest-detail"></p></div></div>
- <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd id="map-key">M</kbd></button></div>
+ <div class="bottom-left"><canvas id="minimap" width="160" height="160" aria-label="Nearby map" data-action="map"></canvas><button class="map-label" data-action="map">THE KINGDOM <kbd id="map-key">M</kbd></button></div>
  <div id="prompt" hidden></div><div id="boss" hidden><small id="boss-name"></small><div><i id="boss-fill"></i></div></div>
  <div class="controls" id="controls"></div>
  <div id="target-dot" aria-hidden="true" hidden></div><div id="threats" aria-hidden="true"></div><div id="save-indicator">Progress saved</div></div>
@@ -287,13 +287,13 @@ export class UI {
     this.el("boss-name").textContent = name;
     this.el("boss-fill").style.width = `${fraction * 100}%`;
   }
-  toast(text: string) {
+  toast(text: string, ms = 4200) {
     this.el("toast").textContent = this.say(text);
     this.el("toast").classList.add("visible");
     clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(
       () => this.el("toast").classList.remove("visible"),
-      4200,
+      ms,
     );
   }
   /** Says the picture is lost while the device has the graphics; offers a reload once it's been a while. */

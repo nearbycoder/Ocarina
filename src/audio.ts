@@ -113,7 +113,8 @@ export class Sound {
   }
   start() {
     if (!this.ctx) this.ctx = new AudioContext();
-    void this.ctx.resume();
+    // Refused without a gesture or an audio device; the next input retries.
+    void this.ctx.resume().catch(() => {});
   }
   /** Quiets the context while the game is away (the page is hidden). */
   suspend() {

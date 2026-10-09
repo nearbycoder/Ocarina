@@ -164,15 +164,25 @@ export class Quality {
   get label() {
     return FIDELITY_NAMES[this.fidelity];
   }
+  /**
+   * Phones and tablets: Medium's 3D view stops at this pixel ratio, since
+   * every render target grows with it and memory is tight there. High and
+   * Ultra, which the player chooses, keep their own caps.
+   */
+  touchCap = Infinity;
   /** The 3D view's pixel ratio; the interface stays sharp regardless. */
   get pixelRatio() {
     const p = this.profile;
+    const cap =
+      this.fidelity === "medium"
+        ? Math.min(p.pixelCap, this.touchCap)
+        : p.pixelCap;
     // Below 1 the cap comes first (Low is 85% of at most 1×); above 1 the
     // supersampled ratio is capped.
     const ratio =
       p.resolution <= 1
-        ? Math.min(devicePixelRatio, p.pixelCap) * p.resolution
-        : Math.min(devicePixelRatio * p.resolution, p.pixelCap);
+        ? Math.min(devicePixelRatio, cap) * p.resolution
+        : Math.min(devicePixelRatio * p.resolution, cap);
     return ratio * this.scale;
   }
   apply() {
